@@ -1,14 +1,13 @@
-from flask import Flask
+from flask import Flask, request
 
 app = Flask(__name__)
 
 SCRIPTS = {
-    "script1": "🌐 Script 1 - URL Scanner",
-    "script2": "⚡ Script 2 - IP Tool",
-    "script3": "🚀 Script 3 - File Tool"
+    "script1": "🌐 Script 1",
+    "script2": "⚡ Script 2",
+    "script3": "🚀 Script 3"
 }
 
-# 🏠 DASHBOARD ONLY
 @app.route("/")
 def home():
     html = "<h2>🔥 Control Dashboard</h2><br>"
@@ -19,15 +18,16 @@ def home():
     return html
 
 
-# 🔥 DIRECT OPEN (NO LOGIC)
 @app.route("/open/<key>")
 def open_script(key):
+    host = request.host_url.strip("/")   # 👈 IMPORTANT FIX
+
     return f"""
     <script>
-        window.location.href = "http://127.0.0.1:10000/{key}";
+        window.location.href = "{host}/{key}";
     </script>
     """
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=10000)
