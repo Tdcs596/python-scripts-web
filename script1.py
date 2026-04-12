@@ -1,27 +1,30 @@
-from flask import Flask, request
+from flask import Flask, request, send_file
+import os
 
 app = Flask(__name__)
+
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
     return """
-    <h2>🌐 Script 1 - URL Scanner</h2>
+    <h2>📂 Upload Python File</h2>
 
-    <form method="POST" action="/run">
-        <input name="url" placeholder="Enter URL" required>
-        <button>Scan</button>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <br><br>
+        <button>Upload</button>
     </form>
     """
 
+@app.route("/upload", methods=["POST"])
+def upload():
+    file = request.files["file"]
+    path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(path)
 
-@app.route("/run", methods=["POST"])
-def run():
-    url = request.form.get("url")
-    return f"""
-    <h3>Scanning Result</h3>
-    <p>URL: {url}</p>
-    """
-
+    return f"<h3>File uploaded: {file.filename}</h3><p>EXE conversion NOT supported on Render</p>"
 
 if __name__ == "__main__":
     app.run(port=5001)
