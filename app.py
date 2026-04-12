@@ -3,46 +3,39 @@ import subprocess
 
 app = Flask(__name__)
 
-# 🔥 SCRIPT REGISTRY (YAHI SE SAB CONTROL HOGA)
+# 🔥 SCRIPT REGISTRY
 SCRIPTS = {
     "script1": {
-        "name": "🌐 Directory Scanner",
-        "file": "script1.py",
-        "input": "url",
-        "placeholder": "https://example.com"
+        "name": "🌐 Script 1",
+        "file": "script1.py"
     },
     "script2": {
         "name": "⚡ Script 2",
-        "file": "script2.py",
-        "input": "text",
-        "placeholder": "Enter text"
+        "file": "script2.py"
     },
     "script3": {
         "name": "🚀 Script 3",
-        "file": "script3.py",
-        "input": "text",
-        "placeholder": "Enter input"
+        "file": "script3.py"
     },
     "script4": {
         "name": "🧠 Script 4",
-        "file": "script4.py",
-        "input": "text",
-        "placeholder": "Enter input"
+        "file": "script4.py"
     }
 }
 
-# 🏠 HOME PAGE (AUTO MENU)
+# 🏠 HOME PAGE
 @app.route("/")
 def home():
-    menu = "<h2>🔥 Script Control Panel</h2><ul>"
+    html = "<h2>🔥 Script Control Panel</h2><ul>"
 
-    for key in SCRIPTS:
-        menu += f'<li><a href="/run/{key}">{SCRIPTS[key]["name"]}</a></li>'
+    for key, val in SCRIPTS.items():
+        html += f'<li><a href="/run/{key}">{val["name"]}</a></li>'
 
-    menu += "</ul>"
-    return menu
+    html += "</ul>"
+    return html
 
-# 📥 INPUT PAGE (DYNAMIC)
+
+# 📥 RUN PAGE
 @app.route("/run/<script_key>")
 def run_page(script_key):
     if script_key not in SCRIPTS:
@@ -54,38 +47,45 @@ def run_page(script_key):
     <h2>{script['name']}</h2>
 
     <form action="/execute/{script_key}" method="post">
-        Enter Input:<br><br>
-        <input type="text" name="user_input" placeholder="{script['placeholder']}" size="40" required>
+        <input type="text" name="user_input" placeholder="Enter input (optional)" size="40">
         <br><br>
-        <input type="submit" value="Run">
+        <button type="submit">Run Script</button>
     </form>
 
     <br><a href="/">⬅ Back</a>
     """
 
-# ▶️ EXECUTION ENGINE (SAME FOR ALL)
+
+# ▶️ EXECUTION ENGINE
 @app.route("/execute/<script_key>", methods=["POST"])
 def execute(script_key):
     if script_key not in SCRIPTS:
         return "❌ Script not found"
 
     script = SCRIPTS[script_key]
-    user_input = request.form.get("user_input")
+    user_input = request.form.get("user_input", "")
 
-    result = subprocess.run(
-        ["python", script["file"], user_input],
-        capture_output=True,
-        text=True
-    )
+    try:
+        result = subprocess.run(
+            ["python3", script["file"], user_input],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
 
-    output = result.stdout + result.stderr
+        output = result.stdout + result.stderr
 
-    return f"""
-    <h3>Result:</h3>
-    <pre>{output}</pre>
-    <br><br>
-    <a href="/run/{script_key}">🔁 Run Again</a><br>
-    <a href="/">🏠 Home</a>
-    """
+        return f"""
+        <h3>📌 Output</h3>
+        <pre>{output}</pre>
 
-app.run(host="0.0.0.0", port=10000)
+        <br><a href="/run/{script_key}">🔁 Run Again</a>
+        <br><a href="/">🏠 Home</a>
+        """
+
+    except Exception as e:
+        return f"<pre>Error: {str(e)}</pre>"
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
