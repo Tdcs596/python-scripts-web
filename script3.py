@@ -5,30 +5,37 @@ import subprocess
 
 app = Flask(__name__)
 
-UPLOAD = "uploads"
-DIST = "dist"
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "dist"
 
-os.makedirs(UPLOAD, exist_ok=True)
-os.makedirs(DIST, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 
+# 🏠 HOME PAGE (FILE UPLOAD UI)
 @app.route("/")
 def home():
     return """
-    <h2>PY → EXE Converter</h2>
-    <form method="POST" action="/convert" enctype="multipart/form-data">
+    <h2>🔥 PY → EXE Converter</h2>
+
+    <form action="/convert" method="post" enctype="multipart/form-data">
         <input type="file" name="file" accept=".py" required>
-        <button>Convert</button>
+        <br><br>
+        <button type="submit">Convert to EXE</button>
     </form>
     """
 
 
+# ⚙️ CONVERT ENGINE
 @app.route("/convert", methods=["POST"])
 def convert():
-    file = request.files["file"]
+    file = request.files.get("file")
 
-    uid = str(uuid.uuid4())
-    py_path = os.path.join(UPLOAD, uid + ".py")
+    if not file:
+        return "No file uploaded"
+
+    file_id = str(uuid.uuid4())
+    py_path = os.path.join(UPLOAD_FOLDER, file_id + ".py")
 
     file.save(py_path)
 
@@ -37,20 +44,20 @@ def convert():
             "pyinstaller",
             "--onefile",
             "--noconsole",
-            "--distpath", DIST,
+            "--distpath", OUTPUT_FOLDER,
             py_path
         ], check=True)
 
         exe_file = None
 
-        for root, dirs, files in os.walk(DIST):
+        for root, dirs, files in os.walk(OUTPUT_FOLDER):
             for f in files:
                 if f.endswith(".exe"):
                     exe_file = os.path.join(root, f)
                     break
 
         if not exe_file:
-            return "EXE not found"
+            return "EXE not generated"
 
         return send_file(exe_file, as_attachment=True)
 
