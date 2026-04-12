@@ -1,41 +1,27 @@
-import sys
-import requests
+from flask import Flask, request
 
-# Debug (optional)
-print("ARGS:", sys.argv)
+app = Flask(__name__)
 
-# Check input
-if len(sys.argv) < 2:
-    print("❌ No URL provided")
-    exit()
+@app.route("/")
+def home():
+    return """
+    <h2>🌐 Script 1 - URL Scanner</h2>
 
-url = sys.argv[1]
+    <form method="POST" action="/run">
+        <input name="url" placeholder="Enter URL" required>
+        <button>Scan</button>
+    </form>
+    """
 
-paths = [
-    "admin",
-    "login",
-    "dashboard",
-    "uploads",
-    "images",
-    "backup",
-    "config",
-    ".git",
-    "api"
-]
 
-print("Scanning:", url)
-print("-" * 30)
+@app.route("/run", methods=["POST"])
+def run():
+    url = request.form.get("url")
+    return f"""
+    <h3>Scanning Result</h3>
+    <p>URL: {url}</p>
+    """
 
-for path in paths:
-    full_url = url.rstrip("/") + "/" + path
-    try:
-        res = requests.get(full_url, timeout=5)
 
-        if res.status_code == 200:
-            print(f"[FOUND] {full_url}")
-
-        elif res.status_code == 403:
-            print(f"[FORBIDDEN] {full_url}")
-
-    except:
-        print(f"[ERROR] {full_url}")
+if __name__ == "__main__":
+    app.run(port=5001)
