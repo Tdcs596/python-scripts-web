@@ -9,25 +9,36 @@ SCRIPTS = {
     "script4": "🧠 Script 4"
 }
 
-# 🏠 HOME PAGE (ONLY BUTTONS)
+# 🏠 HOME PAGE
 @app.route("/")
 def home():
     html = "<h2>🔥 Script Dashboard</h2><br>"
 
     for key, name in SCRIPTS.items():
-        html += f'<p><a href="/run/{key}">{name}</a></p>'
+        html += f'<p><a href="/{key}">{name}</a></p>'
 
     return html
 
 
-# ▶️ JUST REDIRECT STYLE ACCESS
-@app.route("/run/<key>")
-def run_script(key):
-    return f"""
-    <script>
-        window.location.href = "/{key}";
-    </script>
-    """
+# 🔥 SCRIPT ROUTES (IMPORTANT FIX)
+@app.route("/script1")
+def script1():
+    return "<h2>🌐 Script 1 Running</h2>"
+
+
+@app.route("/script2")
+def script2():
+    return "<h2>⚡ Script 2 Running</h2>"
+
+
+@app.route("/script3")
+def script3():
+    return "<h2>🚀 Script 3 Running</h2>"
+
+
+@app.route("/script4")
+def script4():
+    return "<h2>🧠 Script 4 Running</h2>"
 
 
 if __name__ == "__main__":
