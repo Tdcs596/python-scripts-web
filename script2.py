@@ -1,90 +1,68 @@
-import nmap
-import socket
-import sys
-import json
-import time
+from flask import Flask, request, send_file
+import os
+import uuid
+import subprocess
 
-nm = nmap.PortScanner()
+app = Flask(__name__)
 
-# 🌐 resolve domain/IP
-def resolve_host(host):
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "dist"
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+
+@app.route("/")
+def home():
+    return """
+    <h2>🔥 PY → EXE Converter</h2>
+    <form method="POST" action="/convert" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".py" required>
+        <button>Convert & Download EXE</button>
+    </form>
+    """
+
+
+@app.route("/convert", methods=["POST"])
+def convert():
+    file = request.files["file"]
+
+    if not file:
+        return "No file uploaded"
+
+    file_id = str(uuid.uuid4())
+    py_path = os.path.join(UPLOAD_FOLDER, file_id + ".py")
+
+    file.save(py_path)
+
     try:
-        return socket.gethostbyname(host)
-    except:
-        return None
+        # build exe
+        subprocess.run([
+            "pyinstaller",
+            "--onefile",
+            "--distpath", OUTPUT_FOLDER,
+            py_path
+        ], check=True)
 
+        exe_name = os.path.splitext(os.path.basename(py_path))[0] + ".exe"
 
-# 🔥 MAIN ENGINE
-def full_scan(target):
-    output = {
-        "target": target,
-        "ip": "",
-        "state": "",
-        "ports": [],
-        "os": "",
-        "services": [],
-        "summary": {}
-    }
+        # find generated exe
+        exe_path = None
+        for root, dirs, files in os.walk(OUTPUT_FOLDER):
+            for f in files:
+                if f.endswith(".exe"):
+                    exe_path = os.path.join(root, f)
+                    break
 
-    ip = resolve_host(target)
-    if not ip:
-        return {"error": "Host not reachable"}
+        if not exe_path:
+            return "EXE not found"
 
-    output["ip"] = ip
-
-    try:
-        # 🚀 FULL SAFE ADVANCED SCAN
-        nm.scan(ip, arguments="""
-            -sS        # SYN scan
-            -sV        # service/version detection
-            -O         # OS detection
-            -F         # fast scan
-            -T4        # speed
-        """)
-
-        for host in nm.all_hosts():
-            output["state"] = nm[host].state()
-
-            # OS detection
-            try:
-                output["os"] = nm[host]["osmatch"][0]["name"]
-            except:
-                output["os"] = "Unknown"
-
-            for proto in nm[host].all_protocols():
-                ports = nm[host][proto].keys()
-
-                for port in sorted(ports):
-                    port_data = nm[host][proto][port]
-
-                    output["ports"].append({
-                        "port": port,
-                        "state": port_data["state"],
-                        "service": port_data["name"],
-                        "product": port_data.get("product", ""),
-                        "version": port_data.get("version", "")
-                    })
-
-                    output["services"].append(port_data["name"])
-
-        # 📊 summary
-        output["summary"] = {
-            "total_ports": len(output["ports"]),
-            "open_ports": len([p for p in output["ports"] if p["state"] == "open"]),
-            "services_found": list(set(output["services"]))
-        }
-
-        return output
+        # 👉 DIRECT DOWNLOAD
+        return send_file(exe_path, as_attachment=True)
 
     except Exception as e:
-        return {"error": str(e)}
+        return f"Error: {str(e)}"
 
 
-# 🖥 CLI MODE (for testing)
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python script2.py <target>")
-        sys.exit()
-
-    result = full_scan(sys.argv[1])
-    print(json.dumps(result, indent=4))
+    app.run(host="0.0.0.0", port=10000)
