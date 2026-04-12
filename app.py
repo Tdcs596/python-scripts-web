@@ -1,30 +1,31 @@
-from flask import Flask, request
+from flask import Flask
 
 app = Flask(__name__)
 
 SCRIPTS = {
     "script1": "🌐 Script 1",
     "script2": "⚡ Script 2",
-    "script3": "🚀 Script 3"
+    "script3": "🚀 Script 3",
+    "script4": "🧠 Script 4"
 }
 
+# 🏠 HOME PAGE (ONLY BUTTONS)
 @app.route("/")
 def home():
-    html = "<h2>🔥 Control Dashboard</h2><br>"
+    html = "<h2>🔥 Script Dashboard</h2><br>"
 
     for key, name in SCRIPTS.items():
-        html += f'<h3><a href="/open/{key}">{name}</a></h3>'
+        html += f'<p><a href="/run/{key}">{name}</a></p>'
 
     return html
 
 
-@app.route("/open/<key>")
-def open_script(key):
-    host = request.host_url.strip("/")   # 👈 IMPORTANT FIX
-
+# ▶️ JUST REDIRECT STYLE ACCESS
+@app.route("/run/<key>")
+def run_script(key):
     return f"""
     <script>
-        window.location.href = "{host}/{key}";
+        window.location.href = "/{key}";
     </script>
     """
 
