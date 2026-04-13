@@ -1,27 +1,51 @@
-import os
-import subprocess
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "dist"
+def scrape(url):
+    if not url.startswith("http"):
+        url = "http://" + url
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-def convert(filepath):
     try:
-        subprocess.run([
-            "pyinstaller",
-            "--onefile",
-            "--distpath", OUTPUT_FOLDER,
-            filepath
-        ], check=True)
+        res = requests.get(url, timeout=5)
+        soup = BeautifulSoup(res.text, "html.parser")
 
-        # find exe
-        for file in os.listdir(OUTPUT_FOLDER):
-            if file.endswith(".exe"):
-                return os.path.join(OUTPUT_FOLDER, file)
+        title = soup.title.string if soup.title else "No Title"
 
-        return "❌ EXE not generated"
+        # 🔗 Links
+        links = []
+        for a in soup.find_all("a", href=True):
+            full_link = urljoin(url, a['href'])
+            links.append(full_link)
+
+        # 🖼 Images
+        images = []
+        for img in soup.find_all("img", src=True):
+            images.append(urljoin(url, img['src']))
+
+        # 📝 Meta description
+        desc = ""
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta:
+            desc = meta.get("content", "")
+
+        return f"""
+        ✅ SCRAPE RESULT
+
+        🌐 URL: {url}
+
+        🏷 Title:
+        {title}
+
+        📄 Description:
+        {desc}
+
+        🔗 Total Links: {len(links)}
+        {links[:20]}
+
+        🖼 Total Images: {len(images)}
+        {images[:10]}
+        """
 
     except Exception as e:
         return f"❌ Error: {str(e)}"
