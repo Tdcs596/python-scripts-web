@@ -1,15 +1,16 @@
-from flask import Flask
-import subprocess
+from flask import Flask, request
+import script1 as s1   # script1.py import
 
 app = Flask(__name__)
 
 SCRIPTS = {
-    "script1": "🌐 Script 1",
+    "script1": "🌐 Website Analyzer",
     "script2": "⚡ Script 2",
     "script3": "🚀 Script 3",
     "script4": "🧠 Script 4"
 }
 
+# 🏠 HOME PAGE
 @app.route("/")
 def home():
     html = "<h2>🔥 Script Dashboard</h2><br>"
@@ -20,46 +21,53 @@ def home():
     return html
 
 
-# 🔥 SCRIPT RUNNER
-@app.route("/script1")
+# 🌐 SCRIPT 1 (WORKING)
+@app.route("/script1", methods=["GET", "POST"])
 def script1():
-    result = subprocess.run(
-        ["python3", "script1.py"],
-        capture_output=True,
-        text=True
-    )
-    return f"<pre>{result.stdout + result.stderr}</pre>"
+    if request.method == "POST":
+        url = request.form.get("url")
+        result = s1.run(url)
+
+        return f"""
+        <h3>Result:</h3>
+        <pre>{result}</pre>
+        <br><a href="/script1">🔁 Back</a>
+        <br><a href="/">🏠 Home</a>
+        """
+
+    return """
+    <h2>🌐 Website Analyzer</h2>
+
+    <form method="POST">
+        <input name="url" placeholder="https://example.com" required>
+        <br><br>
+        <button>Analyze</button>
+    </form>
+
+    <br><a href="/">🏠 Home</a>
+    """
 
 
+# ⚡ SCRIPT 2 (placeholder)
 @app.route("/script2")
 def script2():
-    result = subprocess.run(
-        ["python3", "script2.py"],
-        capture_output=True,
-        text=True
-    )
-    return f"<pre>{result.stdout + result.stderr}</pre>"
+    return "<h2>⚡ Script 2 Coming Soon</h2><br><a href='/'>🏠 Home</a>"
 
 
+# 🚀 SCRIPT 3 (placeholder)
 @app.route("/script3")
 def script3():
-    result = subprocess.run(
-        ["python3", "script3.py"],
-        capture_output=True,
-        text=True
-    )
-    return f"<pre>{result.stdout + result.stderr}</pre>"
+    return "<h2>🚀 Script 3 Coming Soon</h2><br><a href='/'>🏠 Home</a>"
 
 
+# 🧠 SCRIPT 4 (placeholder)
 @app.route("/script4")
 def script4():
-    result = subprocess.run(
-        ["python3", "script4.py"],
-        capture_output=True,
-        text=True
-    )
-    return f"<pre>{result.stdout + result.stderr}</pre>"
+    return "<h2>🧠 Script 4 Coming Soon</h2><br><a href='/'>🏠 Home</a>"
 
 
+# 🔥 RUN
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
