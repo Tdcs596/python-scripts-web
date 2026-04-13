@@ -1,4 +1,5 @@
 from flask import Flask
+import subprocess
 
 app = Flask(__name__)
 
@@ -9,7 +10,6 @@ SCRIPTS = {
     "script4": "🧠 Script 4"
 }
 
-# 🏠 HOME PAGE
 @app.route("/")
 def home():
     html = "<h2>🔥 Script Dashboard</h2><br>"
@@ -20,25 +20,45 @@ def home():
     return html
 
 
-# 🔥 SCRIPT ROUTES (IMPORTANT FIX)
+# 🔥 SCRIPT RUNNER
 @app.route("/script1")
 def script1():
-    return "<h2>🌐 Script 1 Running</h2>"
+    result = subprocess.run(
+        ["python3", "script1.py"],
+        capture_output=True,
+        text=True
+    )
+    return f"<pre>{result.stdout + result.stderr}</pre>"
 
 
 @app.route("/script2")
 def script2():
-    return "<h2>⚡ Script 2 Running</h2>"
+    result = subprocess.run(
+        ["python3", "script2.py"],
+        capture_output=True,
+        text=True
+    )
+    return f"<pre>{result.stdout + result.stderr}</pre>"
 
 
 @app.route("/script3")
 def script3():
-    return "<h2>🚀 Script 3 Running</h2>"
+    result = subprocess.run(
+        ["python3", "script3.py"],
+        capture_output=True,
+        text=True
+    )
+    return f"<pre>{result.stdout + result.stderr}</pre>"
 
 
 @app.route("/script4")
 def script4():
-    return "<h2>🧠 Script 4 Running</h2>"
+    result = subprocess.run(
+        ["python3", "script4.py"],
+        capture_output=True,
+        text=True
+    )
+    return f"<pre>{result.stdout + result.stderr}</pre>"
 
 
 if __name__ == "__main__":
