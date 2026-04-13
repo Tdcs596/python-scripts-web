@@ -1,39 +1,27 @@
-import requests
-import time
+import os
+import subprocess
 
-def run(user_input):
-    url = user_input
+UPLOAD_FOLDER = "uploads"
+OUTPUT_FOLDER = "dist"
 
-    if not url.startswith("http"):
-        url = "https://" + url
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+def convert(filepath):
     try:
-        start = time.time()
-        res = requests.get(url, timeout=10)
-        end = time.time()
+        subprocess.run([
+            "pyinstaller",
+            "--onefile",
+            "--distpath", OUTPUT_FOLDER,
+            filepath
+        ], check=True)
 
-        headers = dict(res.headers)
+        # find exe
+        for file in os.listdir(OUTPUT_FOLDER):
+            if file.endswith(".exe"):
+                return os.path.join(OUTPUT_FOLDER, file)
 
-        output = f"""
-🔍 WEBSITE SCAN RESULT
-
-URL: {url}
-STATUS: {res.status_code}
-RESPONSE TIME: {round(end-start, 2)} sec
-
-SERVER: {headers.get('Server')}
-CONTENT-TYPE: {headers.get('Content-Type')}
-
-FULL HEADERS:
-{headers}
-"""
-        return output
+        return "❌ EXE not generated"
 
     except Exception as e:
-        return f"ERROR: {str(e)}"
-
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        print(run(sys.argv[1]))
+        return f"❌ Error: {str(e)}"
