@@ -1,69 +1,92 @@
-from flask import Flask, request, send_file
+from flask import Blueprint, request, send_file
 import os
-import uuid
 import subprocess
+import shutil
+import time
+import io
 
-app = Flask(__name__)
+# Blueprint for app.py
+script3_bp = Blueprint('script3', __name__)
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "dist"
+# Temporary folder for conversion
+TEMP_DIR = "/tmp/exe_build"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+def convert_to_exe(script_name, script_content):
+    if not os.path.exists(TEMP_DIR):
+        os.makedirs(TEMP_DIR)
+    
+    script_path = os.path.join(TEMP_DIR, script_name)
+    
+    # 1. Script file write karna
+    with open(script_path, "w") as f:
+        f.write(script_content)
+    
+    try:
+        # 2. PyInstaller Run karna (Onefile mode)
+        # Note: Render Linux hai, toh ye Linux executable banayega. 
+        # Agar Windows pe chalana hai toh ise Windows machine pe run karna padta hai.
+        subprocess.run([
+            "pyinstaller", 
+            "--onefile", 
+            "--clean",
+            "--workpath", os.path.join(TEMP_DIR, "build"),
+            "--distpath", os.path.join(TEMP_DIR, "dist"),
+            script_path
+        ], check=True)
+        
+        exe_path = os.path.join(TEMP_DIR, "dist", script_name.replace(".py", ""))
+        
+        if os.path.exists(exe_path):
+            return exe_path
+        return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
 
+@script3_bp.route("/", methods=["GET", "POST"])
+def index():
+    msg = ""
+    download_link = False
+    
+    if request.method == "POST":
+        file = request.files.get("file")
+        if file and file.filename.endswith(".py"):
+            content = file.read().decode("utf-8")
+            exe_file = convert_to_exe(file.filename, content)
+            
+            if exe_file:
+                download_link = True
+                msg = "✅ Conversion Successful! Download your file below."
+            else:
+                msg = "❌ Conversion Failed (PyInstaller Error)."
+        else:
+            msg = "❌ Please upload a valid .py file."
 
-# 🏠 HOME PAGE (FILE UPLOAD UI)
-@app.route("/")
-def home():
-    return """
-    <h2>🔥 PY → EXE Converter</h2>
-
-    <form action="/convert" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".py" required>
+    return f"""
+    <div style="font-family: sans-serif; padding: 20px;">
+        <h2>🛠️ Python to Executable Converter</h2>
+        <p style="color: red;"><b>Note:</b> Render Linux hai, isliye ye Linux Executable banayega.</p>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".py" style="padding:10px;" required>
+            <button type="submit" style="padding:10px; background: #e67e22; color:white; border:none; cursor:pointer;">Convert to EXE</button>
+        </form>
+        
+        <br>
+        <p>{msg}</p>
+        
+        {f'<a href="/script3/download" style="padding:10px; background:green; color:white; text-decoration:none;">📥 Download File</a>' if download_link else ""}
+        
         <br><br>
-        <button type="submit">Convert to EXE</button>
-    </form>
+        <a href="/">⬅️ Back to Dashboard</a>
+    </div>
     """
 
-
-# ⚙️ CONVERT ENGINE
-@app.route("/convert", methods=["POST"])
-def convert():
-    file = request.files.get("file")
-
-    if not file:
-        return "No file uploaded"
-
-    file_id = str(uuid.uuid4())
-    py_path = os.path.join(UPLOAD_FOLDER, file_id + ".py")
-
-    file.save(py_path)
-
-    try:
-        subprocess.run([
-            "pyinstaller",
-            "--onefile",
-            "--noconsole",
-            "--distpath", OUTPUT_FOLDER,
-            py_path
-        ], check=True)
-
-        exe_file = None
-
-        for root, dirs, files in os.walk(OUTPUT_FOLDER):
-            for f in files:
-                if f.endswith(".exe"):
-                    exe_file = os.path.join(root, f)
-                    break
-
-        if not exe_file:
-            return "EXE not generated"
-
-        return send_file(exe_file, as_attachment=True)
-
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+@script3_bp.route("/download")
+def download():
+    # Dist folder se file uthana
+    files = os.listdir(os.path.join(TEMP_DIR, "dist"))
+    if files:
+        target = os.path.join(TEMP_DIR, "dist", files[0])
+        return send_file(target, as_attachment=True)
+    return "File not found."
