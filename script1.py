@@ -1,24 +1,31 @@
-import requests
+from flask import Blueprint, request
 
-def run(url):
-    if not url.startswith("http"):
-        url = "http://" + url
+# Blueprint define kiya
+script1_bp = Blueprint('script1', __name__)
 
+def run_logic(url):
+    # Tera purana logic yahan rahega
+    import requests
     try:
-        response = requests.get(url, timeout=5)
-
-        headers = response.headers
-        status = response.status_code
-        length = len(response.text)
-
-        return f"""
-URL: {url}
-Status Code: {status}
-Content Length: {length} bytes
-
-Headers:
-{headers}
-"""
-
+        res = requests.get(url, timeout=5)
+        return f"Status: {res.status_code} | Size: {len(res.text)} bytes"
     except Exception as e:
-        return f"Error: {str(e)}"
+        return str(e)
+
+@script1_bp.route("/", methods=["GET", "POST"])
+def index():
+    result = ""
+    if request.method == "POST":
+        url = request.form.get("url")
+        result = run_logic(url)
+    
+    # Iska apna alag HTML interface
+    return f"""
+    <h2>🌐 Website Analyzer (Script 1)</h2>
+    <form method="POST">
+        <input name="url" placeholder="https://example.com" required>
+        <button type="submit">Analyze</button>
+    </form>
+    <br><pre>{result}</pre>
+    <br><a href="/">Back to Main Dashboard</a>
+    """
