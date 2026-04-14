@@ -6,94 +6,129 @@ import ssl
 import time
 from datetime import datetime
 import urllib3
-import dns.resolver # Iske liye 'dnspython' chahiye requirements.txt mein
+import dns.resolver
+import re
 
-# Blueprint for app.py
 script1_bp = Blueprint('script1', __name__)
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def get_ssl_details(domain):
+    try:
+        context = ssl.create_default_context()
+        with socket.create_connection((domain, 443), timeout=5) as sock:
+            with context.wrap_socket(sock, server_hostname=domain) as ssock:
+                cert = ssock.getpeercert()
+                expiry_str = cert.get('notAfter')
+                issuer = dict(x[0] for x in cert.get('issuer'))
+                expiry_date = datetime.strptime(expiry_str, '%b %d %H:%M:%S %Y %Z')
+                days_left = (expiry_date - datetime.utcnow()).days
+                return {
+                    "expiry": expiry_date.strftime('%Y-%m-%d'),
+                    "days": days_left,
+                    "issuer": issuer.get('commonName', 'Unknown'),
+                    "version": ssock.version()
+                }
+    except:
+        return None
 
 def advanced_recon(url):
     if not url.startswith("http"):
         url = "https://" + url
     
     domain = url.replace("https://", "").replace("http://", "").split('/')[0]
-    report = ""
     
     try:
-        # 1. Network Intel
+        # 1. SSL DEEP SCAN
+        ssl_info = get_ssl_details(domain)
+        
+        # 2. NETWORK & WHOIS-LITE
         ip_addr = socket.gethostbyname(domain)
         
-        # 2. DNS Records (MX & TXT) - Leak checking
-        dns_info = ""
-        try:
-            mx_records = dns.resolver.resolve(domain, 'MX')
-            dns_info += f"● Mail Servers (MX): {[str(data.exchange) for data in mx_records]}\n"
-            txt_records = dns.resolver.resolve(domain, 'TXT')
-            dns_info += f"● TXT/SPF Records : {[str(data) for data in txt_records[:2]]}\n"
-        except:
-            dns_info += "● DNS Records     : Protected/Not Found\n"
+        # 3. DNS HARVESTING (MX, TXT, NS, A)
+        dns_report = ""
+        for r_type in ['A', 'MX', 'TXT', 'NS', 'CNAME']:
+            try:
+                answers = dns.resolver.resolve(domain, r_type)
+                dns_report += f"● {r_type.ljust(6)}: {[str(data) for data in answers]}\n"
+            except: pass
 
-        # 3. HTTP Headers & Server Leaks
+        # 4. HTTP REQUEST & LEAK DETECTION
         start_time = time.time()
-        res = requests.get(url, timeout=10, verify=False, headers={"User-Agent": "Mozilla/5.0"})
+        res = requests.get(url, timeout=12, verify=False, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ReconBot/5.0"})
         load_time = round(time.time() - start_time, 3)
         
-        server = res.headers.get('Server', 'Protected')
-        powered_by = res.headers.get('X-Powered-By', 'Hidden')
+        # Header Leaks
+        server = res.headers.get('Server', 'Protected/Hidden')
+        powered = res.headers.get('X-Powered-By', 'Not Disclosed')
+        via = res.headers.get('Via', 'None')
 
-        # 4. Security Audit (Advanced)
-        sec_checks = {
-            "Strict-Transport-Security": "HSTS",
-            "Content-Security-Policy": "CSP/XSS",
+        # 5. SECURITY VULNERABILITY AUDIT (The BIG List)
+        sec_headers = {
+            "Strict-Transport-Security": "HSTS (SSL Force)",
+            "Content-Security-Policy": "CSP (XSS Filter)",
             "X-Frame-Options": "Clickjacking",
-            "X-Content-Type-Options": "MIME-Sniff",
-            "Permissions-Policy": "Feature-Control"
+            "X-Content-Type-Options": "MIME Sniffing",
+            "Referrer-Policy": "Data Leakage",
+            "Permissions-Policy": "Hardware Access"
         }
-        sec_report = ""
-        for h, name in sec_checks.items():
-            status = "✅ SAFE" if h in res.headers else "❌ VULNERABLE"
-            sec_report += f"● {name.ljust(15)}: {status}\n"
+        audit_res = ""
+        for h, label in sec_headers.items():
+            audit_res += f"● {label.ljust(20)}: {'✅ SECURE' if h in res.headers else '❌ VULNERABLE'}\n"
 
-        # 5. Robots.txt & Hidden Paths
-        robots_url = f"https://{domain}/robots.txt"
-        robots_res = requests.get(robots_url, timeout=5)
-        robots_status = "✅ Exposed" if robots_res.status_code == 200 else "❌ Hidden"
-
-        # 6. SEO & Meta Intel
+        # 6. CONTENT & OSINT DATA
         soup = BeautifulSoup(res.text, 'html.parser')
-        title = soup.title.string[:50] if soup.title else "N/A"
-        links_count = len(soup.find_all('a'))
-        scripts_count = len(soup.find_all('script'))
+        
+        # Email Discovery (Educational RegEx)
+        emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', res.text)
+        email_leak = ", ".join(list(set(emails))[:3]) if emails else "No Public Emails Found"
 
-        # FINAL FORMATTED REPORT
-        report = f"""
-[+] TARGET      : {url}
-[+] IP ADDRESS  : {ip_addr}
-[+] STATUS      : {res.status_code} OK
-[+] LOAD SPEED  : {load_time}s
+        # Social & External Recon
+        socials = []
+        for a in soup.find_all('a', href=True):
+            for p in ['fb.com', 'facebook', 'twitter', 'linkedin', 'instagram', 'github', 'youtube']:
+                if p in a['href']: socials.append(p.split('.')[0])
+        
+        # 7. SENSITIVE FILES CHECK
+        files_check = ""
+        for f in ['/robots.txt', '/sitemap.xml', '/.well-known/security.txt', '/.git/config']:
+            f_res = requests.get(f"http://{domain}{f}", timeout=3)
+            status = "🔓 EXPOSED" if f_res.status_code == 200 else "🔒 SECURE"
+            files_check += f"● {f.ljust(20)}: {status}\n"
+
+        # --- THE MASTER REPORT ---
+        return f"""
+[+] TARGET DOMAIN : {domain}
+[+] IP ADDRESS    : {ip_addr}
+[+] RESPONSE TIME : {load_time}s | STATUS: {res.status_code}
 --------------------------------------------------
-[🔍] INFRASTRUCTURE & SERVER INTEL
-● Web Server    : {server}
-● Backend Tech  : {powered_by}
-● Robots.txt    : {robots_status}
-{dns_info}
+[🔒] SSL/TLS ENCRYPTION LAYER
+● Status      : {'✅ VALID' if ssl_info else '❌ INVALID/EXPIRED'}
+● Certificate : {ssl_info['issuer'] if ssl_info else 'N/A'}
+● Expiry Date : {ssl_info['expiry'] if ssl_info else 'N/A'}
+● Days Left   : {ssl_info['days'] if ssl_info else '0'} Days
+● Protocol    : {ssl_info['version'] if ssl_info else 'N/A'}
 --------------------------------------------------
-[🛡️] SECURITY VULNERABILITY AUDIT
-{sec_report}
+[🛡️] SECURITY COMPLIANCE AUDIT
+{audit_res}
 --------------------------------------------------
-[📊] CONTENT & RECON DATA
-● Page Title    : {title}...
-● Internal JS   : {scripts_count} Scripts detected
-● Total Links   : {links_count} Links found
-● SSL Expiry    : {res.url.split(':')[0].upper()} encrypted
+[📡] DNS INFRASTRUCTURE DATA
+{dns_report if dns_report else "● Records: Private or Cloudflare Protected"}
 --------------------------------------------------
-[!] SCAN COMPLETED : {datetime.now().strftime('%H:%M:%S')}
+[📂] SENSITIVE DIRECTORY SCAN
+{files_check}
+--------------------------------------------------
+[🔍] OSINT & FINGERPRINTING
+● Web Server  : {server}
+● Tech Stack  : {powered}
+● Proxy/Via   : {via}
+● Emails Found: {email_leak}
+● Socials     : {", ".join(set(socials)) if socials else "None Detected"}
+● Total Assets: {len(soup.find_all('a'))} Links, {len(soup.find_all('img'))} Images
+--------------------------------------------------
+[!] SCAN FINISHED : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
-        return report
-
     except Exception as e:
-        return f"[-] ERROR: {str(e)}"
+        return f"[-] SYSTEM FAILURE: {str(e)}"
 
 @script1_bp.route("/", methods=["GET", "POST"])
 def index():
@@ -103,17 +138,19 @@ def index():
         result = advanced_recon(url)
     
     return f"""
-    <div style="background:#0a0a0a; color:#00ff00; font-family:'Courier New'; padding:20px; min-height:100vh;">
-        <h2 style="color:#fff; border-bottom:2px solid #00ff00; display:inline-block;">⚡ CYBER MASTER PRO RECON v4.0</h2>
-        <form method="POST" style="margin:20px 0;">
-            <input name="url" placeholder="Enter target (tdcs.in)" style="background:#1a1a1a; color:#0f0; border:1px solid #0f0; padding:10px; width:300px;">
-            <button type="submit" style="background:#00ff00; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;">INFILTRATE</button>
+    <div style="background:#000; color:#00ff00; font-family:'Consolas', 'Courier New', monospace; padding:25px; min-height:100vh; border: 4px double #00ff00;">
+        <h1 style="text-align:center; color:#fff; text-shadow: 0 0 15px #0f0;">💀 TDCS SHIKHOTECH - GHOST RECON 💀</h1>
+        <hr style="border:1px solid #333;">
+        <form method="POST" style="text-align:center; margin:20px;">
+            <input name="url" placeholder="target.com" style="background:#111; color:#0f0; border:2px solid #0f0; padding:12px; width:400px; font-size:16px;">
+            <button type="submit" style="background:#0f0; color:#000; border:none; padding:12px 25px; font-weight:bold; cursor:pointer; font-size:16px; box-shadow: 0 0 10px #0f0;">EXECUTE SCAN</button>
         </form>
-        <div style="background:#000; border:1px solid #333; padding:20px; border-radius:5px; box-shadow: 0 0 15px rgba(0,255,0,0.2); white-space:pre-wrap; line-height:1.5;">
-            {result if result else "[*] Awaiting target for deep reconnaissance..."}
+        <div style="background:rgba(0,20,0,0.9); border:1px solid #0f0; padding:20px; white-space:pre-wrap; font-size:14px; box-shadow: inset 0 0 20px #000;">
+            {result if result else "[*] System Initialized... Awaiting Target for Deep Analysis."}
         </div>
         <br>
-        <a href="/" style="color:#888; text-decoration:none;">[ ESCAPE TO DASHBOARD ]</a>
+        <div style="text-align:center;">
+            <a href="/" style="color:#666; text-decoration:none; border: 1px solid #444; padding: 5px 10px;">[ TERMINATE SESSION ]</a>
+        </div>
     </div>
     """
-
