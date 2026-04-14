@@ -2,6 +2,7 @@ from flask import Flask
 from script1 import script1_bp # Import kiya
 from script2 import script2_bp
 from script3 import script3_bp
+from script4 import script4_bp
 
 app = Flask(__name__)
 
@@ -12,13 +13,15 @@ def home():
     <h1>🔥 Master Dashboard</h1>
     <a href="/script1"><button>Open Analyzer</button></a><br><br>
     <a href="/script2"><button>Open Scraper</button></a><br><br>
-    <a href="/script3"><button>Open EXE Converter</button></a>
+    <a href="/script3"><button>Open EXE Converter</button></a><br><br>
+    <a href="/script4"><button>DDoS Lab</button></a>
     """
 
 # Yahan Script ko "Register" kiya
 app.register_blueprint(script1_bp, url_prefix='/script1')
 app.register_blueprint(script2_bp, url_prefix='/script2')
 app.register_blueprint(script3_bp, url_prefix='/script3')
+app.register_blueprint(script4_bp, url_prefix='/script4')
 
 
 if __name__ == "__main__":
