@@ -1,3 +1,4 @@
+from flask import Blueprint, request # Flask imports add kiye
 import requests
 from bs4 import BeautifulSoup
 import socket
@@ -5,6 +6,9 @@ import ssl
 import time
 from datetime import datetime
 import urllib3
+
+# --- BLUEPRINT DEFINITION (app.py isi ko dhoond raha hai) ---
+script1_bp = Blueprint('script1', __name__)
 
 # SSL warnings bypass (Insecure sites ke liye)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -110,3 +114,27 @@ def run(url):
 
     except Exception as e:
         return f"❌ Error analyzing site: {str(e)}"
+
+# --- YE INTERFACE HANDLE KAREGA (Isse app.py connect hoga) ---
+@script1_bp.route("/", methods=["GET", "POST"])
+def index():
+    result = ""
+    if request.method == "POST":
+        url = request.form.get("url")
+        result = run(url) # Tumhara original 'run' function call ho raha hai
+    
+    return f"""
+    <div style="font-family: monospace; padding: 20px;">
+        <h2>🌐 Ultimate Website Intelligence</h2>
+        <form method="POST">
+            <input name="url" placeholder="example.com" style="padding:10px; width:300px;" required>
+            <button type="submit" style="padding:10px; cursor:pointer;">Scan Website</button>
+        </form>
+        <br>
+        <div style="background: #000; color: #0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
+            {result if result else "Waiting for Target URL..."}
+        </div>
+        <br>
+        <a href="/">⬅️ Back to Dashboard</a>
+    </div>
+    """
