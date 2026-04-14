@@ -1,4 +1,4 @@
-from flask import Blueprint, request # Flask imports add kiye
+from flask import Blueprint, request
 import requests
 from bs4 import BeautifulSoup
 import socket
@@ -6,135 +6,114 @@ import ssl
 import time
 from datetime import datetime
 import urllib3
+import dns.resolver # Iske liye 'dnspython' chahiye requirements.txt mein
 
-# --- BLUEPRINT DEFINITION (app.py isi ko dhoond raha hai) ---
+# Blueprint for app.py
 script1_bp = Blueprint('script1', __name__)
 
-# SSL warnings bypass (Insecure sites ke liye)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def run(url):
-    # 1. URL Cleanup & Domain Extraction
+def advanced_recon(url):
     if not url.startswith("http"):
-        url = "http://" + url
+        url = "https://" + url
     
-    # Domain nikalna DNS aur SSL check ke liye
     domain = url.replace("https://", "").replace("http://", "").split('/')[0]
+    report = ""
     
-    # 2. Advanced Bot Bypass Headers
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://www.google.com/",
-        "Connection": "keep-alive"
-    }
-
-    report = f"╔══════════════════════════════════════════════════════════╗\n"
-    report += f"║       🚀 ULTIMATE WEBSITE INTELLIGENCE REPORT            ║\n"
-    report += f"╚══════════════════════════════════════════════════════════╝\n"
-    report += f"Target URL : {url}\n"
-    report += f"Scan Date  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-    report += f"------------------------------------------------------------\n\n"
-
     try:
-        # --- [NETWORK & IP RESOLVER] ---
+        # 1. Network Intel
+        ip_addr = socket.gethostbyname(domain)
+        
+        # 2. DNS Records (MX & TXT) - Leak checking
+        dns_info = ""
         try:
-            ip_addr = socket.gethostbyname(domain)
+            mx_records = dns.resolver.resolve(domain, 'MX')
+            dns_info += f"● Mail Servers (MX): {[str(data.exchange) for data in mx_records]}\n"
+            txt_records = dns.resolver.resolve(domain, 'TXT')
+            dns_info += f"● TXT/SPF Records : {[str(data) for data in txt_records[:2]]}\n"
         except:
-            ip_addr = "Could not resolve IP"
+            dns_info += "● DNS Records     : Protected/Not Found\n"
 
-        # --- [SPEED TEST & PERFORMANCE] ---
+        # 3. HTTP Headers & Server Leaks
         start_time = time.time()
-        response = requests.get(url, headers=headers, timeout=15, verify=False)
-        end_time = time.time()
-        load_speed = round(end_time - start_time, 3)
+        res = requests.get(url, timeout=10, verify=False, headers={"User-Agent": "Mozilla/5.0"})
+        load_time = round(time.time() - start_time, 3)
+        
+        server = res.headers.get('Server', 'Protected')
+        powered_by = res.headers.get('X-Powered-By', 'Hidden')
 
-        report += f"[📡 NETWORK & PERFORMANCE]\n"
-        report += f"● Server IP      : {ip_addr}\n"
-        report += f"● Status Code    : {response.status_code}\n"
-        report += f"● Response Time  : {load_speed} Seconds\n"
-        report += f"● Server Tech    : {response.headers.get('Server', 'Hidden')}\n\n"
-
-        # --- [SSL CERTIFICATE CHECKER] ---
-        report += f"[🔒 SSL/SECURITY INFO]\n"
-        if url.startswith("https"):
-            try:
-                context = ssl.create_default_context()
-                with socket.create_connection((domain, 443), timeout=5) as sock:
-                    with context.wrap_socket(sock, server_hostname=domain) as ssock:
-                        cert = ssock.getpeercert()
-                        expiry = cert.get('notAfter')
-                        report += f"● SSL Status     : ✅ Active\n"
-                        report += f"● Expiry Date    : {expiry}\n"
-            except:
-                report += f"● SSL Status     : ⚠️ SSL Check Failed\n"
-        else:
-            report += f"● SSL Status     : ❌ No HTTPS (Insecure)\n"
-
-        # --- [SECURITY AUDIT - HEADERS] ---
-        sec_headers = {
-            "X-Frame-Options": "Clickjacking",
-            "Content-Security-Policy": "XSS Protection",
+        # 4. Security Audit (Advanced)
+        sec_checks = {
             "Strict-Transport-Security": "HSTS",
-            "X-Content-Type-Options": "MIME Sniffing"
+            "Content-Security-Policy": "CSP/XSS",
+            "X-Frame-Options": "Clickjacking",
+            "X-Content-Type-Options": "MIME-Sniff",
+            "Permissions-Policy": "Feature-Control"
         }
-        for h, label in sec_headers.items():
-            status = "✅ Found" if h in response.headers else "❌ Missing"
-            report += f"● {label} ({h}): {status}\n"
-        report += "\n"
+        sec_report = ""
+        for h, name in sec_checks.items():
+            status = "✅ SAFE" if h in res.headers else "❌ VULNERABLE"
+            sec_report += f"● {name.ljust(15)}: {status}\n"
 
-        # --- [SEO & CONTENT OVERVIEW] ---
-        soup = BeautifulSoup(response.text, 'html.parser')
-        report += f"[🔍 SEO & CONTENT ANALYSIS]\n"
-        report += f"● Page Title     : {soup.title.string if soup.title else 'N/A'}\n"
-        
-        meta = soup.find('meta', attrs={'name': 'description'})
-        report += f"● Meta Desc      : {meta['content'] if meta else 'N/A'}\n"
-        
-        report += f"● Total Links    : {len(soup.find_all('a'))}\n"
-        report += f"● Total Images   : {len(soup.find_all('img'))}\n\n"
+        # 5. Robots.txt & Hidden Paths
+        robots_url = f"https://{domain}/robots.txt"
+        robots_res = requests.get(robots_url, timeout=5)
+        robots_status = "✅ Exposed" if robots_res.status_code == 200 else "❌ Hidden"
 
-        # --- [TECH DETECTOR] ---
-        report += f"[🛠️ TECHNOLOGY DETECTION]\n"
-        tech_stack = []
-        html_content = response.text.lower()
-        
-        if "wp-content" in html_content: tech_stack.append("WordPress")
-        if "next/static" in html_content: tech_stack.append("Next.js")
-        if "cloudflare" in response.headers.get('Server', '').lower(): tech_stack.append("Cloudflare")
-        if "php" in response.headers.get('X-Powered-By', '').lower(): tech_stack.append("PHP")
-        if "react" in html_content: tech_stack.append("React.js")
-        
-        report += f"● Detected Tech  : {', '.join(tech_stack) if tech_stack else 'Generic/Other'}\n"
+        # 6. SEO & Meta Intel
+        soup = BeautifulSoup(res.text, 'html.parser')
+        title = soup.title.string[:50] if soup.title else "N/A"
+        links_count = len(soup.find_all('a'))
+        scripts_count = len(soup.find_all('script'))
 
-        report += f"\n------------------------------------------------------------\n"
-        report += f"✅ Analysis Completed Successfully."
+        # FINAL FORMATTED REPORT
+        report = f"""
+[+] TARGET      : {url}
+[+] IP ADDRESS  : {ip_addr}
+[+] STATUS      : {res.status_code} OK
+[+] LOAD SPEED  : {load_time}s
+--------------------------------------------------
+[🔍] INFRASTRUCTURE & SERVER INTEL
+● Web Server    : {server}
+● Backend Tech  : {powered_by}
+● Robots.txt    : {robots_status}
+{dns_info}
+--------------------------------------------------
+[🛡️] SECURITY VULNERABILITY AUDIT
+{sec_report}
+--------------------------------------------------
+[📊] CONTENT & RECON DATA
+● Page Title    : {title}...
+● Internal JS   : {scripts_count} Scripts detected
+● Total Links   : {links_count} Links found
+● SSL Expiry    : {res.url.split(':')[0].upper()} encrypted
+--------------------------------------------------
+[!] SCAN COMPLETED : {datetime.now().strftime('%H:%M:%S')}
+"""
         return report
 
     except Exception as e:
-        return f"❌ Error analyzing site: {str(e)}"
+        return f"[-] ERROR: {str(e)}"
 
-# --- YE INTERFACE HANDLE KAREGA (Isse app.py connect hoga) ---
 @script1_bp.route("/", methods=["GET", "POST"])
 def index():
     result = ""
     if request.method == "POST":
         url = request.form.get("url")
-        result = run(url) # Tumhara original 'run' function call ho raha hai
+        result = advanced_recon(url)
     
     return f"""
-    <div style="font-family: monospace; padding: 20px;">
-        <h2>🌐 Ultimate Website Intelligence</h2>
-        <form method="POST">
-            <input name="url" placeholder="example.com" style="padding:10px; width:300px;" required>
-            <button type="submit" style="padding:10px; cursor:pointer;">Scan Website</button>
+    <div style="background:#0a0a0a; color:#00ff00; font-family:'Courier New'; padding:20px; min-height:100vh;">
+        <h2 style="color:#fff; border-bottom:2px solid #00ff00; display:inline-block;">⚡ CYBER MASTER PRO RECON v4.0</h2>
+        <form method="POST" style="margin:20px 0;">
+            <input name="url" placeholder="Enter target (tdcs.in)" style="background:#1a1a1a; color:#0f0; border:1px solid #0f0; padding:10px; width:300px;">
+            <button type="submit" style="background:#00ff00; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;">INFILTRATE</button>
         </form>
-        <br>
-        <div style="background: #000; color: #0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
-            {result if result else "Waiting for Target URL..."}
+        <div style="background:#000; border:1px solid #333; padding:20px; border-radius:5px; box-shadow: 0 0 15px rgba(0,255,0,0.2); white-space:pre-wrap; line-height:1.5;">
+            {result if result else "[*] Awaiting target for deep reconnaissance..."}
         </div>
         <br>
-        <a href="/">⬅️ Back to Dashboard</a>
+        <a href="/" style="color:#888; text-decoration:none;">[ ESCAPE TO DASHBOARD ]</a>
     </div>
     """
+
