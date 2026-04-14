@@ -28,8 +28,7 @@ def get_ssl_details(domain):
                     "issuer": issuer.get('commonName', 'Unknown'),
                     "version": ssock.version()
                 }
-    except:
-        return None
+    except: return None
 
 def advanced_recon(url):
     if not url.startswith("http"):
@@ -37,98 +36,99 @@ def advanced_recon(url):
     
     domain = url.replace("https://", "").replace("http://", "").split('/')[0]
     
+    # Ye headers bot protection bypass karne ke liye hain (Links fix karne ke liye)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+    }
+
     try:
-        # 1. SSL DEEP SCAN
+        # 1. Network & SSL (Pehle wala features)
         ssl_info = get_ssl_details(domain)
-        
-        # 2. NETWORK & WHOIS-LITE
         ip_addr = socket.gethostbyname(domain)
         
-        # 3. DNS HARVESTING (MX, TXT, NS, A)
+        # 2. DNS Intel (Pehle wala)
         dns_report = ""
-        for r_type in ['A', 'MX', 'TXT', 'NS', 'CNAME']:
+        for r_type in ['A', 'MX', 'TXT', 'NS']:
             try:
                 answers = dns.resolver.resolve(domain, r_type)
-                dns_report += f"● {r_type.ljust(6)}: {[str(data) for data in answers]}\n"
+                dns_report += f"● {r_type.ljust(6)}: {[str(data) for data in answers[:2]]}\n"
             except: pass
 
-        # 4. HTTP REQUEST & LEAK DETECTION
+        # 3. Main Request
         start_time = time.time()
-        res = requests.get(url, timeout=12, verify=False, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ReconBot/5.0"})
+        res = requests.get(url, timeout=15, verify=False, headers=headers)
         load_time = round(time.time() - start_time, 3)
-        
-        # Header Leaks
-        server = res.headers.get('Server', 'Protected/Hidden')
-        powered = res.headers.get('X-Powered-By', 'Not Disclosed')
-        via = res.headers.get('Via', 'None')
+        soup = BeautifulSoup(res.text, 'html.parser')
 
-        # 5. SECURITY VULNERABILITY AUDIT (The BIG List)
+        # 4. Security Audit (Pehle wala)
         sec_headers = {
             "Strict-Transport-Security": "HSTS (SSL Force)",
             "Content-Security-Policy": "CSP (XSS Filter)",
             "X-Frame-Options": "Clickjacking",
-            "X-Content-Type-Options": "MIME Sniffing",
-            "Referrer-Policy": "Data Leakage",
-            "Permissions-Policy": "Hardware Access"
+            "X-Content-Type-Options": "MIME Sniffing"
         }
         audit_res = ""
         for h, label in sec_headers.items():
             audit_res += f"● {label.ljust(20)}: {'✅ SECURE' if h in res.headers else '❌ VULNERABLE'}\n"
 
-        # 6. CONTENT & OSINT DATA
-        soup = BeautifulSoup(res.text, 'html.parser')
+        # 5. Link & Image Extraction (The Fix)
+        raw_links = [a.get('href') for a in soup.find_all('a', href=True)]
+        images = [img.get('src') for img in soup.find_all('img', src=True)]
         
-        # Email Discovery (Educational RegEx)
-        emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', res.text)
-        email_leak = ", ".join(list(set(emails))[:3]) if emails else "No Public Emails Found"
-
-        # Social & External Recon
-        socials = []
-        for a in soup.find_all('a', href=True):
-            for p in ['fb.com', 'facebook', 'twitter', 'linkedin', 'instagram', 'github', 'youtube']:
-                if p in a['href']: socials.append(p.split('.')[0])
+        # Links filter karna
+        unique_links = list(set(raw_links))
         
-        # 7. SENSITIVE FILES CHECK
+        # 6. Sensitive Files (Pehle wala)
         files_check = ""
         for f in ['/robots.txt', '/sitemap.xml', '/.well-known/security.txt', '/.git/config']:
-            f_res = requests.get(f"http://{domain}{f}", timeout=3)
-            status = "🔓 EXPOSED" if f_res.status_code == 200 else "🔒 SECURE"
-            files_check += f"● {f.ljust(20)}: {status}\n"
+            try:
+                f_res = requests.get(f"http://{domain}{f}", timeout=3, headers=headers)
+                status = "🔓 EXPOSED" if f_res.status_code == 200 else "🔒 SECURE"
+                files_check += f"● {f.ljust(22)}: {status}\n"
+            except: pass
 
-        # --- THE MASTER REPORT ---
-        return f"""
+        # --- FINAL REPORT GENERATION ---
+        report = f"""
 [+] TARGET DOMAIN : {domain}
 [+] IP ADDRESS    : {ip_addr}
-[+] RESPONSE TIME : {load_time}s | STATUS: {res.status_code}
+[+] LOAD SPEED    : {load_time}s | STATUS: {res.status_code}
 --------------------------------------------------
-[🔒] SSL/TLS ENCRYPTION LAYER
-● Status      : {'✅ VALID' if ssl_info else '❌ INVALID/EXPIRED'}
+[🔒] SSL CERTIFICATE INTELLIGENCE
+● Status      : {'✅ VALID' if ssl_info else '❌ INVALID'}
 ● Certificate : {ssl_info['issuer'] if ssl_info else 'N/A'}
 ● Expiry Date : {ssl_info['expiry'] if ssl_info else 'N/A'}
 ● Days Left   : {ssl_info['days'] if ssl_info else '0'} Days
-● Protocol    : {ssl_info['version'] if ssl_info else 'N/A'}
 --------------------------------------------------
 [🛡️] SECURITY COMPLIANCE AUDIT
 {audit_res}
 --------------------------------------------------
 [📡] DNS INFRASTRUCTURE DATA
-{dns_report if dns_report else "● Records: Private or Cloudflare Protected"}
+{dns_report if dns_report else "● Records: Private/Hidden"}
 --------------------------------------------------
 [📂] SENSITIVE DIRECTORY SCAN
 {files_check}
 --------------------------------------------------
-[🔍] OSINT & FINGERPRINTING
-● Web Server  : {server}
-● Tech Stack  : {powered}
-● Proxy/Via   : {via}
-● Emails Found: {email_leak}
-● Socials     : {", ".join(set(socials)) if socials else "None Detected"}
-● Total Assets: {len(soup.find_all('a'))} Links, {len(soup.find_all('img'))} Images
+[🔍] CONTENT & OSINT DATA
+● Page Title    : {soup.title.string.strip() if soup.title else 'N/A'}
+● Total Images  : {len(images)}
+● Total Links   : {len(raw_links)}
+● Emails Found  : {", ".join(set(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', res.text))) or "None"}
 --------------------------------------------------
-[!] SCAN FINISHED : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+[🔗] ALL EXTRACTED LINKS ({len(unique_links)})
 """
+        # Saare links list karna
+        for i, link in enumerate(unique_links):
+            report += f"{i+1}. {link}\n"
+            if i > 49: # Limit to 50 links so report doesn't crash browser
+                report += "... (More links found, showing top 50)\n"
+                break
+                
+        report += f"\n[!] SCAN FINISHED : {datetime.now().strftime('%H:%M:%S')}"
+        return report
+
     except Exception as e:
-        return f"[-] SYSTEM FAILURE: {str(e)}"
+        return f"[-] CRITICAL FAILURE: {str(e)}"
 
 @script1_bp.route("/", methods=["GET", "POST"])
 def index():
@@ -138,19 +138,16 @@ def index():
         result = advanced_recon(url)
     
     return f"""
-    <div style="background:#000; color:#00ff00; font-family:'Consolas', 'Courier New', monospace; padding:25px; min-height:100vh; border: 4px double #00ff00;">
-        <h1 style="text-align:center; color:#fff; text-shadow: 0 0 15px #0f0;">💀 TDCS SHIKHOTECH - GHOST RECON 💀</h1>
-        <hr style="border:1px solid #333;">
-        <form method="POST" style="text-align:center; margin:20px;">
-            <input name="url" placeholder="target.com" style="background:#111; color:#0f0; border:2px solid #0f0; padding:12px; width:400px; font-size:16px;">
-            <button type="submit" style="background:#0f0; color:#000; border:none; padding:12px 25px; font-weight:bold; cursor:pointer; font-size:16px; box-shadow: 0 0 10px #0f0;">EXECUTE SCAN</button>
+    <div style="background:#000; color:#0f0; font-family:'Courier New', monospace; padding:20px; min-height:100vh;">
+        <h2 style="color:#fff; text-shadow: 0 0 10px #0f0;">💀 TDCS ULTIMATE RECON V6.0 (GOD MODE) 💀</h2>
+        <form method="POST">
+            <input name="url" placeholder="target.com" style="background:#111; color:#0f0; border:1px solid #0f0; padding:10px; width:350px;">
+            <button type="submit" style="background:#0f0; color:#000; border:none; padding:10px 20px; font-weight:bold; cursor:pointer;">START INFILTRATION</button>
         </form>
-        <div style="background:rgba(0,20,0,0.9); border:1px solid #0f0; padding:20px; white-space:pre-wrap; font-size:14px; box-shadow: inset 0 0 20px #000;">
-            {result if result else "[*] System Initialized... Awaiting Target for Deep Analysis."}
+        <div style="background:#000; border:1px solid #333; padding:20px; white-space:pre-wrap; margin-top:20px; box-shadow: 0 0 20px rgba(0,255,0,0.1);">
+            {result if result else "[*] System Ready. Waiting for target authorization..."}
         </div>
-        <br>
-        <div style="text-align:center;">
-            <a href="/" style="color:#666; text-decoration:none; border: 1px solid #444; padding: 5px 10px;">[ TERMINATE SESSION ]</a>
-        </div>
+        <br><a href="/" style="color:#666; text-decoration:none;">[ EXIT TO DASHBOARD ]</a>
     </div>
     """
+
