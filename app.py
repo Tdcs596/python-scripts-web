@@ -1,6 +1,7 @@
 from flask import Flask
 from script1 import script1_bp # Import kiya
 from script2 import script2_bp
+from script3 import script3_bp
 
 app = Flask(__name__)
 
