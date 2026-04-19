@@ -13,7 +13,7 @@ INTERFACE = """
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; }
         .monitor-frame { border: 2px solid #0f0; display: inline-block; margin-top: 20px; position: relative; width: 95%; max-width: 600px; height: 350px; background: #050505; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         .controls { padding: 20px; background: #111; border-top: 2px solid #0f0; }
         input { background: #000; border: 1px solid #0f0; color: #0f0; padding: 10px; margin: 5px; width: 60%; text-align: center; outline: none; }
         button { padding: 10px 20px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; margin: 5px; transition: 0.3s; }
@@ -21,7 +21,7 @@ INTERFACE = """
         .status-bar { font-size: 11px; padding: 5px; background: #002200; color: #0f0; display: flex; justify-content: space-between; padding: 5px 15px; }
         .rec-dot { height: 8px; width: 8px; background: red; border-radius: 50%; display: inline-block; animation: blink 1s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        #logs { font-size: 10px; color: yellow; margin: 5px; }
+        #logs { font-size: 10px; color: yellow; margin: 5px; height: 15px; }
     </style>
 </head>
 <body>
@@ -33,7 +33,7 @@ INTERFACE = """
 
     <div class="monitor-frame">
         <video id="remote-feed" autoplay playsinline></video>
-        <div style="position:absolute; top:10px; left:10px; font-size:10px; text-align:left; pointer-events:none;">
+        <div style="position:absolute; top:10px; left:10px; font-size:10px; text-align:left; pointer-events:none; z-index:10;">
             CAM_SOURCE: REMOTE_ENCRYPTED<br>
             TIME: <span id="timer">00:00:00</span><br>
             STATUS: <span id="stream-status" style="color:red;">NO FEED</span>
@@ -64,15 +64,14 @@ INTERFACE = """
         }
     }
 
-    // --- CCTV MODE (Server) ---
     async function bootCCTV() {
         const cid = document.getElementById('custom-id').value;
         if(!cid) return alert("Pehle number set kar!");
 
         try {
-            // Camera permission request
+            // Force higher resolution for video clarity
             localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" }, // Back camera focus
+                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
                 audio: true 
             });
             
@@ -86,26 +85,22 @@ INTERFACE = """
 
             peer.on('call', call => {
                 logs.innerText = "Viewer connected!";
-                call.answer(localStream); // Answer with camera stream
+                call.answer(localStream);
             });
 
-            peer.on('error', err => {
-                alert("ID Taken or Connection Error. Try another ID.");
-                console.error(err);
-            });
+            peer.on('error', err => { alert("Error: " + err.type); });
 
         } catch (e) {
             logs.innerText = "Error: Mic/Cam permission denied.";
         }
     }
 
-    // --- MONITOR MODE (Viewer) ---
     function connectToCCTV() {
         const tid = document.getElementById('target-id').value;
         if(!tid) return alert("CCTV ID toh daalo!");
 
         if(!peer) {
-            peer = new Peer(); // Create random peer for viewer
+            peer = new Peer(); 
             peer.on('open', () => startViewer(tid));
         } else {
             startViewer(tid);
@@ -115,24 +110,36 @@ INTERFACE = """
     function startViewer(tid) {
         logs.innerText = "Connecting to CCTV: " + tid;
         
-        // viewer ko kuch nahi bhejna, par handshake ke liye empty stream zaroori hai
-        const emptyStream = new AudioContext().createMediaStreamDestination().stream;
+        // Use a dummy audio track to satisfy PeerJS handshake
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const dst = oscillator.connect(audioCtx.createMediaStreamDestination());
+        oscillator.start();
+        const dummyStream = dst.stream;
         
-        const call = peer.call(tid, emptyStream);
+        const call = peer.call(tid, dummyStream);
         
         call.on('stream', s => {
+            console.log("Stream Received");
             remoteVideo.srcObject = s;
-            statusVal.innerText = "LIVE FEED";
-            statusVal.style.color = "#0f0";
-            logs.innerText = "Streaming live from " + tid;
+            
+            // CRITICAL FIX: Force video play on metadata load
+            remoteVideo.onloadedmetadata = () => {
+                remoteVideo.play().catch(e => {
+                    console.log("Autoplay blocked, retrying...");
+                    // If blocked, a second attempt usually works after the user clicked the 'View' button
+                    remoteVideo.muted = true; // Mute temporarily to force play
+                    remoteVideo.play();
+                });
+                statusVal.innerText = "LIVE FEED";
+                statusVal.style.color = "#0f0";
+                logs.innerText = "Streaming live from " + tid;
+            };
         });
 
-        call.on('error', err => {
-            logs.innerText = "Failed to connect to ID: " + tid;
-        });
+        call.on('error', err => { logs.innerText = "Connection failed."; });
     }
 
-    // Timer Update
     setInterval(() => {
         const now = new Date();
         document.getElementById('timer').innerText = now.toLocaleTimeString();
