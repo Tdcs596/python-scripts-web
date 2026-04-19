@@ -4,6 +4,7 @@ from script2 import script2_bp
 from script3 import script3_bp
 from script4 import script4_bp
 from script5 import script5_bp
+from script6 import script6_bp
 
 app = Flask(__name__)
 
@@ -16,7 +17,8 @@ def home():
     <a href="/script2"><button>Open Scraper</button></a><br><br>
     <a href="/script3"><button>Open EXE Converter</button></a><br><br>
     <a href="/script4"><button>DDoS Lab</button></a><br><br>
-    <a href="/script5"><button>Ping</button></a>
+    <a href="/script5"><button>Ping</button></a><br><br>
+    <a href="/script6"><button>Video Call</button></a>
     """
 
 # Yahan Script ko "Register" kiya
@@ -25,7 +27,7 @@ app.register_blueprint(script2_bp, url_prefix='/script2')
 app.register_blueprint(script3_bp, url_prefix='/script3')
 app.register_blueprint(script4_bp, url_prefix='/script4')
 app.register_blueprint(script5_bp, url_prefix='/script5')
-
+app.register_blueprint(script6_bp, url_prefix='/script6')
 
 if __name__ == "__main__":
     import os
