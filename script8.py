@@ -2,7 +2,8 @@ import requests
 import json
 from flask import Blueprint, request, jsonify, render_template_string
 
-script10_bp = Blueprint('script10', __name__)
+# Yahan Blueprint ka naam script8 kar diya hai
+script8_bp = Blueprint('script8', __name__)
 
 INTERFACE = """
 <!DOCTYPE html>
@@ -10,7 +11,7 @@ INTERFACE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Master V10 - OSINT Dashboard</title>
+    <title>Ghost Master V8 - OSINT Dashboard</title>
     <style>
         :root { --glow: #00ff00; --bg: #050505; }
         body { background: var(--bg); color: var(--glow); font-family: 'Courier New', monospace; margin: 0; padding: 20px; overflow-x: hidden; }
@@ -28,7 +29,7 @@ INTERFACE = """
 </head>
 <body onload="initSystem()">
 
-    <h1 style="text-align: center; text-shadow: 0 0 10px #0f0;">GHOST_MASTER_OSINT_V10</h1>
+    <h1 style="text-align: center; text-shadow: 0 0 10px #0f0;">GHOST_MASTER_OSINT_V8</h1>
     <div style="text-align:center; margin-bottom: 20px;">
         <span class="status-on">[ SYSTEM ONLINE ]</span> | <span class="blink">[ ENCRYPTION ACTIVE ]</span>
     </div>
@@ -118,6 +119,6 @@ INTERFACE = """
 </html>
 """
 
-@script10_bp.route('/')
+@script8_bp.route('/')
 def home():
     return render_template_string(INTERFACE)
