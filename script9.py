@@ -62,27 +62,43 @@ INTERFACE = """
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             statVal.innerText = "MIC ACTIVE";
             statVal.style.color = "yellow";
-        } catch (e) { statVal.innerText = "MIC ERROR!"; }
+        } catch (e) { 
+            statVal.innerText = "MIC ERROR! Check Permissions."; 
+            console.error(e);
+        }
     }
 
     function setPrivateID() {
         const customId = document.getElementById('my-custom-id').value;
-        if(!customId) return alert("Number daal!");
+        if(!customId) return alert("Number daal bhai!");
         if(peer) peer.destroy();
+        
         peer = new Peer(customId); 
+        
         peer.on('open', id => {
             statVal.innerText = "ONLINE AS: " + id;
             statVal.style.color = "#0f0";
         });
+
         peer.on('call', call => {
             incomingCallObj = call;
             document.getElementById('incoming-call').style.display = "block";
             document.getElementById('call-icon').innerText = "🔔";
+            // Vibration alert for mobile
+            if(navigator.vibrate) navigator.vibrate([500, 200, 500]);
+        });
+
+        peer.on('error', err => {
+            console.error(err);
+            alert("Error: " + err.type);
         });
     }
 
     function makeAudioCall() {
         const rid = document.getElementById('remote-id').value;
+        if(!rid) return alert("Dost ka number toh daal!");
+        if(!peer) return alert("Pehle SET dabake online aao!");
+        
         const call = peer.call(rid, localStream);
         setupCallListeners(call);
     }
@@ -94,17 +110,26 @@ INTERFACE = """
     }
 
     function setupCallListeners(call) {
+        statVal.innerText = "CONNECTING...";
+        
         call.on('stream', s => {
             remoteStream = s;
             const audio = new Audio();
             audio.srcObject = s;
-            audio.play();
+            audio.play().catch(e => console.error("Audio Play Error:", e));
+            
             statVal.innerText = "CONNECTED";
-            recBtn.disabled = false; // Call connect hone par record button on
+            statVal.style.color = "#0f0";
+            recBtn.disabled = false; 
+            document.getElementById('call-icon').innerText = "🔊";
+        });
+
+        call.on('close', () => {
+            statVal.innerText = "CALL ENDED";
+            recBtn.disabled = true;
         });
     }
 
-    // --- RECORDING LOGIC ---
     function toggleRecording() {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             startRecording();
@@ -114,25 +139,32 @@ INTERFACE = """
     }
 
     function startRecording() {
+        if(!remoteStream) return alert("No remote stream found!");
         chunks = [];
-        // Hum remote stream (dost ki aawaz) record kar rahe hain
-        mediaRecorder = new MediaRecorder(remoteStream);
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Ghost_Call_${Date.now()}.webm`;
-            a.click();
-        };
-        mediaRecorder.start();
-        recBtn.innerText = "⏹️ STOP RECORDING";
-        recBtn.classList.add('rec-active');
+        try {
+            mediaRecorder = new MediaRecorder(remoteStream);
+            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Ghost_Record_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+            mediaRecorder.start();
+            recBtn.innerText = "⏹️ STOP RECORDING";
+            recBtn.classList.add('rec-active');
+        } catch (e) {
+            alert("Recording Error: " + e.message);
+        }
     }
 
     function stopRecording() {
-        mediaRecorder.stop();
+        if(mediaRecorder) mediaRecorder.stop();
         recBtn.innerText = "🔴 START RECORDING";
         recBtn.classList.remove('rec-active');
     }
@@ -146,4 +178,3 @@ INTERFACE = """
 @script9_bp.route('/')
 def script9_home():
     return render_template_string(INTERFACE)
-
