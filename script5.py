@@ -9,55 +9,77 @@ INTERFACE = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ghost Script5 - TCP Pinger</title>
+    <title>Ghost Script5 - Continuous Pinger</title>
     <style>
-        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-        .main-container { border: 2px solid #00ff00; display: inline-block; padding: 20px; background: #000; width: 90%; max-width: 600px; box-shadow: 0 0 20px #0f03; }
-        input { background: #000; border: 1px solid #0f0; color: #0f0; padding: 10px; width: 60%; margin-bottom: 10px; outline: none; }
-        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
-        #terminal { background: #000; border: 1px solid #333; color: #0f0; padding: 15px; height: 300px; margin-top: 20px; text-align: left; overflow-y: auto; font-size: 12px; white-space: pre-wrap; border-left: 3px solid #0f0; }
-        .stat-line { color: yellow; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+        .terminal-window { border: 2px solid #0f0; background: #050505; width: 95%; max-width: 700px; display: inline-block; padding: 15px; box-shadow: 0 0 20px #0f04; text-align: left; }
+        input { background: #000; border: 1px solid #0f0; color: #0f0; padding: 10px; width: 250px; outline: none; }
+        .controls { margin-bottom: 20px; text-align: center; }
+        button { padding: 10px 20px; font-weight: bold; cursor: pointer; border: none; margin: 5px; }
+        .start-btn { background: #0f0; color: #000; }
+        .stop-btn { background: #f00; color: #fff; display: none; }
+        #output { height: 400px; overflow-y: auto; font-size: 13px; color: #0f0; line-height: 1.4; border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; }
+        .lost { color: #ff4444; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #0f0; }
     </style>
 </head>
 <body>
-<div class="main-container">
-    <h2>GHOST_TCP_PINGER v5.0</h2>
-    <input type="text" id="target" placeholder="Enter IP or Domain (e.g. 8.8.8.8)">
-    <button onclick="startAdvancedPing()">START PING</button>
-    <div id="terminal">[SYSTEM READY]... Enter Target to scan packets.</div>
-</div>
+    <div class="terminal-window">
+        <div class="controls">
+            <h2 style="color: #0f0; margin-top: 0;">GHOST_CONTINUOUS_PINGER</h2>
+            <input type="text" id="target" placeholder="Enter IP or Domain (8.8.8.8)">
+            <button class="start-btn" id="startBtn" onclick="togglePing(true)">START PING</button>
+            <button class="stop-btn" id="stopBtn" onclick="togglePing(false)">STOP PING</button>
+        </div>
+        <div id="output">Ready...</div>
+    </div>
 
 <script>
-    async function startAdvancedPing() {
+    let pingInterval;
+    let isPinging = false;
+
+    async function sendPing() {
         const target = document.getElementById('target').value;
-        const terminal = document.getElementById('terminal');
-        if(!target) return;
-        
-        terminal.innerText = `[#] Pinging ${target} with 4 packets (TCP_SCAN)...\\n`;
+        const output = document.getElementById('output');
         
         try {
-            const response = await fetch('/script5/run-ping', {
+            const res = await fetch('/script5/run-single-ping', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({target: target})
             });
-            const data = await response.json();
+            const data = await res.json();
             
+            const line = document.createElement('div');
             if(data.status === "success") {
-                let output = "";
-                data.results.forEach(res => {
-                    output += `Reply from ${target}: bytes=32 time=${res}ms\\n`;
-                });
-                output += `\\n--- ${target} ping statistics ---\\n`;
-                output += `Packets: Sent = 4, Received = ${data.received}, Lost = ${4 - data.received}\\n`;
-                output += `Approximate round trip times in milli-seconds:\\n`;
-                output += `Minimum = ${data.min}ms, Maximum = ${data.max}ms, Average = ${data.avg}ms`;
-                terminal.innerText = output;
+                line.innerHTML = `Reply from ${target}: time=${data.latency}ms status=200`;
             } else {
-                terminal.innerText = "[!] FAILED: " + data.message;
+                line.innerHTML = `<span class="lost">Request timed out. (Packet Lost)</span>`;
             }
+            
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
         } catch (e) {
-            terminal.innerText = "[!] ERROR: Check network or IP.";
+            console.error("Ping Error");
+        }
+    }
+
+    function togglePing(start) {
+        const target = document.getElementById('target').value;
+        if(!target && start) return alert("Enter Target!");
+
+        isPinging = start;
+        document.getElementById('startBtn').style.display = start ? 'none' : 'inline-block';
+        document.getElementById('stopBtn').style.display = start ? 'inline-block' : 'none';
+
+        if(start) {
+            document.getElementById('output').innerHTML = `[!] Starting Continuous Ping for ${target}...<br>`;
+            // Har 1000ms (1 second) mein ping bhejega
+            pingInterval = setInterval(sendPing, 1000);
+        } else {
+            clearInterval(pingInterval);
+            document.getElementById('output').innerHTML += `<br>[!] Ping Stopped.`;
         }
     }
 </script>
@@ -69,37 +91,17 @@ INTERFACE = """
 def script5_home():
     return render_template_string(INTERFACE)
 
-@script5_bp.route('/run-ping', methods=['POST'])
-def run_ping():
+@script5_bp.route('/run-single-ping', methods=['POST'])
+def run_single_ping():
     data = request.json
     target = data.get('target', '').strip()
-    port = 80 # Standard Web Port for TCP Ping
     
-    results = []
-    received = 0
-    
-    for _ in range(4):
-        try:
-            start = time.time()
-            # Socket connection jo har server allow karta hai
-            s = socket.create_connection((target, port), timeout=2)
-            end = time.time()
-            s.close()
-            
-            ms = round((end - start) * 1000, 2)
-            results.append(ms)
-            received += 1
-        except Exception:
-            pass # Packet Lost
-            
-    if results:
-        return jsonify({
-            "status": "success",
-            "results": results,
-            "received": received,
-            "min": min(results),
-            "max": max(results),
-            "avg": round(sum(results)/len(results), 2)
-        })
-    else:
-        return jsonify({"status": "error", "message": "Host Unreachable or Packets Lost 100%"}), 500
+    try:
+        start = time.time()
+        # TCP Ping check
+        s = socket.create_connection((target, 80), timeout=1.5)
+        latency = round((time.time() - start) * 1000, 2)
+        s.close()
+        return jsonify({"status": "success", "latency": latency})
+    except:
+        return jsonify({"status": "error", "message": "Lost"}), 500
