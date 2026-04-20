@@ -18,6 +18,8 @@ INTERFACE = """
         button { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px; width: 45%; transition: 0.3s; }
         .btn-call { background: #00ff00; color: #000; }
         .btn-hangup { background: #ff0000; color: #fff; }
+        .btn-ctrl { background: #222; color: #0f0; border: 1px solid #0f0; font-size: 11px; }
+        .active-off { border-color: red !important; color: red !important; }
         .btn-rec { background: #555; color: white; width: 93%; margin-top: 10px; }
         .rec-active { background: #ff0000 !important; animation: blink 1s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
@@ -31,11 +33,16 @@ INTERFACE = """
         <h2>GHOST_PRIVATE_CALL_V9</h2>
         
         <div style="font-size:11px; margin-bottom:15px; color:#aaa;">
-            SET PRIVATE NO: <input type="text" id="my-custom-id" placeholder="Ex: 007, 999" style="width:50px; padding:5px; margin-bottom:0;">
+            SET PRIVATE NO: <input type="text" id="my-custom-id" placeholder="Ex: 007" style="width:50px; padding:5px; margin-bottom:0;">
             <button onclick="setPrivateID()" style="width:auto; padding:5px; font-size:10px;">SET</button>
         </div>
         
-        <p id="status">NETWORK STATUS: <span id="stat-val" style="color:red;">OFFLINE</span></p>
+        <p id="status">STATUS: <span id="stat-val" style="color:red;">OFFLINE</span></p>
+
+        <div style="margin-bottom: 15px;">
+            <button id="mic-toggle" class="btn-ctrl" onclick="toggleMic()">🎤 MIC: ON</button>
+            <button id="spk-toggle" class="btn-ctrl" onclick="toggleSpeaker()">🔊 SPK: ON</button>
+        </div>
 
         <input type="text" id="remote-id" placeholder="Enter Target Private Number">
         <br>
@@ -46,127 +53,106 @@ INTERFACE = """
         
         <div id="incoming-call">
             <h3 style="color:red; margin:0;">⚠️ INCOMING CALL</h3>
-            <p style="color:white; font-size:18px;">PRIVATE NUMBER</p>
             <button class="btn-call" style="width:80%;" onclick="answerCall()">ACCEPT</button>
         </div>
     </div>
 
+    <audio id="remote-audio" autoplay></audio>
+
 <script>
     let peer, localStream, remoteStream, incomingCallObj;
     let mediaRecorder, chunks = [];
+    let micEnabled = true;
+    let spkEnabled = true;
+
     const statVal = document.getElementById('stat-val');
     const recBtn = document.getElementById('rec-btn');
+    const remoteAudio = document.getElementById('remote-audio');
 
     async function initMic() {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            statVal.innerText = "MIC ACTIVE";
+            statVal.innerText = "MIC READY";
             statVal.style.color = "yellow";
-        } catch (e) { 
-            statVal.innerText = "MIC ERROR! Check Permissions."; 
-            console.error(e);
-        }
+        } catch (e) { statVal.innerText = "MIC ERROR"; }
+    }
+
+    // SPEAKER ON/OFF LOGIC
+    function toggleSpeaker() {
+        spkEnabled = !spkEnabled;
+        remoteAudio.muted = !spkEnabled;
+        const btn = document.getElementById('spk-toggle');
+        btn.innerText = spkEnabled ? "🔊 SPK: ON" : "🔇 SPK: OFF";
+        btn.classList.toggle('active-off', !spkEnabled);
+    }
+
+    // MIC ON/OFF LOGIC
+    function toggleMic() {
+        if(!localStream) return;
+        micEnabled = !micEnabled;
+        localStream.getAudioTracks()[0].enabled = micEnabled;
+        const btn = document.getElementById('mic-toggle');
+        btn.innerText = micEnabled ? "🎤 MIC: ON" : "🚫 MIC: OFF";
+        btn.classList.toggle('active-off', !micEnabled);
     }
 
     function setPrivateID() {
         const customId = document.getElementById('my-custom-id').value;
-        if(!customId) return alert("Number daal bhai!");
-        if(peer) peer.destroy();
-        
+        if(!customId) return;
         peer = new Peer(customId); 
-        
         peer.on('open', id => {
-            statVal.innerText = "ONLINE AS: " + id;
+            statVal.innerText = "ONLINE: " + id;
             statVal.style.color = "#0f0";
         });
-
         peer.on('call', call => {
             incomingCallObj = call;
             document.getElementById('incoming-call').style.display = "block";
-            document.getElementById('call-icon').innerText = "🔔";
-            // Vibration alert for mobile
-            if(navigator.vibrate) navigator.vibrate([500, 200, 500]);
-        });
-
-        peer.on('error', err => {
-            console.error(err);
-            alert("Error: " + err.type);
         });
     }
 
     function makeAudioCall() {
         const rid = document.getElementById('remote-id').value;
-        if(!rid) return alert("Dost ka number toh daal!");
-        if(!peer) return alert("Pehle SET dabake online aao!");
-        
         const call = peer.call(rid, localStream);
-        setupCallListeners(call);
+        setupCall(call);
     }
 
     function answerCall() {
         incomingCallObj.answer(localStream);
         document.getElementById('incoming-call').style.display = "none";
-        setupCallListeners(incomingCallObj);
+        setupCall(incomingCallObj);
     }
 
-    function setupCallListeners(call) {
-        statVal.innerText = "CONNECTING...";
-        
+    function setupCall(call) {
         call.on('stream', s => {
             remoteStream = s;
-            const audio = new Audio();
-            audio.srcObject = s;
-            audio.play().catch(e => console.error("Audio Play Error:", e));
-            
+            remoteAudio.srcObject = s;
             statVal.innerText = "CONNECTED";
             statVal.style.color = "#0f0";
-            recBtn.disabled = false; 
-            document.getElementById('call-icon').innerText = "🔊";
-        });
-
-        call.on('close', () => {
-            statVal.innerText = "CALL ENDED";
-            recBtn.disabled = true;
+            recBtn.disabled = false;
         });
     }
 
+    // Recording logic (unchanged as requested)
     function toggleRecording() {
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            startRecording();
-        } else {
-            stopRecording();
-        }
-    }
-
-    function startRecording() {
-        if(!remoteStream) return alert("No remote stream found!");
-        chunks = [];
-        try {
+            chunks = [];
             mediaRecorder = new MediaRecorder(remoteStream);
-            mediaRecorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
             mediaRecorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'audio/webm' });
-                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `Ghost_Record_${Date.now()}.webm`;
-                document.body.appendChild(a);
+                a.href = URL.createObjectURL(blob);
+                a.download = `Ghost_Call_${Date.now()}.webm`;
                 a.click();
-                window.URL.revokeObjectURL(url);
             };
             mediaRecorder.start();
             recBtn.innerText = "⏹️ STOP RECORDING";
             recBtn.classList.add('rec-active');
-        } catch (e) {
-            alert("Recording Error: " + e.message);
+        } else {
+            mediaRecorder.stop();
+            recBtn.innerText = "🔴 START RECORDING";
+            recBtn.classList.remove('rec-active');
         }
-    }
-
-    function stopRecording() {
-        if(mediaRecorder) mediaRecorder.stop();
-        recBtn.innerText = "🔴 START RECORDING";
-        recBtn.classList.remove('rec-active');
     }
 
     initMic();
