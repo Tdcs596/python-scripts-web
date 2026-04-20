@@ -28,7 +28,7 @@ def home():
     <a href="/script8"><button>Phone OSINT</button></a><br><br>
     <a href="/script9"><button>Private call</button></a><br><br>
     <a href="/script10"><button>Cctv Cam</button></a><br><br>
-    <a href="/script10"><button>Mail Spoofing</button></a>
+    <a href="/script11"><button>Mail Spoofing</button></a>
     
     """
 
