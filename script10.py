@@ -183,4 +183,4 @@ def bomb():
 # ----------------------------------------------------------------------
 # Compatibility alias – used by app.py
 # ----------------------------------------------------------------------
-script10_bp = sms_bomber_bp
+script10_bp = sms_bomber_bp   # <-- Fixed: remove trailing dot
