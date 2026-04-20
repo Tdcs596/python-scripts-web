@@ -10,6 +10,10 @@ from script8 import script8_bp
 from script9 import script9_bp
 from script10 import script10_bp
 from script11 import script11_bp
+from script12 import script12_bp
+from script13 import script13_bp
+from script14 import script14_bp
+from script15 import script15_bp
 
 app = Flask(__name__)
 
@@ -28,8 +32,11 @@ def home():
     <a href="/script8"><button>Phone OSINT</button></a><br><br>
     <a href="/script9"><button>Private call</button></a><br><br>
     <a href="/script10"><button>Cctv Cam</button></a><br><br>
-    <a href="/script11"><button>Mail Spoofing</button></a>
-    
+    <a href="/script11"><button>Mail Spoofing</button></a><br><br>
+    <a href="/script12"><button>nnnnn</button></a><br><br>
+    <a href="/script13"><button>ngg</button></a><br><br>
+    <a href="/script14"><button>nmmm</button></a><br><br>
+    <a href="/script15"><button>nnnnn</button></a>
     """
 
 # Yahan Script ko "Register" kiya
@@ -44,6 +51,10 @@ app.register_blueprint(script8_bp, url_prefix='/script8')
 app.register_blueprint(script9_bp, url_prefix='/script9')
 app.register_blueprint(script10_bp, url_prefix='/script10')
 app.register_blueprint(script11_bp, url_prefix='/script11')
+app.register_blueprint(script12_bp, url_prefix='/script12')
+app.register_blueprint(script13_bp, url_prefix='/script13')
+app.register_blueprint(script14_bp, url_prefix='/script14')
+app.register_blueprint(script15_bp, url_prefix='/script15')
 
 if __name__ == "__main__":
     import os
