@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-script10.py – Production‑ready Flask Blueprint for SMS bombing.
-Exports:
-    * sms_bomber_bp   – the Blueprint object
-    * script10_bp     – alias for compatibility with app.py
+script10.py – Flask Blueprint that offers:
+    * A JSON API (POST /bomb) – your existing “SMS bomber”.
+    * A friendly HTML page (GET /) – a quick form to fire the bomber from a browser.
+
+No changes are required in app.py – it still registers the blueprint with
+url_prefix="/script10".
 """
 
 # ----------------------------------------------------------------------
@@ -15,7 +17,7 @@ import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template_string
 
 # ----------------------------------------------------------------------
 # Configuration – tweak as needed
@@ -87,14 +89,51 @@ def _build_payload(template, number):
 @sms_bomber_bp.route("/", methods=["GET"])
 def index():
     """
-    Simple health‑check / informational endpoint.
+    A simple HTML UI.
+    The form POSTs to /bomb – the same endpoint that powers the API.
     """
-    return jsonify({
-        "message": "SMS Bomber API",
-        "available_endpoint": "/bomb",
-        "method": "POST",
-        "expected_body": {"number": "10‑digit phone number (optional)"},
-    })
+    html = """
+    <!doctype html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>SMS Bomber</title>
+        <style>
+            body{font-family:Arial,sans-serif;background:#f4f4f4;padding:2rem;}
+            form{max-width:400px;margin:auto;background:#fff;padding:1.5rem;border-radius:8px;}
+            label{display:block;margin:0.5rem 0 0.25rem;}
+            input{width:100%;padding:0.5rem;border:1px solid #ccc;border-radius:4px;}
+            button{margin-top:1rem;padding:0.5rem 1rem;background:#28a745;color:#fff;border:none;border-radius:4px;}
+            #output{margin-top:1rem;background:#eee;padding:1rem;border-radius:4px;font-family:monospace;}
+        </style>
+    </head>
+    <body>
+        <h2>SMS Bomber UI</h2>
+        <form id="bombForm">
+            <label for="number">Phone number (10 digits, e.g. 9876543210)</label>
+            <input type="text" id="number" name="number" required>
+            <button type="submit">Bomb!</button>
+        </form>
+        <pre id="output"></pre>
+        <script>
+            const form = document.getElementById('bombForm');
+            const output = document.getElementById('output');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                output.textContent = '🚀 Sending…';
+                const data = new FormData(form);
+                const resp = await fetch('/script10/bomb', {
+                    method: 'POST',
+                    body: data
+                });
+                const json = await resp.json();
+                output.textContent = JSON.stringify(json, null, 2);
+            });
+        </script>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
 
 @sms_bomber_bp.route("/bomb", methods=["POST"])
 def bomb():
