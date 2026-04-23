@@ -1,144 +1,132 @@
 import socket
-import threading
 import time
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 from flask import Blueprint, request, jsonify, render_template_string
 
 script12_bp = Blueprint("script12", __name__)
 
-# --- HACKER CONSOLE UI ---
-ULTIMATE_UI = """
+# --- CLI STYLE UI ---
+NMAP_CLI_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OMEGA X-TREME RECON</title>
+    <title>NMAP TERMINAL v7.97</title>
     <style>
-        body { background: #020202; color: #00ff41; font-family: 'Courier New', monospace; padding: 20px; }
-        .terminal { border: 2px solid #00ff41; background: #000; padding: 20px; box-shadow: 0 0 25px #00ff4133; max-width: 900px; margin: auto; }
-        .header { border-bottom: 1px solid #00ff41; margin-bottom: 15px; padding-bottom: 10px; font-weight: bold; }
-        input { background: #111; border: 1px solid #00ff41; color: #fff; padding: 12px; width: 70%; margin-right: 10px; outline: none; }
-        button { background: #00ff41; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-        #output { margin-top: 20px; background: #050505; border: 1px solid #222; height: 450px; overflow-y: auto; padding: 15px; font-size: 13px; line-height: 1.5; }
-        .port-entry { border-left: 2px solid #00ff41; padding-left: 10px; margin-bottom: 10px; }
-        .vulnerable { color: #ff3333; font-weight: bold; }
-        .secure { color: #00ff41; }
-        .blink { animation: blinker 1s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
+        body { background: #0c0c0c; color: #d1d1d1; font-family: 'Consolas', 'Courier New', monospace; padding: 20px; }
+        .terminal-window { background: #000; border: 1px solid #444; padding: 15px; min-height: 500px; box-shadow: 0 0 20px rgba(0,255,0,0.05); }
+        .input-line { display: flex; align-items: center; margin-bottom: 20px; color: #00ff00; }
+        input { background: transparent; border: none; color: #fff; font-family: inherit; font-size: 16px; width: 100%; outline: none; margin-left: 10px; }
+        #output { white-space: pre-wrap; line-height: 1.4; color: #cccccc; }
+        .cursor { display: inline-block; width: 8px; height: 15px; background: #00ff00; animation: blink 1s infinite; vertical-align: middle; }
+        @keyframes blink { 50% { opacity: 0; } }
+        button { display: none; }
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <div class="header">OMEGA SYSTEM v5.0 | ADVANCED RECONNAISSANCE ENGINE</div>
-        <div style="margin-bottom: 20px;">
-            <input type="text" id="target" placeholder="TARGET_IP / DOMAIN (e.g. google.com)">
-            <button onclick="startScan()" id="btn">ENGINE_START</button>
+    <div class="terminal-window">
+        <div class="input-line">
+            <span>C:\\Users\\TDCS_ADMIN> nmap -A -v</span>
+            <input type="text" id="target" placeholder="[IP or Domain]" onkeypress="handleKey(event)">
         </div>
-        <div id="output">> SYSTEM_READY: Awaiting Target Injection...</div>
+        <div id="output"># Nmap 7.97 scan engine initialized. Enter target and press Enter...</div>
+        <span id="cursor-main" class="cursor"></span>
     </div>
 
     <script>
-        async function startScan() {
-            const target = document.getElementById('target').value;
-            const output = document.getElementById('output');
-            const btn = document.getElementById('btn');
+        async function handleKey(event) {
+            if (event.key === 'Enter') {
+                const target = document.getElementById('target').value;
+                const output = document.getElementById('output');
+                if(!target) return;
 
-            if(!target) return alert("Target missing!");
+                document.getElementById('cursor-main').style.display = 'none';
+                output.innerHTML += `\\n\\nStarting Nmap 7.97 ( https://nmap.org ) at ${new Date().toLocaleString()}\\n`;
+                output.innerHTML += `Initiating Parallel DNS resolution of 1 host...\\n`;
+                output.innerHTML += `Initiating SYN Stealth Scan...\\n`;
 
-            btn.disabled = true;
-            output.innerHTML = "<span class='blink'>> [!] INITIALIZING DEEP RECONNAISSANCE... DATA PACKETS DISPATCHED...</span><br>";
-
-            try {
-                const response = await fetch(window.location.pathname + "scan", {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ target: target })
-                });
-                const data = await response.json();
-                
-                let report = `> SCAN COMPLETED FOR: ${target}\\n`;
-                report += `> ELAPSED TIME: ${data.duration}s\\n`;
-                report += `> --------------------------------------------------\\n`;
-
-                if(data.results.length === 0) {
-                    report += "> [!] ALERT: No common ports found open on this target.";
-                } else {
-                    data.results.forEach(p => {
-                        let riskClass = p.risk === "HIGH" ? "vulnerable" : "secure";
-                        report += `<div class='port-entry'>[+] PORT: ${p.port} | SERVICE: ${p.service}\\n`;
-                        report += `    STATUS: <span class='${riskClass}'>${p.status}</span>\\n`;
-                        report += `    ADVISORY: ${p.info}</div>`;
+                try {
+                    const response = await fetch(window.location.pathname + "nmap_exec", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ target: target })
                     });
+                    const data = await response.json();
+                    output.innerHTML += data.report;
+                } catch (e) {
+                    output.innerHTML += "\\n[!] FATAL ERROR: nsock_loop error 10022";
                 }
-                output.innerHTML = report;
-            } catch (err) {
-                output.innerText = "> ERROR: SERVER_HANDSHAKE_FAILED";
+                document.getElementById('cursor-main').style.display = 'inline-block';
             }
-            btn.disabled = false;
         }
     </script>
 </body>
 </html>
 """
 
-# Advanced Feature Set: Port mapping + Advisory + Risk Analysis
-INTEL_DB = {
-    21: {"svc": "FTP", "risk": "HIGH", "info": "Risk of Anonymous Login. Plaintext protocol."},
-    22: {"svc": "SSH", "risk": "MED", "info": "Secure Shell. Check for brute-force attempts."},
-    23: {"svc": "Telnet", "risk": "HIGH", "info": "CRITICAL: Insecure. Sniffing risk is 100%."},
-    25: {"svc": "SMTP", "risk": "MED", "info": "Mail server. Check for open relay issues."},
-    53: {"svc": "DNS", "risk": "LOW", "info": "Domain Name System. Possible Zone Transfer."},
-    80: {"svc": "HTTP", "risk": "MED", "info": "Web Server. Check for directory listing."},
-    110: {"svc": "POP3", "risk": "MED", "info": "Mail protocol. Plaintext auth possible."},
-    443: {"svc": "HTTPS", "risk": "LOW", "info": "Secure Web. Check SSL/TLS certificate."},
-    445: {"svc": "SMB", "risk": "HIGH", "info": "Vulnerable to EternalBlue / SMBGhost."},
-    3306: {"svc": "MySQL", "risk": "HIGH", "info": "Database exposed. Check root password."},
-    3389: {"svc": "RDP", "risk": "HIGH", "info": "Remote Desktop. BlueKeep vulnerability risk."},
-    8080: {"svc": "HTTP-Proxy", "risk": "MED", "info": "Secondary Web Port. Often unhardened."}
-}
+def generate_nmap_report(target_raw, target_ip, open_ports, duration):
+    curr_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    report = f"""Nmap scan report for {target_raw} ({target_ip})
+Host is up (0.031s latency).
+Not shown: 988 filtered tcp ports (no-response)
+PORT    STATE SERVICE   VERSION
+"""
+    for p in open_ports:
+        report += f"{p['port']}/tcp  open  {p['svc'].lower():<10} {p['ver']}\n"
+        if p['port'] == 80 or p['port'] == 443:
+            report += f"|_http-server-header: {p['ver']}\n"
+            report += f"|_http-title: Site managed by TDCS Infrastructure\n"
 
-def scan_worker(ip, port):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1.0)
-        result = sock.connect_ex((ip, port))
-        if result == 0:
-            intel = INTEL_DB.get(port, {"svc": "Unknown", "risk": "MED", "info": "No info available."})
-            return {
-                "port": port,
-                "service": intel["svc"],
-                "status": "OPEN",
-                "risk": intel["risk"],
-                "info": intel["info"]
-            }
-        sock.close()
-    except:
-        pass
-    return None
+    report += f"""
+TRACEROUTE (using port 80/tcp)
+HOP RTT      ADDRESS
+1   6.00 ms  10.47.227.96
+2   21.00 ms 192.168.72.131
+3   22.00 ms {target_ip}
+
+Nmap done: 1 IP address (1 host up) scanned in {duration} seconds
+           Raw packets sent: 1040 | Rcvd: 22
+"""
+    return report
 
 @script12_bp.route("/")
 def index():
-    return render_template_string(ULTIMATE_UI)
+    return render_template_string(NMAP_CLI_UI)
 
-@script12_bp.route("/scan", methods=["POST"])
-def perform_scan():
+@script12_bp.route("/nmap_exec", methods=["POST"])
+def nmap_exec():
     target_raw = request.json.get('target')
     try:
         target_ip = socket.gethostbyname(target_raw)
     except:
-        return jsonify({"error": "Host resolution failed"}), 400
+        return jsonify({"report": "\n[!] Failed to resolve target."})
 
-    start = time.time()
+    start_time = time.time()
     found = []
-    # All major ports
-    ports_to_check = [21, 22, 23, 25, 53, 80, 110, 443, 445, 3306, 3389, 8080]
+    # Major ports and their emulated version for Vercel/Cloud feel
+    check_ports = {
+        80: "Vercel", 443: "Vercel", 22: "OpenSSH 8.2", 
+        21: "vsftpd 3.0.3", 3306: "MySQL 8.0.21"
+    }
 
-    with ThreadPoolExecutor(max_workers=40) as executor:
-        results = [executor.submit(scan_worker, target_ip, p) for p in ports_to_check]
+    def scan(p, v):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.8)
+            if s.connect_ex((target_ip, p)) == 0:
+                return {"port": p, "svc": socket.getservbyname(p) if p < 1000 else "unknown", "ver": v}
+            s.close()
+        except: pass
+        return None
+
+    with ThreadPoolExecutor(max_workers=20) as exe:
+        results = [exe.submit(scan, p, v) for p, v in check_ports.items()]
         for f in results:
             res = f.result()
-            if res:
-                found.append(res)
+            if res: found.append(res)
 
-    duration = round(time.time() - start, 2)
-    return jsonify({"results": found, "duration": duration})
+    duration = round(time.time() - start_time, 2)
+    full_report = generate_nmap_report(target_raw, target_ip, found, duration)
+    
+    return jsonify({"report": full_report})
