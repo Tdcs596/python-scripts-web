@@ -3,4 +3,5 @@ requests
 beautifulsoup4
 pyinstaller
 dnspython
+python-nmap
 gunicorn
