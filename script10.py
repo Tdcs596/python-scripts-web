@@ -56,7 +56,8 @@ def send_otp(service, phone):
             verify=False
         )
         return resp.status_code == 200
-    except:
+    except Exception as e:
+        logger.error(f"Error sending OTP: {e}")
         return False
 
 @script10_bp.route('/script10/')
@@ -151,3 +152,9 @@ def bomb():
     
     logger.info(final_status)
     return jsonify({'status': final_status})
+
+if __name__ == '__main__':
+    from flask import Flask
+    app = Flask(__name__)
+    app.register_blueprint(script10_bp)
+    app.run(debug=True)
