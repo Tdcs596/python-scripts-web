@@ -1,71 +1,65 @@
-import nmap
+import socket
+from concurrent.futures import ThreadPoolExecutor
 from flask import Blueprint, request, jsonify, render_template_string
 
 script12_bp = Blueprint("script12", __name__)
 
 # --- UI DESIGN ---
-NMAP_UI = """
+SOCKET_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OMEGA NMAP SCANNER</title>
+    <title>OMEGA NATIVE SCANNER</title>
     <style>
-        body { background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; padding: 30px; }
-        .scanner-box { border: 2px solid #00ff41; padding: 20px; background: #000; box-shadow: 0 0 15px #00ff4133; max-width: 800px; margin: auto; }
-        input, select { background: #111; border: 1px solid #00ff41; color: #fff; padding: 10px; margin: 10px 0; width: 90%; }
-        button { background: #00ff41; color: #000; border: none; padding: 15px; width: 93%; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        #results { margin-top: 20px; background: #050505; padding: 15px; border: 1px solid #333; height: 400px; overflow-y: auto; font-size: 13px; color: #00ff41; white-space: pre-wrap; }
-        .loading { animation: blink 1s infinite; color: #ff3333; }
-        @keyframes blink { 50% { opacity: 0; } }
+        body { background: #000; color: #00ff41; font-family: 'Courier New', monospace; padding: 30px; text-align: center; }
+        .scanner-box { border: 2px solid #00ff41; padding: 20px; background: #050505; display: inline-block; width: 90%; max-width: 600px; box-shadow: 0 0 20px #00ff4133; }
+        input { background: #111; border: 1px solid #00ff41; color: #fff; padding: 12px; width: 80%; margin: 10px 0; }
+        button { background: #00ff41; color: #000; border: none; padding: 15px; width: 85%; font-weight: bold; cursor: pointer; }
+        #results { margin-top: 20px; background: #000; padding: 15px; border: 1px solid #333; height: 300px; overflow-y: auto; text-align: left; font-size: 14px; }
+        .open { color: #00ff41; font-weight: bold; }
+        .closed { color: #444; }
     </style>
 </head>
 <body>
     <div class="scanner-box">
-        <h2>[ ADVANCED NETWORK SCANNER ]</h2>
-        <p style="color: #888;">Target: IP, Hostname, or Subnet (e.g., 192.168.1.1)</p>
-        
-        <input type="text" id="target" placeholder="Enter Target IP">
-        
-        <select id="scan_type">
-            <option value="-F">Quick Scan (Fast)</option>
-            <option value="-sS -sV">Service & Version Detection</option>
-            <option value="-O">OS Fingerprinting</option>
-            <option value="-A">Aggressive Scan (Everything)</option>
-            <option value="-p 1-65535">Full Port Scan</option>
-        </select>
-        
-        <button onclick="runScan()" id="scanBtn">Execute Scan</button>
-        
-        <div id="results">System Ready for Reconnaissance...</div>
+        <h2>[ NATIVE PORT SCANNER ]</h2>
+        <p style="color: #888;">Render Compatible | No API Required</p>
+        <input type="text" id="target" placeholder="Enter IP (e.g. 8.8.8.8)">
+        <br>
+        <button onclick="runScan()" id="btn">START SCAN</button>
+        <div id="results">Waiting for target...</div>
     </div>
 
     <script>
         async function runScan() {
             const target = document.getElementById('target').value;
-            const args = document.getElementById('scan_type').value;
             const resBox = document.getElementById('results');
-            const btn = document.getElementById('scanBtn');
+            const btn = document.getElementById('btn');
 
-            if(!target) return alert("Target toh daal bhai!");
+            if(!target) return alert("Target IP daalo bhai!");
 
             btn.disabled = true;
-            resBox.innerHTML = "<span class='loading'>[!] SCANNING IN PROGRESS... PLEASE WAIT...</span>";
+            resBox.innerHTML = "Scanning common ports... Please wait...";
 
             try {
                 const response = await fetch(window.location.pathname + "scan", {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ target: target, arguments: args })
+                    body: JSON.stringify({ target: target })
                 });
                 const data = await response.json();
                 
-                if(data.error) {
-                    resBox.innerText = "ERROR: " + data.error;
+                let output = "<b>Scan Results for " + target + ":</b><br><br>";
+                if(data.open_ports.length === 0) {
+                    output += "No open ports found in common range.";
                 } else {
-                    resBox.innerText = data.raw_results;
+                    data.open_ports.forEach(p => {
+                        output += "<span class='open'>[+] Port " + p + " is OPEN</span><br>";
+                    });
                 }
+                resBox.innerHTML = output;
             } catch (err) {
-                resBox.innerText = "Connection Failed. Ensure Nmap is installed on server.";
+                resBox.innerText = "Error connecting to server.";
             }
             btn.disabled = false;
         }
@@ -76,37 +70,37 @@ NMAP_UI = """
 
 @script12_bp.route("/")
 def index():
-    return render_template_string(NMAP_UI)
+    return render_template_string(SOCKET_UI)
+
+def check_port(ip, port):
+    """Try to connect to a specific port."""
+    try:
+        # Socket object create kiya
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1.0) # 1 second wait karega connection ka
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            return port
+        sock.close()
+    except:
+        pass
+    return None
 
 @script12_bp.route("/scan", methods=["POST"])
-def perform_scan():
-    data = request.json
-    target = data.get('target')
-    scan_args = data.get('arguments')
-
-    nm = nmap.PortScanner()
+def scan():
+    target = request.json.get('target')
     
-    try:
-        # Nmap Execute ho raha hai
-        nm.scan(hosts=target, arguments=scan_args)
-        
-        # Result ko readable format mein convert karna
-        scan_output = ""
-        for host in nm.all_hosts():
-            scan_output += f"Host : {host} ({nm[host].hostname()})\n"
-            scan_output += f"State : {nm[host].state()}\n"
-            
-            for proto in nm[host].all_protocols():
-                scan_output += f"----------\nProtocol : {proto}\n"
-                lport = nm[host][proto].keys()
-                for port in sorted(lport):
-                    port_data = nm[host][proto][port]
-                    scan_output += f"Port : {port}\tState : {port_data['state']}\tService : {port_data['name']}\tVersion : {port_data['version']}\n"
-        
-        if not scan_output:
-            scan_output = "Scan complete. No open ports or hosts found."
-            
-        return jsonify({"raw_results": scan_output})
+    # Common ports jo hum scan karenge
+    common_ports = [21, 22, 23, 25, 53, 80, 110, 135, 139, 443, 445, 3306, 3389, 8080]
     
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    open_ports = []
+    
+    # Threading use kar rahe hain taaki scan fast ho
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        results = [executor.submit(check_port, target, port) for port in common_ports]
+        for f in results:
+            res = f.result()
+            if res:
+                open_ports.append(res)
+                
+    return jsonify({"open_ports": open_ports})
