@@ -1,5 +1,6 @@
 flask
 requests
+scapy
 beautifulsoup4
 pyinstaller
 dnspython
