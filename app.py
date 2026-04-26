@@ -19,24 +19,27 @@ from script16 import script16_bp
 from script17 import script17_bp
 
 app = Flask(__name__)
+# Ye line ensure karegi ki /script17 aur /script17/ dono chalein
+app.url_map.strict_slashes = False
 
-# --- FIX: DASHBOARD LINKS UPDATED WITH '/' ---
 @app.route("/")
 def home():
     return """
     <html>
     <head>
-        <title>TDCS Master Dashboard</title>
+        <title>Shivam Singh - Master Dashboard</title>
         <style>
-            body { background: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 50px; }
-            .btn { background: #1a1a1a; border: 1px solid #00ff00; color: #00ff00; padding: 15px; width: 250px; 
-                   margin: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-            .btn:hover { background: #00ff00; color: #000; box-shadow: 0 0 15px #00ff00; }
-            h1 { color: #ffff00; text-shadow: 2px 2px #ff0000; }
+            body { background: #050505; color: #ff0000; font-family: 'Consolas', monospace; text-align: center; padding: 50px; }
+            .btn { background: #111; border: 1px solid #ff0000; color: #ff0000; padding: 15px; width: 250px; 
+                   margin: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; border-radius: 5px; }
+            .btn:hover { background: #ff0000; color: #000; box-shadow: 0 0 20px #ff0000; }
+            h1 { color: #fff; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; }
+            .sub { color: #666; margin-bottom: 30px; font-size: 14px; }
         </style>
     </head>
     <body>
-        <h1>🔥 TDCS OMEGA DASHBOARD 🔥</h1>
+        <h1>💀 SHIVAM SINGH OMEGA DASHBOARD 💀</h1>
+        <p class="sub">PRIVATE CYBERSECURITY & UTILITY PANEL</p>
         <div style="display: flex; flex-wrap: wrap; justify-content: center;">
             <a href="/script1/"><button class="btn">Open Analyzer</button></a>
             <a href="/script2/"><button class="btn">Open Scraper</button></a>
@@ -52,14 +55,13 @@ def home():
             <a href="/script12/"><button class="btn">Nmap Scanner</button></a>
             <a href="/script15/"><button class="btn">Nu Attack</button></a>
             <a href="/script16/"><button class="btn">Vehicle Info</button></a>
-            <a href="/script17/"><button class="btn">Encryption</button></a>
+            <a href="/script17/"><button class="btn">SHIVAM VAULT (ENCRYPTION)</button></a>
         </div>
     </body>
     </html>
     """
 
 # --- BLUEPRINT REGISTRATION ---
-# url_prefix ka matlab hai ki script ke andar ke routes yahan se start honge
 app.register_blueprint(script1_bp, url_prefix='/script1')
 app.register_blueprint(script2_bp, url_prefix='/script2')
 app.register_blueprint(script3_bp, url_prefix='/script3')
@@ -77,6 +79,5 @@ app.register_blueprint(script16_bp, url_prefix='/script16')
 app.register_blueprint(script17_bp, url_prefix='/script17')
 
 if __name__ == "__main__":
-    # Render port handling
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
