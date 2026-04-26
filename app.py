@@ -1,5 +1,8 @@
-from flask import Flask
-from script1 import script1_bp # Import kiya
+from flask import Flask, render_template_string
+import os
+
+# Import Blueprints
+from script1 import script1_bp
 from script2 import script2_bp
 from script3 import script3_bp
 from script4 import script4_bp
@@ -11,37 +14,50 @@ from script9 import script9_bp
 from script10 import script10_bp
 from script11 import script11_bp
 from script12 import script12_bp
-# from script13 import script13_bp
-# from script14 import script14_bp
 from script15 import script15_bp
 from script16 import script16_bp
 
 app = Flask(__name__)
 
-# Main Dashboard
+# --- FIX: DASHBOARD LINKS UPDATED WITH '/' ---
 @app.route("/")
 def home():
     return """
-    <h1>🔥 Master Dashboard</h1>
-    <a href="/script1"><button>Open Analyzer</button></a><br><br>
-    <a href="/script2"><button>Open Scraper</button></a><br><br>
-    <a href="/script3"><button>Open EXE Converter</button></a><br><br>
-    <a href="/script4"><button>DDoS Lab</button></a><br><br>
-    <a href="/script5"><button>Ping</button></a><br><br>
-    <a href="/script6"><button>Video Call</button></a><br><br>
-    <a href="/script7"><button>Voipe Call</button></a><br><br>
-    <a href="/script8"><button>Phone OSINT</button></a><br><br>
-    <a href="/script9"><button>Private call</button></a><br><br>
-    <a href="/script10"><button>Cctv Cam</button></a><br><br>
-    <a href="/script11"><button>Mail Spoofing</button></a><br><br>
-    <a href="/script12"><button>Nmap</button></a><br><br>
-    <a href="/script13"><button>ngg</button></a><br><br>
-    <a href="/script14"><button>nmmm</button></a><br><br>
-    <a href="/script15"><button>Nu Att</button></a><br><br>
-    <a href="/script16"><button>Veh</button></a>   
+    <html>
+    <head>
+        <title>TDCS Master Dashboard</title>
+        <style>
+            body { background: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 50px; }
+            .btn { background: #1a1a1a; border: 1px solid #00ff00; color: #00ff00; padding: 15px; width: 250px; 
+                   margin: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+            .btn:hover { background: #00ff00; color: #000; box-shadow: 0 0 15px #00ff00; }
+            h1 { color: #ffff00; text-shadow: 2px 2px #ff0000; }
+        </style>
+    </head>
+    <body>
+        <h1>🔥 TDCS OMEGA DASHBOARD 🔥</h1>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+            <a href="/script1/"><button class="btn">Open Analyzer</button></a>
+            <a href="/script2/"><button class="btn">Open Scraper</button></a>
+            <a href="/script3/"><button class="btn">Open EXE Converter</button></a>
+            <a href="/script4/"><button class="btn">DDoS Lab</button></a>
+            <a href="/script5/"><button class="btn">Ping Tool</button></a>
+            <a href="/script6/"><button class="btn">Video Call</button></a>
+            <a href="/script7/"><button class="btn">VoIP Call</button></a>
+            <a href="/script8/"><button class="btn">Phone OSINT</button></a>
+            <a href="/script9/"><button class="btn">Private Call</button></a>
+            <a href="/script10/"><button class="btn">CCTV Cam / SMS Flooder</button></a>
+            <a href="/script11/"><button class="btn">Mail Spoofing</button></a>
+            <a href="/script12/"><button class="btn">Nmap Scanner</button></a>
+            <a href="/script15/"><button class="btn">Nu Attack</button></a>
+            <a href="/script16/"><button class="btn">Vehicle Info</button></a>
+        </div>
+    </body>
+    </html>
     """
 
-# Yahan Script ko "Register" kiya
+# --- BLUEPRINT REGISTRATION ---
+# url_prefix ka matlab hai ki script ke andar ke routes yahan se start honge
 app.register_blueprint(script1_bp, url_prefix='/script1')
 app.register_blueprint(script2_bp, url_prefix='/script2')
 app.register_blueprint(script3_bp, url_prefix='/script3')
@@ -54,11 +70,10 @@ app.register_blueprint(script9_bp, url_prefix='/script9')
 app.register_blueprint(script10_bp, url_prefix='/script10')
 app.register_blueprint(script11_bp, url_prefix='/script11')
 app.register_blueprint(script12_bp, url_prefix='/script12')
-# app.register_blueprint(script13_bp, url_prefix='/script13')
-# app.register_blueprint(script14_bp, url_prefix='/script14')
 app.register_blueprint(script15_bp, url_prefix='/script15')
 app.register_blueprint(script16_bp, url_prefix='/script16')
 
 if __name__ == "__main__":
-    import os
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    # Render port handling
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
