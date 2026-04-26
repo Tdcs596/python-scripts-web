@@ -16,6 +16,7 @@ from script11 import script11_bp
 from script12 import script12_bp
 from script15 import script15_bp
 from script16 import script16_bp
+from script17 import script17_bp
 
 app = Flask(__name__)
 
@@ -51,6 +52,7 @@ def home():
             <a href="/script12/"><button class="btn">Nmap Scanner</button></a>
             <a href="/script15/"><button class="btn">Nu Attack</button></a>
             <a href="/script16/"><button class="btn">Vehicle Info</button></a>
+            <a href="/script17/"><button class="btn">Encryption</button></a>
         </div>
     </body>
     </html>
@@ -72,6 +74,7 @@ app.register_blueprint(script11_bp, url_prefix='/script11')
 app.register_blueprint(script12_bp, url_prefix='/script12')
 app.register_blueprint(script15_bp, url_prefix='/script15')
 app.register_blueprint(script16_bp, url_prefix='/script16')
+app.register_blueprint(script17_bp, url_prefix='/script17')
 
 if __name__ == "__main__":
     # Render port handling
