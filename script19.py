@@ -2,135 +2,150 @@ from flask import Blueprint, render_template_string
 
 script19_bp = Blueprint('script19', __name__)
 
-OMEGA_X_UI = """
+GHOST_AI_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OMEGA X-TREME | Shivam Singh</title>
+    <title>OMEGA-X GHOST | SHIVAM SINGH</title>
     <style>
-        :root { --neon: #00ff00; --glow: #00ff0055; }
-        body { background: #000; color: var(--neon); font-family: 'Segoe UI', 'Consolas', monospace; margin: 0; overflow: hidden; }
+        :root { --main-color: #00ff00; --bg-color: #000800; --accent: #ff0000; }
+        body { background: var(--bg-color); color: var(--main-color); font-family: 'Share Tech Mono', monospace; margin: 0; overflow: hidden; }
         
-        /* THE SCI-FI GRID BACKGROUND */
-        body::before {
-            content: ''; position: absolute; width: 200%; height: 200%;
-            background-image: linear-gradient(var(--glow) 1px, transparent 1px), linear-gradient(90deg, var(--glow) 1px, transparent 1px);
-            background-size: 50px 50px; transform: perspective(500px) rotateX(60deg);
-            bottom: -50%; left: -50%; z-index: -1; animation: moveGrid 10s linear infinite;
-        }
-        @keyframes moveGrid { from { transform: perspective(500px) rotateX(60deg) translateY(0); } to { transform: perspective(500px) rotateX(60deg) translateY(50px); } }
+        /* GHOST LAYER BACKGROUND */
+        #ghost-canvas { position: absolute; top: 0; left: 0; z-index: -1; filter: blur(2px); opacity: 0.3; }
 
-        /* HOLOGRAPHIC CONTAINER */
-        .hologram { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; box-sizing: border-box; }
+        .hud-wrapper { height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; border: 1px solid #003300; }
         
-        /* ADVANCED REACTOR CORE */
-        .core-wrap { position: relative; width: 250px; height: 250px; }
-        .ring { position: absolute; border: 2px solid var(--neon); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 20px var(--neon); }
-        .r1 { width: 240px; height: 240px; border-style: dotted; animation: spin 20s linear infinite; }
-        .r2 { width: 200px; height: 200px; border-style: dashed; animation: spin-rev 10s linear infinite; }
-        .r3 { width: 160px; height: 160px; border-width: 4px; animation: pulse 2s ease-in-out infinite; }
-        
-        @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-        @keyframes spin-rev { from { transform: translate(-50%, -50%) rotate(360deg); } to { transform: translate(-50%, -50%) rotate(0deg); } }
-        @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
+        /* NEURAL CORE ANIMATION */
+        .core-container { position: relative; width: 300px; height: 300px; margin: auto; display: flex; align-items: center; justify-content: center; }
+        .neural-ring { position: absolute; border-radius: 50%; border: 2px solid var(--main-color); box-shadow: 0 0 30px var(--main-color); }
+        .ring-1 { width: 280px; height: 280px; border-style: dashed; animation: rotate 15s linear infinite; }
+        .ring-2 { width: 220px; height: 220px; border-style: double; animation: rotate-rev 8s linear infinite; }
+        .ring-3 { width: 160px; height: 160px; border-width: 5px; animation: pulse 1s infinite; }
 
-        /* DATA PANELS */
-        .panel { position: absolute; border-left: 5px solid var(--neon); background: rgba(0,255,0,0.05); padding: 15px; width: 250px; backdrop-filter: blur(5px); }
-        .top-left { top: 20px; left: 20px; }
-        .bottom-right { bottom: 20px; right: 20px; }
-        
-        #cmd-display { font-size: 1.5rem; text-shadow: 0 0 10px var(--neon); color: #fff; height: 40px; }
-        .visualizer { display: flex; gap: 5px; height: 30px; align-items: flex-end; }
-        .bar { width: 4px; background: var(--neon); animation: dance 1s infinite alternate; }
-        @keyframes dance { from { height: 5px; } to { height: 30px; } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes rotate-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 20px var(--main-color); } 50% { box-shadow: 0 0 60px var(--main-color); } }
 
-        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--neon); top: 0; box-shadow: 0 0 15px var(--neon); animation: scan 4s linear infinite; }
-        @keyframes scan { from { top: 0; } to { top: 100%; } }
+        /* DATA LOGS & SPECTRUM */
+        .log-panel { width: 300px; background: rgba(0,20,0,0.8); border: 1px solid var(--main-color); padding: 10px; font-size: 11px; max-height: 200px; overflow: hidden; }
+        #live-transcript { font-size: 1.8rem; text-align: center; color: #fff; text-shadow: 0 0 15px var(--main-color); margin-bottom: 20px; min-height: 40px; }
+        .visualizer { display: flex; gap: 3px; height: 50px; align-items: center; justify-content: center; }
+        .bar { width: 5px; height: 10px; background: var(--main-color); animation: ghost-wave 0.5s infinite alternate; }
+
+        @keyframes ghost-wave { from { height: 5px; opacity: 0.5; } to { height: 40px; opacity: 1; } }
+        .btn-ghost { background: transparent; border: 1px solid var(--main-color); color: var(--main-color); padding: 15px 40px; cursor: pointer; font-weight: bold; letter-spacing: 5px; transition: 0.3s; }
+        .btn-ghost:hover { background: var(--main-color); color: #000; box-shadow: 0 0 50px var(--main-color); }
     </style>
 </head>
 <body>
-    <div class="scan-line"></div>
-    <div class="hologram">
-        <div class="panel top-left">
-            <div>BIOMETRIC: SHIVAM_SINGH</div>
-            <div>STATUS: <span id="sys-status">SECURE</span></div>
-            <div id="clock">00:00:00</div>
-            <div class="visualizer" id="viz"></div>
+    <canvas id="ghost-canvas"></canvas>
+    
+    <div class="hud-wrapper">
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <div>LOCATION: MIRA_BHAYANDAR // IND</div>
+            <div id="sys-timer">STABLE</div>
+            <div>UID: SHIVAM_GHOST_99</div>
         </div>
 
-        <div class="core-wrap" onclick="initOmega()">
-            <div class="ring r1"></div>
-            <div class="ring r2"></div>
-            <div class="ring r3"></div>
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:bold; letter-spacing:3px;">OMEGA-X</div>
+        <div class="core-container">
+            <div class="neural-ring ring-1"></div>
+            <div class="neural-ring ring-2"></div>
+            <div class="neural-ring ring-3"></div>
+            <div style="z-index: 10; font-size: 20px; font-weight: bold;">GHOST</div>
         </div>
 
-        <div id="cmd-display">TAP CORE TO INITIALIZE</div>
+        <div id="live-transcript">SYSTEM: ENCRYPTED</div>
 
-        <div class="panel bottom-right">
-            <div>CORE: V19.9-ULTRA</div>
-            <div>LOC: MIRA_BHAYANDAR</div>
-            <div style="font-size: 10px; color: #666; margin-top: 10px;">Say: "Analyze System", "Search [X]", "Security Protocol"</div>
+        <div class="visualizer" id="spectrum"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div class="log-panel" id="log-box">>> Ghost Node Initialized...</div>
+            <button class="btn-ghost" onclick="igniteGhost()">ENGAGE LINK</button>
+            <div class="log-panel" style="text-align: right;">
+                ACTIVE SCRIPTS: 1-18<br>
+                AUTH: SHIVAM SINGH<br>
+                LEVEL: SOVEREIGN
+            </div>
         </div>
     </div>
 
     <script>
-        const cmdDisplay = document.getElementById('cmd-display');
-        const clock = document.getElementById('clock');
-        const viz = document.getElementById('viz');
+        const transcriptDiv = document.getElementById('live-transcript');
+        const logBox = document.getElementById('log-box');
+        const spectrum = document.getElementById('spectrum');
 
-        // Create Bars for Visualizer
-        for(let i=0; i<15; i++) {
-            let bar = document.createElement('div');
-            bar.className = 'bar';
-            bar.style.animationDelay = (i * 0.1) + 's';
-            viz.appendChild(bar);
-        }
+        // Create bars
+        for(let i=0; i<20; i++) { spectrum.innerHTML += `<div class="bar" style="animation-delay: ${i*0.05}s"></div>`; }
 
-        setInterval(() => { clock.innerText = new Date().toLocaleTimeString(); }, 1000);
-
-        function speak(text) {
+        function ghostSpeak(text) {
+            const synth = window.speechSynthesis;
             const utter = new SpeechSynthesisUtterance(text);
-            utter.pitch = 0.7; utter.rate = 1.0;
-            window.speechSynthesis.speak(utter);
+            // GHOST VOICE: Deep, slow, and robotic
+            utter.pitch = 0.05; 
+            utter.rate = 0.85;
+            utter.volume = 1;
+            synth.speak(utter);
         }
 
-        function initOmega() {
-            const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-            const rec = new SpeechRecognition();
+        function igniteGhost() {
+            const SpeechRec = window.webkitSpeechRecognition || window.SpeechRecognition;
+            const rec = new SpeechRec();
             rec.lang = 'en-US';
             rec.continuous = true;
 
             rec.onstart = () => {
-                cmdDisplay.innerText = "LISTENING_FOR_COMMANDS";
-                speak("Neural link established. Omega X-Treme is at your service, Shivam Sir.");
+                transcriptDiv.innerText = "LISTENING...";
+                logBox.innerHTML += "<br>>> Neural Link: SUCCESS";
+                ghostSpeak("Ghost protocol initiated. I am watching, Shivam Sir.");
             };
 
-            rec.onresult = (event) => {
-                const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-                cmdDisplay.innerText = transcript.toUpperCase();
-                handleAction(transcript);
+            rec.onresult = (e) => {
+                const cmd = e.results[e.results.length - 1][0].transcript.toLowerCase();
+                transcriptDiv.innerText = cmd.toUpperCase();
+                processGhostCommand(cmd);
             };
 
-            rec.onend = () => rec.start();
+            rec.onend = () => rec.start(); // Eternal Loop
             rec.start();
         }
 
-        function handleAction(cmd) {
-            let reply = "";
-            if (cmd.includes("hello")) reply = "Greetings Sir. Systems are running at peak performance.";
-            else if (cmd.includes("analyze system")) reply = "Scanning Scripts 1 to 18. All modules are clean. No intrusion detected.";
-            else if (cmd.includes("security protocol")) reply = "Executing Black-Hat protection. Rotating AES-256 keys now.";
-            else if (cmd.includes("search for")) {
+        function processGhostCommand(cmd) {
+            let res = "";
+            if(cmd.includes("status")) res = "Nodes are secure. No trace detected on the network.";
+            else if(cmd.includes("search for")) {
                 let q = cmd.split("search for")[1];
-                reply = "Scanning global data for " + q;
-                window.open("https://google.com/search?q=" + q);
+                res = "Scraping dark-web for " + q;
+                window.open(`https://www.google.com/search?q=${q}`);
             }
-            else if (cmd.includes("open youtube")) { reply = "Opening Media Interface."; window.open("https://youtube.com"); }
-            else if (cmd.includes("time")) reply = "The system clock shows " + new Date().toLocaleTimeString();
-
-            if(reply) speak(reply);
+            else if(cmd.includes("open youtube")) { res = "Accessing media mainframe."; window.open("https://youtube.com"); }
+            else if(cmd.includes("who am i")) res = "You are the Architect, Shivam Singh.";
+            else if(cmd.includes("ghost exit")) { res = "Fading into the void."; location.reload(); }
+            
+            if(res) {
+                logBox.innerHTML += `<br>> ${res}`;
+                ghostSpeak(res);
+            }
         }
+
+        // Ghost Background Effect
+        const c = document.getElementById('ghost-canvas');
+        const ctx = c.getContext('2d');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const chars = "01";
+        const drops = Array(Math.floor(c.width/20)).fill(1);
+        function draw() {
+            ctx.fillStyle = "rgba(0, 8, 0, 0.05)";
+            ctx.fillRect(0,0,c.width,c.height);
+            ctx.fillStyle = "#0f0";
+            drops.forEach((y, i) => {
+                const text = chars[Math.floor(Math.random()*chars.length)];
+                ctx.fillText(text, i*20, y*20);
+                if(y*20 > c.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(draw, 50);
     </script>
 </body>
 </html>
@@ -138,5 +153,4 @@ OMEGA_X_UI = """
 
 @script19_bp.route('/')
 def index():
-    return render_template_string(OMEGA_X_UI)
-
+    return render_template_string(GHOST_AI_UI)
