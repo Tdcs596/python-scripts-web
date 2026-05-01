@@ -2,125 +2,134 @@ from flask import Blueprint, render_template_string
 
 script19_bp = Blueprint('script19', __name__)
 
-# --- ELITE HACKER HUD UI ---
-JARVIS_ELITE_UI = """
+OMEGA_X_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JARVIS ELITE | Shivam Singh</title>
+    <title>OMEGA X-TREME | Shivam Singh</title>
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Consolas', monospace; text-align: center; margin: 0; overflow: hidden; }
+        :root { --neon: #00ff00; --glow: #00ff0055; }
+        body { background: #000; color: var(--neon); font-family: 'Segoe UI', 'Consolas', monospace; margin: 0; overflow: hidden; }
         
-        /* THE HUD BOX */
-        .hud-frame { border: 2px solid #00ff00; height: 90vh; margin: 20px; position: relative; background: radial-gradient(circle, #001a00 0%, #000 100%); }
-        
-        /* ROTATING REACTOR */
-        .reactor-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        .ring { border: 2px solid #00ff00; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 20px #00ff00; }
-        .r1 { width: 180px; height: 180px; border-style: dashed; animation: spin 10s linear infinite; }
-        .r2 { width: 140px; height: 140px; border-style: double; animation: spin-rev 5s linear infinite; }
-        .core-text { color: #fff; font-weight: bold; font-size: 14px; text-shadow: 0 0 10px #00ff00; }
+        /* THE SCI-FI GRID BACKGROUND */
+        body::before {
+            content: ''; position: absolute; width: 200%; height: 200%;
+            background-image: linear-gradient(var(--glow) 1px, transparent 1px), linear-gradient(90deg, var(--glow) 1px, transparent 1px);
+            background-size: 50px 50px; transform: perspective(500px) rotateX(60deg);
+            bottom: -50%; left: -50%; z-index: -1; animation: moveGrid 10s linear infinite;
+        }
+        @keyframes moveGrid { from { transform: perspective(500px) rotateX(60deg) translateY(0); } to { transform: perspective(500px) rotateX(60deg) translateY(50px); } }
 
+        /* HOLOGRAPHIC CONTAINER */
+        .hologram { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; box-sizing: border-box; }
+        
+        /* ADVANCED REACTOR CORE */
+        .core-wrap { position: relative; width: 250px; height: 250px; }
+        .ring { position: absolute; border: 2px solid var(--neon); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 20px var(--neon); }
+        .r1 { width: 240px; height: 240px; border-style: dotted; animation: spin 20s linear infinite; }
+        .r2 { width: 200px; height: 200px; border-style: dashed; animation: spin-rev 10s linear infinite; }
+        .r3 { width: 160px; height: 160px; border-width: 4px; animation: pulse 2s ease-in-out infinite; }
+        
         @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
         @keyframes spin-rev { from { transform: translate(-50%, -50%) rotate(360deg); } to { transform: translate(-50%, -50%) rotate(0deg); } }
+        @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
 
-        /* DATA BOXES */
-        .data-panel { position: absolute; border: 1px solid #004400; padding: 10px; font-size: 12px; text-align: left; background: rgba(0,0,0,0.8); }
-        .top-left { top: 20px; left: 20px; width: 200px; }
-        .bottom-right { bottom: 20px; right: 20px; width: 250px; }
+        /* DATA PANELS */
+        .panel { position: absolute; border-left: 5px solid var(--neon); background: rgba(0,255,0,0.05); padding: 15px; width: 250px; backdrop-filter: blur(5px); }
+        .top-left { top: 20px; left: 20px; }
+        .bottom-right { bottom: 20px; right: 20px; }
         
-        #console { color: #00ff00; height: 100px; overflow: hidden; margin-top: 10px; }
-        .pulse-mic { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
-                     background: #00ff00; color: #000; padding: 15px 40px; border: none; font-weight: bold; cursor: pointer; }
+        #cmd-display { font-size: 1.5rem; text-shadow: 0 0 10px var(--neon); color: #fff; height: 40px; }
+        .visualizer { display: flex; gap: 5px; height: 30px; align-items: flex-end; }
+        .bar { width: 4px; background: var(--neon); animation: dance 1s infinite alternate; }
+        @keyframes dance { from { height: 5px; } to { height: 30px; } }
+
+        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--neon); top: 0; box-shadow: 0 0 15px var(--neon); animation: scan 4s linear infinite; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
     </style>
 </head>
 <body>
-    <div class="hud-frame">
-        <div class="data-panel top-left">
-            <div>SYSTEM: ONLINE</div>
-            <div>USER: SHIVAM SINGH</div>
-            <div id="clock"></div>
-            <div id="console">>> Initializing neural links...</div>
+    <div class="scan-line"></div>
+    <div class="hologram">
+        <div class="panel top-left">
+            <div>BIOMETRIC: SHIVAM_SINGH</div>
+            <div>STATUS: <span id="sys-status">SECURE</span></div>
+            <div id="clock">00:00:00</div>
+            <div class="visualizer" id="viz"></div>
         </div>
 
-        <div class="reactor-container">
+        <div class="core-wrap" onclick="initOmega()">
             <div class="ring r1"></div>
             <div class="ring r2"></div>
-            <div class="core-text" id="status">JARVIS</div>
+            <div class="ring r3"></div>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:bold; letter-spacing:3px;">OMEGA-X</div>
         </div>
 
-        <div class="data-panel bottom-right">
-            <div>VULNERABILITY: 0%</div>
-            <div>ENCRYPTION: AES-256 ACTIVE</div>
-            <div style="color: #666; font-size: 10px;">Commands: "Open Google", "Time", "Search [X]", "System Status"</div>
-        </div>
+        <div id="cmd-display">TAP CORE TO INITIALIZE</div>
 
-        <button class="pulse-mic" onclick="initJarvis()">INITIALIZE VOICE CONTROL</button>
+        <div class="panel bottom-right">
+            <div>CORE: V19.9-ULTRA</div>
+            <div>LOC: MIRA_BHAYANDAR</div>
+            <div style="font-size: 10px; color: #666; margin-top: 10px;">Say: "Analyze System", "Search [X]", "Security Protocol"</div>
+        </div>
     </div>
 
     <script>
-        const statusText = document.getElementById('status');
-        const consoleLog = document.getElementById('console');
+        const cmdDisplay = document.getElementById('cmd-display');
+        const clock = document.getElementById('clock');
+        const viz = document.getElementById('viz');
 
-        // Real-time Clock
-        setInterval(() => { document.getElementById('clock').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
+        // Create Bars for Visualizer
+        for(let i=0; i<15; i++) {
+            let bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.animationDelay = (i * 0.1) + 's';
+            viz.appendChild(bar);
+        }
+
+        setInterval(() => { clock.innerText = new Date().toLocaleTimeString(); }, 1000);
 
         function speak(text) {
             const utter = new SpeechSynthesisUtterance(text);
-            utter.rate = 1.1; utter.pitch = 0.8;
+            utter.pitch = 0.7; utter.rate = 1.0;
             window.speechSynthesis.speak(utter);
         }
 
-        function initJarvis() {
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.continuous = true; // Ye Jarvis ko "always listening" mode mein dalega
-            recognition.lang = 'en-US';
+        function initOmega() {
+            const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+            const rec = new SpeechRecognition();
+            rec.lang = 'en-US';
+            rec.continuous = true;
 
-            recognition.onstart = () => {
-                statusText.innerText = "LISTENING";
-                consoleLog.innerHTML += "<br>> Voice Engine Started...";
-                speak("System initialized. I am online and ready, Shivam Sir.");
+            rec.onstart = () => {
+                cmdDisplay.innerText = "LISTENING_FOR_COMMANDS";
+                speak("Neural link established. Omega X-Treme is at your service, Shivam Sir.");
             };
 
-            recognition.onresult = (event) => {
-                const current = event.resultIndex;
-                const transcript = event.results[current][0].transcript.toLowerCase();
-                processEliteCommand(transcript);
+            rec.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+                cmdDisplay.innerText = transcript.toUpperCase();
+                handleAction(transcript);
             };
 
-            recognition.start();
+            rec.onend = () => rec.start();
+            rec.start();
         }
 
-        function processEliteCommand(cmd) {
-            consoleLog.innerHTML = "> detected: " + cmd;
-            let response = "";
-
-            if (cmd.includes("hello") || cmd.includes("jarvis")) {
-                response = "At your service, Shivam Sir.";
-            } 
-            else if (cmd.includes("time")) {
-                response = "The current time is " + new Date().toLocaleTimeString();
-            }
-            else if (cmd.includes("open google")) {
-                response = "Opening Google Mainframe.";
-                window.open("https://www.google.com", "_blank");
-            }
+        function handleAction(cmd) {
+            let reply = "";
+            if (cmd.includes("hello")) reply = "Greetings Sir. Systems are running at peak performance.";
+            else if (cmd.includes("analyze system")) reply = "Scanning Scripts 1 to 18. All modules are clean. No intrusion detected.";
+            else if (cmd.includes("security protocol")) reply = "Executing Black-Hat protection. Rotating AES-256 keys now.";
             else if (cmd.includes("search for")) {
-                let query = cmd.split("search for")[1];
-                response = "Searching the global database for " + query;
-                window.open("https://www.google.com/search?q=" + query, "_blank");
+                let q = cmd.split("search for")[1];
+                reply = "Scanning global data for " + q;
+                window.open("https://google.com/search?q=" + q);
             }
-            else if (cmd.includes("system status")) {
-                response = "All modules from Script 1 to 18 are fully operational. Encryption levels optimal.";
-            }
-            else if (cmd.includes("who is shivam")) {
-                response = "Shivam Singh is the architect of the Omega Dashboard and my creator.";
-            }
+            else if (cmd.includes("open youtube")) { reply = "Opening Media Interface."; window.open("https://youtube.com"); }
+            else if (cmd.includes("time")) reply = "The system clock shows " + new Date().toLocaleTimeString();
 
-            if(response !== "") {
-                speak(response);
-                consoleLog.innerHTML += "<br>> Jarvis: " + response;
-            }
+            if(reply) speak(reply);
         }
     </script>
 </body>
@@ -129,5 +138,5 @@ JARVIS_ELITE_UI = """
 
 @script19_bp.route('/')
 def index():
-    return render_template_string(JARVIS_ELITE_UI)
+    return render_template_string(OMEGA_X_UI)
 
