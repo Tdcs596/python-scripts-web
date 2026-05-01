@@ -5,4 +5,5 @@ pyinstaller
 dnspython
 python-nmap
 cryptography
+google-generativeai
 gunicorn
