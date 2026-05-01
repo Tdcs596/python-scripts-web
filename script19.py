@@ -1,99 +1,126 @@
-from flask import Blueprint, render_template_string, request, jsonify
-import google.generativeai as genai
+from flask import Blueprint, render_template_string
 
 script19_bp = Blueprint('script19', __name__)
 
-# --- SET YOUR API KEY HERE ---
-genai.configure(api_key="AIzaSyDWwsvK7C_vN4bgBcNvV2EAYaKGXNq_iRI")
-model = genai.GenerativeModel('gemini-pro')
-
-JARVIS_ADVANCED_UI = """
+# --- ELITE HACKER HUD UI ---
+JARVIS_ELITE_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JARVIS AI | Shivam Singh</title>
+    <title>JARVIS ELITE | Shivam Singh</title>
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Consolas', monospace; text-align: center; margin: 0; padding: 20px; }
-        .hud-container { border: 2px solid #00ff00; max-width: 700px; margin: auto; padding: 20px; background: rgba(0, 10, 0, 0.9); box-shadow: 0 0 30px #00ff0044; }
+        body { background: #000; color: #00ff00; font-family: 'Consolas', monospace; text-align: center; margin: 0; overflow: hidden; }
         
-        /* JARVIS CIRCLE ANIMATION */
-        .ai-core { width: 150px; height: 150px; border: 3px solid #00ff00; border-radius: 50%; margin: 30px auto; position: relative; 
-                  display: flex; align-items: center; justify-content: center; animation: spin 4s linear infinite; }
-        .ai-core::after { content: ''; width: 120px; height: 120px; border: 2px dashed #00ff00; border-radius: 50%; position: absolute; animation: spin-rev 2s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        /* THE HUD BOX */
+        .hud-frame { border: 2px solid #00ff00; height: 90vh; margin: 20px; position: relative; background: radial-gradient(circle, #001a00 0%, #000 100%); }
         
-        #response-text { color: #fff; font-size: 18px; margin: 20px; min-height: 50px; text-shadow: 0 0 5px #00ff00; }
-        .mic-btn { background: #00ff00; color: #000; padding: 20px 40px; font-weight: bold; border: none; cursor: pointer; border-radius: 50px; transition: 0.3s; }
-        .mic-btn:hover { box-shadow: 0 0 20px #00ff00; transform: scale(1.05); }
-        .mic-btn.active { background: #ff0000; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        /* ROTATING REACTOR */
+        .reactor-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .ring { border: 2px solid #00ff00; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 20px #00ff00; }
+        .r1 { width: 180px; height: 180px; border-style: dashed; animation: spin 10s linear infinite; }
+        .r2 { width: 140px; height: 140px; border-style: double; animation: spin-rev 5s linear infinite; }
+        .core-text { color: #fff; font-weight: bold; font-size: 14px; text-shadow: 0 0 10px #00ff00; }
+
+        @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes spin-rev { from { transform: translate(-50%, -50%) rotate(360deg); } to { transform: translate(-50%, -50%) rotate(0deg); } }
+
+        /* DATA BOXES */
+        .data-panel { position: absolute; border: 1px solid #004400; padding: 10px; font-size: 12px; text-align: left; background: rgba(0,0,0,0.8); }
+        .top-left { top: 20px; left: 20px; width: 200px; }
+        .bottom-right { bottom: 20px; right: 20px; width: 250px; }
+        
+        #console { color: #00ff00; height: 100px; overflow: hidden; margin-top: 10px; }
+        .pulse-mic { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); 
+                     background: #00ff00; color: #000; padding: 15px 40px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="hud-container">
-        <h1>[ JARVIS SYSTEM ONLINE ]</h1>
-        <div class="ai-core"><div id="core-status">READY</div></div>
-        
-        <div id="response-text">Welcome back, Shivam Sir. Systems are standing by.</div>
-        
-        <button id="micBtn" class="mic-btn" onclick="toggleMic()">INITIALIZE VOICE COMMAND</button>
-        
-        <p style="font-size: 10px; color: #444; margin-top: 20px;">POWERED BY SHIVAM SINGH AI ENGINE</p>
+    <div class="hud-frame">
+        <div class="data-panel top-left">
+            <div>SYSTEM: ONLINE</div>
+            <div>USER: SHIVAM SINGH</div>
+            <div id="clock"></div>
+            <div id="console">>> Initializing neural links...</div>
+        </div>
+
+        <div class="reactor-container">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="core-text" id="status">JARVIS</div>
+        </div>
+
+        <div class="data-panel bottom-right">
+            <div>VULNERABILITY: 0%</div>
+            <div>ENCRYPTION: AES-256 ACTIVE</div>
+            <div style="color: #666; font-size: 10px;">Commands: "Open Google", "Time", "Search [X]", "System Status"</div>
+        </div>
+
+        <button class="pulse-mic" onclick="initJarvis()">INITIALIZE VOICE CONTROL</button>
     </div>
 
     <script>
-        const responseText = document.getElementById('response-text');
-        const micBtn = document.getElementById('micBtn');
-        const coreStatus = document.getElementById('core-status');
+        const statusText = document.getElementById('status');
+        const consoleLog = document.getElementById('console');
+
+        // Real-time Clock
+        setInterval(() => { document.getElementById('clock').innerText = "TIME: " + new Date().toLocaleTimeString(); }, 1000);
 
         function speak(text) {
-            const synth = window.speechSynthesis;
             const utter = new SpeechSynthesisUtterance(text);
-            utter.pitch = 0.7; // Deep/Heavy voice
-            utter.rate = 1.1;
-            synth.speak(utter);
+            utter.rate = 1.1; utter.pitch = 0.8;
+            window.speechSynthesis.speak(utter);
         }
 
-        async function getAIResponse(prompt) {
-            coreStatus.innerText = "THINKING";
-            try {
-                const res = await fetch('/script19/ask', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({prompt: prompt})
-                });
-                const data = await res.json();
-                return data.response;
-            } catch (err) { return "Sir, there was an error in my neural network."; }
-        }
-
-        function toggleMic() {
+        function initJarvis() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = true; // Ye Jarvis ko "always listening" mode mein dalega
             recognition.lang = 'en-US';
 
             recognition.onstart = () => {
-                micBtn.classList.add('active');
-                micBtn.innerText = "LISTENING...";
-                coreStatus.innerText = "LISTENING";
+                statusText.innerText = "LISTENING";
+                consoleLog.innerHTML += "<br>> Voice Engine Started...";
+                speak("System initialized. I am online and ready, Shivam Sir.");
             };
 
-            recognition.onresult = async (event) => {
-                const transcript = event.results[0][0].transcript;
-                responseText.innerText = "YOU: " + transcript;
-                
-                const aiMsg = await getAIResponse(transcript);
-                responseText.innerText = "JARVIS: " + aiMsg;
-                speak(aiMsg);
-                coreStatus.innerText = "ACTIVE";
-            };
-
-            recognition.onend = () => {
-                micBtn.classList.remove('active');
-                micBtn.innerText = "INITIALIZE VOICE COMMAND";
+            recognition.onresult = (event) => {
+                const current = event.resultIndex;
+                const transcript = event.results[current][0].transcript.toLowerCase();
+                processEliteCommand(transcript);
             };
 
             recognition.start();
+        }
+
+        function processEliteCommand(cmd) {
+            consoleLog.innerHTML = "> detected: " + cmd;
+            let response = "";
+
+            if (cmd.includes("hello") || cmd.includes("jarvis")) {
+                response = "At your service, Shivam Sir.";
+            } 
+            else if (cmd.includes("time")) {
+                response = "The current time is " + new Date().toLocaleTimeString();
+            }
+            else if (cmd.includes("open google")) {
+                response = "Opening Google Mainframe.";
+                window.open("https://www.google.com", "_blank");
+            }
+            else if (cmd.includes("search for")) {
+                let query = cmd.split("search for")[1];
+                response = "Searching the global database for " + query;
+                window.open("https://www.google.com/search?q=" + query, "_blank");
+            }
+            else if (cmd.includes("system status")) {
+                response = "All modules from Script 1 to 18 are fully operational. Encryption levels optimal.";
+            }
+            else if (cmd.includes("who is shivam")) {
+                response = "Shivam Singh is the architect of the Omega Dashboard and my creator.";
+            }
+
+            if(response !== "") {
+                speak(response);
+                consoleLog.innerHTML += "<br>> Jarvis: " + response;
+            }
         }
     </script>
 </body>
@@ -102,14 +129,5 @@ JARVIS_ADVANCED_UI = """
 
 @script19_bp.route('/')
 def index():
-    return render_template_string(JARVIS_ADVANCED_UI)
+    return render_template_string(JARVIS_ELITE_UI)
 
-@script19_bp.route('/ask', methods=['POST'])
-def ask():
-    user_prompt = request.json.get('prompt')
-    # AI Logic
-    try:
-        response = model.generate_content(f"You are JARVIS, a loyal and highly intelligent AI assistant for Shivam Singh. Answer this shortly and coolly: {user_prompt}")
-        return jsonify({'response': response.text})
-    except:
-        return jsonify({'response': "Sir, connection to the mainframe is unstable."})
