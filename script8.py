@@ -58,6 +58,31 @@ INTERFACE = """
             <h3>🛡️ Security & Social</h3>
             <div id="ss"></div>
         </div>
+
+        <div class="card">
+            <h3>📊 System Info</h3>
+            <div id="sys"></div>
+        </div>
+
+        <div class="card">
+            <h3>📈 Network Info</h3>
+            <div id="net"></div>
+        </div>
+
+        <div class="card">
+            <h3>📊 Disk Info</h3>
+            <div id="disk"></div>
+        </div>
+
+        <div class="card">
+            <h3>📊 CPU Info</h3>
+            <div id="cpu"></div>
+        </div>
+
+        <div class="card">
+            <h3>📊 RAM Info</h3>
+            <div id="ram"></div>
+        </div>
     </div>
 
     <div class="card" style="margin-top: 10px;">
@@ -115,6 +140,26 @@ INTERFACE = """
             add('ss', 'ISP', j.org);
             add('ss', 'City', j.city);
         } catch(e) { log("IP Scan Blocked."); }
+
+        // System Info
+        add('sys', 'OS', navigator.platform);
+        add('sys', 'Browser', navigator.userAgent.substring(0, 30) + '...');
+
+        // Network Info
+        add('net', 'Type', n.effectiveType || 'N/A');
+        add('net', 'Speed', (n.downlink || 'N/A') + ' Mbps');
+
+        // Disk Info
+        add('disk', 'Free', (navigator.deviceStorage ? navigator.deviceStorage.freeSpace : 'N/A') + ' GB');
+        add('disk', 'Total', (navigator.deviceStorage ? navigator.deviceStorage.totalSpace : 'N/A') + ' GB');
+
+        // CPU Info
+        add('cpu', 'Cores', navigator.hardwareConcurrency || 'N/A');
+        add('cpu', 'Arch', navigator.platform);
+
+        // RAM Info
+        add('ram', 'Total', (navigator.deviceMemory || 'N/A') + ' GB');
+        add('ram', 'Free', (navigator.deviceMemory ? navigator.deviceMemory.free : 'N/A') + ' GB');
     }
 
     function getGPS() {
