@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import csv
 import io
 from urllib.parse import urljoin, urlparse
+import re
 
 # Blueprint for app.py connection
 script2_bp = Blueprint('script2', __name__)
@@ -55,7 +56,16 @@ def advanced_scrape(url):
         # 5. Advanced Metadata (Emails & Phone Numbers - Regex-lite)
         # (Yahan hum basic text search kar rahe hain)
         text_content = soup.get_text()
-        
+        emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text_content)
+        phone_numbers = re.findall(r'(\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4})', text_content)
+
+        # 6. Social Media Links
+        social_media_links = []
+        for link in links:
+            href = link['href']
+            if 'facebook' in href or 'twitter' in href or 'instagram' in href or 'linkedin' in href:
+                social_media_links.append(href)
+
         # Final Formatting
         report = f"📂 --- ADVANCED WEB SCRAPER REPORT: {domain} --- 📂\n"
         report += f"URL Checked: {url}\n"
@@ -83,6 +93,21 @@ def advanced_scrape(url):
 
         report += f"\n[📄 RAW SNIPPET (First 300 chars)]\n"
         report += f"{text_content.strip()[:300]}...\n"
+
+        report += f"\n[📧 EMAILS FOUND]\n"
+        report += f"● Total Emails Found: {len(emails)}\n"
+        for i, email in enumerate(emails[:5]): # Sirf top 5 dikhayenge
+            report += f"  └─ Email {i+1}: {email}\n"
+
+        report += f"\n[📞 PHONE NUMBERS FOUND]\n"
+        report += f"● Total Phone Numbers Found: {len(phone_numbers)}\n"
+        for i, phone_number in enumerate(phone_numbers[:5]): # Sirf top 5 dikhayenge
+            report += f"  └─ Phone Number {i+1}: {phone_number}\n"
+
+        report += f"\n[👥 SOCIAL MEDIA LINKS]\n"
+        report += f"● Total Social Media Links Found: {len(social_media_links)}\n"
+        for i, link in enumerate(social_media_links[:5]): # Sirf top 5 dikhayenge
+            report += f"  └─ Link {i+1}: {link}\n"
 
         report += "\n--------------------------------------------------\n"
         report += "✅ Full Deep Scrape Completed."
