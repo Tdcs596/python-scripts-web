@@ -55,6 +55,7 @@ UI = """
         button { flex: 1; padding: 15px; font-weight: bold; cursor: pointer; border: none; text-transform: uppercase; }
         .enc-btn { background: #ff0000; color: #000; }
         .dec-btn { background: #222; color: #ff0000; border: 1px solid #ff0000; }
+        .copy-btn { background: #333; color: #ff0000; border: 1px solid #ff0000; }
         #result { margin-top: 20px; color: #00ff00; word-break: break-all; border-top: 1px solid #333; padding-top: 15px; }
     </style>
 </head>
@@ -72,6 +73,7 @@ UI = """
         </div>
 
         <div id="result">Waiting for input...</div>
+        <button class="copy-btn" id="copy-btn" onclick="copyResult()">Copy Result</button>
     </div>
 
     <script>
@@ -87,6 +89,13 @@ UI = """
             });
             const data = await res.json();
             document.getElementById('result').innerText = data.output;
+        }
+
+        function copyResult() {
+            const result = document.getElementById('result').innerText;
+            navigator.clipboard.writeText(result).then(() => {
+                alert("Result copied to clipboard!");
+            });
         }
     </script>
 </body>
