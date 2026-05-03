@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+import logging
 
 script18_bp = Blueprint('script18', __name__)
 
@@ -26,8 +27,8 @@ GREEN_UI = """
     <title>S-Vault | Secure Unlock</title>
     <style>
         body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-        .box { max-width: 500px; margin: 50px auto; border: 1px solid #00ff00; padding: 30px; background: #050505; box-shadow: 0 0 20px #00ff00; }
-        input { width: 90%; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 12px; margin: 10px 0; outline: none; }
+        .box { max-width: 500px; margin: 50px auto; border: 1px solid #00ff00; padding: 30px; background: #050505; box-shadow: 0 0 20px #00ff00; display: grid; grid-template-columns: 1fr; grid-gap: 10px; }
+        input { width: 100%; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 12px; margin: 10px 0; outline: none; }
         .btn-row { display: flex; gap: 10px; margin-top: 20px; }
         button { flex: 1; padding: 15px; background: transparent; border: 1px solid #00ff00; color: #00ff00; font-weight: bold; cursor: pointer; }
         button:hover { background: #00ff00; color: #000; }
@@ -70,7 +71,7 @@ def process():
             salt = os.urandom(16)
             iv = os.urandom(16)
             key = get_secure_key(pw, salt)
-            cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+            cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
             encryptor = cipher.encryptor()
             secure_payload = encryptor.update(raw_data) + encryptor.finalize()
             
@@ -88,7 +89,7 @@ def process():
             ciphertext = raw_data[32:]
             
             key = get_secure_key(pw, salt)
-            cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+            cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             
             try:
@@ -104,4 +105,8 @@ def process():
             mimetype='application/octet-stream'
         )
     except Exception as e:
+        logging.error(f"Error: {e}")
         return f"<h3>[!] SYSTEM ERROR: {str(e)}</h3>"
+
+if __name__ == '__main__':
+    script18_bp.run(debug=True)
