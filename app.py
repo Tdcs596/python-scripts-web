@@ -20,6 +20,8 @@ from script17 import script17_bp
 from script18 import script18_bp # <-- Naya Script Import
 from script19 import script19_bp
 from script20 import script20_bp
+from script21 import script21_bp
+
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -58,7 +60,8 @@ def home():
             <a href="/script17/"><button class="btn">Message Vault</button></a>
             <a href="/script18/"><button class="btn" style="border-width: 2px;">FILE VAULT (PRIVATE)</button></a>
             <a href="/script19/"><button class="btn">Jarvis</button></a>
-            <a href="/script20/"><button class="btn">Jarvis</button></a>
+            <a href="/script20/"><button class="btn">Information</button></a>
+            <a href="/script21/"><button class="btn">XSS</button></a>
         </div>
     </body>
     </html>
@@ -83,6 +86,7 @@ app.register_blueprint(script17_bp, url_prefix='/script17')
 app.register_blueprint(script18_bp, url_prefix='/script18') # <-- Naya Register
 app.register_blueprint(script19_bp, url_prefix='/script19')
 app.register_blueprint(script20_bp, url_prefix='/script20')
+app.register_blueprint(script21_bp, url_prefix='/script21')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
