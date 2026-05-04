@@ -1,7 +1,7 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request, redirect, session, url_for
 import os
 
-# Blueprints Import Karein
+# --- Blueprints Import ---
 from script1 import script1_bp
 from script2 import script2_bp
 from script3 import script3_bp
@@ -17,14 +17,68 @@ from script12 import script12_bp
 from script15 import script15_bp
 from script16 import script16_bp
 from script17 import script17_bp
-from script18 import script18_bp # <-- Naya Script Import
+from script18 import script18_bp
 from script19 import script19_bp
 from script20 import script20_bp
 from script21 import script21_bp
 
-
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+app.secret_key = "PHANTOM_ULTRA_SECRET_KEY" # Session secure rakhne ke liye
+
+# --- ⚙️ CREDENTIALS SETTING ---
+ADMIN_USER = "shivam"
+ADMIN_PASS = "phantom123"
+
+# --- 🛡️ SECURITY MIDDLEWARE ---
+@app.before_request
+def check_login():
+    # Login page, static files, aur active session ko allow karein
+    allowed_routes = ['login', 'static']
+    if request.endpoint not in allowed_routes and 'logged_in' not in session:
+        return redirect(url_for('login'))
+
+# --- 🔑 LOGIN PAGE ---
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        if request.form['user'] == ADMIN_USER and request.form['pass'] == ADMIN_PASS:
+            session['logged_in'] = True
+            return redirect(url_for('home'))
+        else:
+            error = "ACCESS_DENIED: INVALID_CREDENTIALS"
+
+    return f"""
+    <html>
+    <head>
+        <title>PHANTOM_AUTH</title>
+        <style>
+            body {{ background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
+            .login-box {{ border: 1px solid #0f0; padding: 40px; background: #050505; box-shadow: 0 0 20px #0f0; text-align: center; }}
+            input {{ display: block; width: 100%; margin: 10px 0; padding: 10px; background: #111; border: 1px solid #0f0; color: #0f0; }}
+            button {{ background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; width: 100%; }}
+            .error {{ color: #ff0000; font-size: 12px; margin-bottom: 10px; }}
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h2>[ GATEWAY_AUTH ]</h2>
+            {f'<div class="error">{error}</div>' if error else ''}
+            <form method="POST">
+                <input type="text" name="user" placeholder="USERNAME" required>
+                <input type="password" name="pass" placeholder="PASSWORD" required>
+                <button type="submit">DECRYPT_ACCESS</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route("/logout")
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
 
 @app.route("/")
 def home():
@@ -35,39 +89,41 @@ def home():
         <style>
             body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; text-align: center; padding: 40px; }
             .btn { background: transparent; border: 1px solid #00ff00; color: #00ff00; padding: 15px; width: 260px; 
-                   margin: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+                   margin: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; text-decoration: none; display: inline-block; }
             .btn:hover { background: #00ff00; color: #000; box-shadow: 0 0 15px #00ff00; }
             h1 { text-shadow: 0 0 10px #00ff00; }
+            .logout-link { color: #ff0000; text-decoration: none; font-size: 12px; position: absolute; top: 20px; right: 20px; }
         </style>
     </head>
     <body>
+        <a href="/logout" class="logout-link">[ TERMINATE_SESSION ]</a>
         <h1>[ SHIVAM SINGH OMEGA DASHBOARD ]</h1>
         <div style="display: flex; flex-wrap: wrap; justify-content: center;">
-            <a href="/script1/"><button class="btn">Open Analyzer</button></a>
-            <a href="/script2/"><button class="btn">Open Scraper</button></a>
-            <a href="/script3/"><button class="btn">EXE Converter</button></a>
-            <a href="/script4/"><button class="btn">DDoS Lab</button></a>
-            <a href="/script5/"><button class="btn">Ping Tool</button></a>
-            <a href="/script6/"><button class="btn">Video Call</button></a>
-            <a href="/script7/"><button class="btn">VoIP Call</button></a>
-            <a href="/script8/"><button class="btn">Phone OSINT</button></a>
-            <a href="/script9/"><button class="btn">Private Call</button></a>
-            <a href="/script10/"><button class="btn">Spy Cam</button></a>
-            <a href="/script11/"><button class="btn">Mail Spoofing</button></a>
-            <a href="/script12/"><button class="btn">Nmap Scanner</button></a>
-            <a href="/script15/"><button class="btn">Nu Attack</button></a>
-            <a href="/script16/"><button class="btn">Vehicle Info</button></a>
-            <a href="/script17/"><button class="btn">Message Vault</button></a>
-            <a href="/script18/"><button class="btn" style="border-width: 2px;">FILE VAULT (PRIVATE)</button></a>
-            <a href="/script19/"><button class="btn">Jarvis</button></a>
-            <a href="/script20/"><button class="btn">Information</button></a>
-            <a href="/script21/"><button class="btn">XSS</button></a>
+            <a href="/script1/" class="btn">Open Analyzer</a>
+            <a href="/script2/" class="btn">Open Scraper</a>
+            <a href="/script3/" class="btn">EXE Converter</a>
+            <a href="/script4/" class="btn">DDoS Lab</a>
+            <a href="/script5/" class="btn">Ping Tool</a>
+            <a href="/script6/" class="btn">Video Call</a>
+            <a href="/script7/" class="btn">VoIP Call</a>
+            <a href="/script8/" class="btn">Phone OSINT</a>
+            <a href="/script9/" class="btn">Private Call</a>
+            <a href="/script10/" class="btn">Spy Cam</a>
+            <a href="/script11/" class="btn">Mail Spoofing</a>
+            <a href="/script12/" class="btn">Nmap Scanner</a>
+            <a href="/script15/" class="btn">Nu Attack</a>
+            <a href="/script16/" class="btn">Vehicle Info</a>
+            <a href="/script17/" class="btn">Message Vault</a>
+            <a href="/script18/" class="btn" style="border-width: 2px;">FILE VAULT (PRIVATE)</a>
+            <a href="/script19/" class="btn">Jarvis</a>
+            <a href="/script20/" class="btn">Information</a>
+            <a href="/script21/" class="btn">XSS</a>
         </div>
     </body>
     </html>
     """
 
-# Blueprints Register Karein
+# --- Blueprints Register Karein ---
 app.register_blueprint(script1_bp, url_prefix='/script1')
 app.register_blueprint(script2_bp, url_prefix='/script2')
 app.register_blueprint(script3_bp, url_prefix='/script3')
@@ -83,7 +139,7 @@ app.register_blueprint(script12_bp, url_prefix='/script12')
 app.register_blueprint(script15_bp, url_prefix='/script15')
 app.register_blueprint(script16_bp, url_prefix='/script16')
 app.register_blueprint(script17_bp, url_prefix='/script17')
-app.register_blueprint(script18_bp, url_prefix='/script18') # <-- Naya Register
+app.register_blueprint(script18_bp, url_prefix='/script18')
 app.register_blueprint(script19_bp, url_prefix='/script19')
 app.register_blueprint(script20_bp, url_prefix='/script20')
 app.register_blueprint(script21_bp, url_prefix='/script21')
