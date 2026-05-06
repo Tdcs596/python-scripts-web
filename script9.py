@@ -30,7 +30,7 @@ INTERFACE = """
 <body>
     <div class="call-card">
         <div class="avatar" id="call-icon">📞</div>
-        <h2>GHOST_PRIVATE_CALL_V9</h2>
+        <h2>FORTIFIEDBYTES_PRIVATE_CALL</h2>
         
         <div style="font-size:11px; margin-bottom:15px; color:#aaa;">
             SET PRIVATE NO: <input type="text" id="my-custom-id" placeholder="Ex: 007" style="width:50px; padding:5px; margin-bottom:0;">
