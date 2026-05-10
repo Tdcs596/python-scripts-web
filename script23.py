@@ -5,6 +5,7 @@ import json
 script23_bp = Blueprint('script23', __name__)
 
 # --- CONFIGURATION ---
+# Tera RapidAPI Credentials
 RAPID_API_KEY = "155514abbfmshd5da5b6f34d5791p144617jsn3ac281515eb0"
 RAPID_API_HOST = "vehicle-rc-information-v2.p.rapidapi.com"
 
@@ -16,23 +17,24 @@ UI = """
     <style>
         body { background: #000; color: #00d4ff; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
         .container { border: 2px solid #00d4ff; background: #050505; padding: 30px; box-shadow: 0 0 25px #00d4ff33; display: inline-block; width: 80%; max-width: 600px; border-radius: 10px; }
-        input { width: 70%; padding: 12px; background: #111; border: 1px solid #00d4ff; color: #fff; text-transform: uppercase; font-size: 18px; margin-bottom: 15px; }
-        button { padding: 12px 30px; background: #00d4ff; color: #000; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        h2 { margin-top: 0; color: #fff; text-shadow: 0 0 10px #00d4ff; }
+        input { width: 80%; padding: 12px; background: #111; border: 1px solid #00d4ff; color: #fff; text-transform: uppercase; font-size: 18px; margin-bottom: 15px; border-radius: 5px; outline: none; }
+        button { padding: 12px 30px; background: #00d4ff; color: #000; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; border-radius: 5px; }
         button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
         .result-card { margin-top: 25px; text-align: left; border-top: 1px solid #333; padding-top: 15px; display: none; }
-        .data-item { margin-bottom: 8px; font-size: 14px; }
-        .label { color: #888; text-transform: uppercase; margin-right: 10px; font-size: 12px; }
+        .data-item { margin-bottom: 8px; font-size: 14px; border-bottom: 1px solid #111; padding-bottom: 5px; }
+        .label { color: #888; text-transform: uppercase; margin-right: 10px; font-size: 11px; }
         .value { color: #fff; font-weight: bold; }
-        .loading { color: #ff0; animation: blink 1s infinite; display: none; margin-top: 10px; }
+        .loading { color: #ff0; animation: blink 1s infinite; display: none; margin-top: 10px; font-weight: bold; }
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>🚗 VAHAN_RC_TRACKER v23</h2>
-        <p>Enter Vehicle Number to fetch Registration Details</p>
+        <p>Shivm Singh Omega Dashboard - RTO Node</p>
         
-        <input type="text" id="v_number" placeholder="DL 01 CA 1234" maxlength="12">
+        <input type="text" id="v_number" placeholder="MH 01 AB 1234" maxlength="12">
         <br>
         <button onclick="fetchRC()">FETCH_INFORMATION</button>
         
@@ -48,7 +50,7 @@ UI = """
             const loader = document.getElementById('loader');
             const resultBox = document.getElementById('result');
 
-            if(!vNum) return alert("Vehicle number missing!");
+            if(!vNum) return alert("Bhai, gaadi ka number toh daal!");
 
             loader.style.display = "block";
             resultBox.style.display = "none";
@@ -60,28 +62,33 @@ UI = """
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ vehicle_number: vNum })
                 });
+                
                 const data = await res.json();
                 loader.style.display = "none";
 
-                if(data.status === "error") {
-                    resultBox.innerHTML = `<div style="color:red; text-align:center;">\${data.message}</div>`;
+                if(data.status === "error" || !data || data.message) {
+                    resultBox.innerHTML = '<div style="color:red; text-align:center;">Vehicle Not Found or API Limit Exceeded</div>';
+                    resultBox.style.display = "block";
                 } else {
                     resultBox.style.display = "block";
-                    // Loop through data to show all details
+                    
+                    let htmlContent = "";
+                    // Pure data object ko loop karke details nikal rahe hain
                     for(let key in data) {
-                        if(typeof data[key] !== 'object') {
-                            resultBox.innerHTML += `
-                                <div class="data-item">
-                                    <span class="label">\${key.replace(/_/g, ' ')}:</span>
-                                    <span class="value">\${data[key]}</span>
-                                </div>
-                            `;
+                        // Agar value object nahi hai, tabhi display karein
+                        if(typeof data[key] !== 'object' && data[key] !== null) {
+                            let cleanKey = key.replace(/_/g, ' ').toUpperCase();
+                            htmlContent += '<div class="data-item">' +
+                                '<span class="label">' + cleanKey + ':</span>' +
+                                '<span class="value">' + data[key] + '</span>' +
+                            '</div>';
                         }
                     }
+                    resultBox.innerHTML = htmlContent || '<div style="color:red;">No specific details available.</div>';
                 }
             } catch (e) {
                 loader.style.display = "none";
-                alert("Database connection timed out.");
+                alert("Error: Server se connection nahi ho paya.");
             }
         }
     </script>
@@ -95,6 +102,7 @@ def index():
 
 @script23_bp.route('/fetch_rc', methods=['POST'])
 def fetch_rc():
+    # User input ko clean karna (Spaces hatana aur Uppercase banana)
     v_num = request.json.get('vehicle_number', '').replace(" ", "").upper()
     
     try:
@@ -111,11 +119,10 @@ def fetch_rc():
         res = conn.getresponse()
         data = res.read()
         
-        # Parse data and return
+        # JSON response ko parse karke bhejna
         result = json.loads(data.decode("utf-8"))
         return jsonify(result)
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
 
