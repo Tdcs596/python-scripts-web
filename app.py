@@ -31,7 +31,7 @@ app.secret_key = "PHANTOM_ULTRA_SECRET_KEY" # Session secure rakhne ke liye
 
 # --- ⚙️ CREDENTIALS SETTING ---
 ADMIN_USER = "shivam"
-ADMIN_PASS = "phantom123"
+ADMIN_PASS = "@nishka"
 
 # --- 🛡️ SECURITY MIDDLEWARE ---
 @app.before_request
