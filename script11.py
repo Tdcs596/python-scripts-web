@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template_string, request, jsonify
 import http.client
 import json
-import base64
 
 script11_bp = Blueprint('script11', __name__)
 
@@ -17,86 +16,72 @@ UI = """
     <style>
         body { background: #000; color: #0f0; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
         .container { border: 2px solid #0f0; background: #050505; padding: 30px; box-shadow: 0 0 30px #0f03; display: inline-block; width: 90%; max-width: 700px; border-radius: 10px; text-align: left; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #0f0; font-size: 14px; }
-        input, textarea { width: 100%; padding: 10px; background: #111; border: 1px solid #0f0; color: #fff; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
-        .attachment-section { border: 1px dashed #555; padding: 10px; margin-top: 10px; }
-        button { width: 100%; padding: 15px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #fff; box-shadow: 0 0 20px #fff; }
-        #status { margin-top: 20px; padding: 10px; display: none; text-align: center; border-radius: 5px; }
-        .success { background: #004400; color: #0f0; border: 1px solid #0f0; }
-        .error { background: #440000; color: #f00; border: 1px solid #f00; }
+        label { display: block; margin-bottom: 5px; color: #0f0; font-size: 14px; margin-top: 15px; }
+        input, textarea { width: 100%; padding: 10px; background: #111; border: 1px solid #0f0; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .file-box { border: 1px dashed #555; padding: 15px; margin-top: 15px; text-align: center; }
+        button { width: 100%; padding: 15px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; border-radius: 5px; }
+        #status { margin-top: 20px; padding: 10px; display: none; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align:center;">☣️ PHANTOM_MAILER v11 ☣️</h2>
-        <p style="text-align:center; color:#888;">Ultimate Email Sender with Attachment Support</p>
-        <hr style="border:0.5px solid #333;">
+        <h2 style="text-align:center;">☣️ PHANTOM MAIL SPOOFER ☣️</h2>
+        
+        <label>TO (Victim Email):</label>
+        <input type="email" id="to_email" placeholder="target@gmail.com">
 
-        <div class="input-group">
-            <label>TARGET EMAIL (To):</label>
-            <input type="email" id="to_email" placeholder="victim@example.com">
+        <label>REPLY-TO (Spoofed Sender):</label>
+        <input type="text" id="reply_to" placeholder="billing@netflix.com">
+
+        <label>SUBJECT:</label>
+        <input type="text" id="subject" placeholder="Account Suspension Alert">
+
+        <label>MESSAGE:</label>
+        <textarea id="body" rows="5" placeholder="Write HTML or Plain text here..."></textarea>
+
+        <div class="file-box">
+            <label style="margin-top:0;">📎 ATTACH FILE (PDF/JPG/PNG):</label>
+            <input type="file" id="file_input">
+            <p id="file_info" style="font-size:11px; color:#888;"></p>
         </div>
 
-        <div class="input-group">
-            <label>SENDER NAME/EMAIL (Reply-To):</label>
-            <input type="text" id="reply_to" placeholder="support@google.com">
-        </div>
-
-        <div class="input-group">
-            <label>SUBJECT:</label>
-            <input type="text" id="subject" placeholder="Security Alert: Action Required">
-        </div>
-
-        <div class="input-group">
-            <label>MESSAGE BODY (HTML Supported):</label>
-            <textarea id="body" rows="6" placeholder="Bhai, message yahan likho..."></textarea>
-        </div>
-
-        <div class="attachment-section">
-            <label>ATTACHMENT (Optional):</label>
-            <input type="file" id="file_input" onchange="encodeFile()">
-            <input type="hidden" id="file_base64">
-            <input type="hidden" id="file_name">
-            <p id="file_status" style="font-size:10px; color:#888; margin-top:5px;">No file selected</p>
-        </div>
-        <br>
-
-        <button onclick="sendMail()" id="send_btn">EXECUTE_SENDING</button>
+        <button onclick="sendMail()" id="send_btn">EXECUTE SEND</button>
         <div id="status"></div>
     </div>
 
     <script>
-        function encodeFile() {
-            const file = document.getElementById('file_input').files[0];
+        // File ko Base64 mein convert karne ka function
+        const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = function() {
-                document.getElementById('file_base64').value = reader.result.split(',')[1];
-                document.getElementById('file_name').value = file.name;
-                document.getElementById('file_status').innerText = "File Ready: " + file.name;
-            }
-            if (file) reader.readAsDataURL(file);
-        }
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = error => reject(error);
+        });
 
         async function sendMail() {
             const btn = document.getElementById('send_btn');
             const status = document.getElementById('status');
+            const file = document.getElementById('file_input').files[0];
             
+            btn.disabled = true;
+            btn.innerText = "UPLOADING & SENDING...";
+
+            let fileData = null;
+            let fileName = null;
+
+            if (file) {
+                fileData = await toBase64(file);
+                fileName = file.name;
+            }
+
             const payload = {
                 to: document.getElementById('to_email').value,
                 replyTo: document.getElementById('reply_to').value,
                 title: document.getElementById('subject').value,
                 body: document.getElementById('body').value,
-                fileName: document.getElementById('file_name').value,
-                fileContent: document.getElementById('file_base64').value
+                att_name: fileName,
+                att_content: fileData
             };
-
-            if(!payload.to || !payload.title) return alert("To and Subject are required!");
-
-            btn.disabled = true;
-            btn.innerText = "SENDING_PACKETS...";
-            status.style.display = "none";
 
             try {
                 const res = await fetch('/script11/send', {
@@ -104,23 +89,19 @@ UI = """
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
+                const result = await res.json();
                 
                 status.style.display = "block";
-                if(data.success) {
-                    status.className = "success";
-                    status.innerText = "✅ EMAIL SENT SUCCESSFULLY!";
+                if(result.success) {
+                    status.innerHTML = "<span style='color:#0f0;'>✅ SENT: " + result.response + "</span>";
                 } else {
-                    status.className = "error";
-                    status.innerText = "❌ FAILED: " + data.message;
+                    status.innerHTML = "<span style='color:#f00;'>❌ FAILED: " + result.message + "</span>";
                 }
             } catch (e) {
-                status.className = "error";
-                status.innerText = "❌ CONNECTION ERROR";
-                status.style.display = "block";
+                alert("Connection Error!");
             }
             btn.disabled = false;
-            btn.innerText = "EXECUTE_SENDING";
+            btn.innerText = "EXECUTE SEND";
         }
     </script>
 </body>
@@ -137,8 +118,7 @@ def send():
     try:
         conn = http.client.HTTPSConnection(RAPID_API_HOST)
         
-        # Build API Payload
-        email_data = {
+        email_payload = {
             "sendTo": data['to'],
             "replyTo": data['replyTo'],
             "isHtml": True,
@@ -146,12 +126,12 @@ def send():
             "body": data['body']
         }
 
-        # Agar file hai toh attachment add karo
-        if data.get('fileContent'):
-            email_data["attachments"] = [
+        # Agar attachment payload mein hai toh add karein
+        if data.get('att_content'):
+            email_payload["attachments"] = [
                 {
-                    "content": data['fileContent'],
-                    "filename": data['fileName']
+                    "content": data['att_content'],
+                    "filename": data['att_name']
                 }
             ]
 
@@ -161,12 +141,10 @@ def send():
             'Content-Type': "application/json"
         }
 
-        conn.request("POST", "/send-email", json.dumps(email_data), headers)
+        conn.request("POST", "/send-email", json.dumps(email_payload), headers)
         res = conn.getresponse()
-        res_data = res.read().decode("utf-8")
+        resp_data = res.read().decode("utf-8")
         
-        return jsonify({"success": True, "response": res_data})
+        return jsonify({"success": True, "response": resp_data})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
-
-
