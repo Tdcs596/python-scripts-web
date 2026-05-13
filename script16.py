@@ -1,195 +1,88 @@
-import time
-import re
-import requests
-from flask import Blueprint, request, jsonify, render_template_string
+from flask import Blueprint, render_template_string, request, jsonify
+import http.client
+import json
 
-# Create the blueprint
-script16_bp = Blueprint("script16", __name__)
+script16_bp = Blueprint('script16', __name__)
 
-# --- THE "VEHICLE GHOST" UI ---
-VEHICLE_GHOST_UI = """
+# --- CONFIGURATION ---
+RAPID_API_KEY = "7bab199056msh3df63cfe9c45d9dp1996b2jsn25ec6d748a00"
+RAPID_API_HOST = "vehicle-rc-information-v2.p.rapidapi.com"
+
+UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>INDIAN VEHICLE GHOST SCANNER</title>
+    <title>VAHAN_RC_SCANNER_v16</title>
     <style>
-        body { 
-            background: #0a0f14; 
-            color: #00ff88; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            margin: 0;
-        }
-        
-        .scanner-box {
-            background: #111820;
-            border: 2px solid #00ff88;
-            padding: 40px;
-            width: 500px;
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.15);
-            border-radius: 8px;
-        }
-
-        h2 { 
-            color: #fff; 
-            text-align: center; 
-            margin-bottom: 30px; 
-            text-transform: uppercase; 
-            letter-spacing: 2px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 15px;
-        }
-
-        .input-group { position: relative; margin-bottom: 25px; }
-        
-        input { 
-            width: 100%; 
-            background: #05080a; 
-            border: 1px solid #00ff88; 
-            color: #fff; 
-            padding: 15px; 
-            font-size: 20px; 
-            text-align: center; 
-            letter-spacing: 3px;
-            font-weight: bold;
-            outline: none;
-        }
-        
-        input:focus { box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
-
-        button { 
-            width: 100%; 
-            background: #00ff88; 
-            color: #000; 
-            border: none; 
-            padding: 15px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            text-transform: uppercase; 
-            font-size: 16px;
-            transition: 0.3s;
-        }
-        
-        button:hover { background: #fff; box-shadow: 0 0 20px #00ff88; }
-
-        /* RESULTS CARD */
-        #result-card {
-            display: none;
-            margin-top: 30px;
-            border: 1px dashed #444;
-            padding: 20px;
-            background: #05080a;
-        }
-
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #222;
-            padding-bottom: 5px;
-        }
-
-        .label { color: #888; font-size: 14px; }
-        .value { color: #00ff88; font-weight: bold; font-family: monospace; font-size: 16px; text-align: right; }
-        .value.error { color: #ff3333; }
-        
-        .loading {
-            text-align: center;
-            margin-top: 20px;
-            display: none;
-            color: #00ff88;
-            font-size: 14px;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
+        body { background: #0a0a0a; color: #00ffcc; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
+        .box { border: 2px solid #00ffcc; background: #000; padding: 25px; box-shadow: 0 0 20px #00ffcc44; display: inline-block; width: 90%; max-width: 650px; border-radius: 15px; }
+        h2 { text-shadow: 0 0 10px #00ffcc; margin-bottom: 20px; }
+        input { width: 80%; padding: 15px; background: #111; border: 1px solid #00ffcc; color: #fff; font-size: 20px; text-transform: uppercase; text-align: center; border-radius: 8px; outline: none; margin-bottom: 20px; }
+        button { width: 85%; padding: 15px; background: #00ffcc; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
+        #status { margin-top: 20px; color: #ffeb3b; font-weight: bold; display: none; }
+        .result-display { margin-top: 25px; text-align: left; background: #050505; border: 1px solid #333; padding: 15px; border-radius: 8px; display: none; max-height: 400px; overflow-y: auto; }
+        .row { border-bottom: 1px solid #1a1a1a; padding: 8px 0; display: flex; justify-content: space-between; }
+        .label { color: #888; font-size: 12px; text-transform: uppercase; }
+        .val { color: #fff; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="scanner-box">
-        <h2>🚗 VEHICLE GHOST SCANNER</h2>
+    <div class="box">
+        <h2>🏎️ VAHAN RC SCANNER v16</h2>
+        <p style="color: #666;">Enter Vehicle Number (e.g. PB65AM0008)</p>
         
-        <div class="input-group">
-            <input type="text" id="vehicleNum" placeholder="ENTER NUMBER (e.g., MH02AB1234)" value="">
-        </div>
+        <input type="text" id="v_num" placeholder="CH 01 AB 1234">
+        <br>
+        <button onclick="scanVehicle()" id="scan_btn">FETCH RC DETAILS</button>
         
-        <button onclick="scanVehicle()" id="btn">SCAN DATABASE</button>
-
-        <div class="loading" id="loading">
-            [CONNECTING TO PARIVAHAN API...]<br>
-            DECRYPTING OWNER DETAILS...
-        </div>
-
-        <div id="result-card">
-            <div class="data-row"><span class="label">VEHICLE NO:</span> <span class="value" id="v-no"></span></div>
-            <div class="data-row"><span class="label">OWNER NAME:</span> <span class="value" id="v-owner"></span></div>
-            <div class="data-row"><span class="label">MOBILE NO:</span> <span class="value" id="v-mobile"></span></div>
-            <div class="data-row"><span class="label">ADDRESS:</span> <span class="value" id="v-addr"></span></div>
-            <div class="data-row"><span class="label">FUEL TYPE:</span> <span class="value" id="v-fuel"></span></div>
-            <div class="data-row"><span class="label">CLASS:</span> <span class="value" id="v-class"></span></div>
-            <div class="data-row"><span class="label">INSURANCE:</span> <span class="value" id="v-ins"></span></div>
-        </div>
+        <div id="status">📡 CONNECTING TO RTO DATABASE...</div>
+        <div id="result" class="result-display"></div>
     </div>
 
     <script>
         async function scanVehicle() {
-            const num = document.getElementById('vehicleNum').value.trim().toUpperCase();
-            const btn = document.getElementById('btn');
-            const loading = document.getElementById('loading');
-            const resultCard = document.getElementById('result-card');
-            
-            if (num.length < 5) { alert("Enter a valid vehicle number!"); return; }
+            const vNum = document.getElementById('v_num').value.replace(/\s+/g, '').toUpperCase();
+            const btn = document.getElementById('scan_btn');
+            const status = document.getElementById('status');
+            const resultBox = document.getElementById('result');
 
-            // Reset UI
+            if(!vNum) return alert("Bhai, number toh daal!");
+
             btn.disabled = true;
-            btn.innerText = "SCANNING...";
-            resultCard.style.display = 'none';
-            loading.style.display = 'block';
+            status.style.display = "block";
+            resultBox.style.display = "none";
+            resultBox.innerHTML = "";
 
             try {
-                const response = await fetch(window.location.pathname + "/ghost", {
+                const res = await fetch('/script16/fetch', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ vehicle: num })
+                    body: JSON.stringify({ vehicle_number: vNum })
                 });
-
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    // Populate Data
-                    document.getElementById('v-no').innerText = data.vehicle_no;
-                    document.getElementById('v-owner').innerText = data.owner_name || "N/A";
-                    document.getElementById('v-mobile').innerText = data.mobile || "N/A";
-                    document.getElementById('v-addr').innerText = data.address || "N/A";
-                    document.getElementById('v-fuel').innerText = data.fuel_type || "N/A";
-                    document.getElementById('v-class').innerText = data.vehicle_class || "N/A";
-                    document.getElementById('v-ins').innerText = data.insurance || "N/A";
-
-                    // Show Result
-                    resultCard.style.display = 'block';
-                    
-                    // Close after 15 seconds
-                    setTimeout(() => { window.close(); }, 15000);
-
-                } else {
-                    loading.innerText = "⚠️ ERROR: " + data.message;
-                    setTimeout(() => { 
-                        btn.disabled = false; 
-                        btn.innerText = "SCAN DATABASE";
-                    }, 2000);
-                }
-
-            } catch (err) {
-                loading.innerText = "🔴 CONNECTION LOST TO API";
+                const data = await res.json();
+                
+                status.style.display = "none";
                 btn.disabled = false;
-                btn.innerText = "SCAN DATABASE";
+
+                if(data.status === "error" || data.message === "You have exceeded the rate limit per second for your plan") {
+                    resultBox.innerHTML = "<p style='color:red; text-align:center;'>❌ ERROR: API Limit Crossed or Invalid Number</p>";
+                } else {
+                    let html = "";
+                    for(let key in data) {
+                        if(typeof data[key] !== 'object' && data[key] !== null) {
+                            html += `<div class="row">
+                                <span class="label">\${key.replace(/_/g, ' ')}</span>
+                                <span class="val">\${data[key]}</span>
+                            </div>`;
+                        }
+                    }
+                    resultBox.innerHTML = html || "<p style='color:red;'>No data found for this number.</p>";
+                }
+                resultBox.style.display = "block";
+            } catch (e) {
+                status.innerText = "❌ Connection Failed!";
+                btn.disabled = false;
             }
         }
     </script>
@@ -197,109 +90,34 @@ VEHICLE_GHOST_UI = """
 </html>
 """
 
-@script16_bp.route("/")
+@script16_bp.route('/')
 def index():
-    return render_template_string(VEHICLE_GHOST_UI)
+    return render_template_string(UI)
 
-@script16_bp.route("/ghost", methods=["POST"])
-def handle_ghost():
-    data = request.get_json()
-    raw_vehicle = data['vehicle']
+@script16_bp.route('/fetch', methods=['POST'])
+def fetch_rc():
+    v_num = request.json.get('vehicle_number', '')
     
-    # Clean the number (remove spaces, ensure uppercase)
-    clean_vehicle = re.sub(r'\s+', '', raw_vehicle).upper()
-    
-    # Basic Validation: Must start with 2 letters (State) + numbers
-    if not re.match(r'^[A-Z]{2}\d{1,2}[A-Z]{0,2}\d{4}$', clean_vehicle):
-        return jsonify({"status": "error", "message": "Invalid Format. Use: MH02AB1234"}), 400
-
     try:
-        result = query_parivahan(clean_vehicle)
-        if result:
-            return jsonify({"status": "success", **result})
-        else:
-            return jsonify({"status": "error", "message": "Vehicle Not Found or Data Locked"}), 404
-            
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-def query_parivahan(vehicle_no):
-    """
-    Queries the Parivahan Sewa API (Public Endpoint).
-    Note: This uses a direct GET request to the RTO database.
-    """
-    
-    # The official endpoint for vehicle details
-    url = "https://parivahan.gov.in/parivahan5.0/apis/v2/search"
-    
-    # Headers to mimic a real browser (Chrome on Android usually)
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Content-Type': 'application/json',
-        'Origin': 'https://parivahan.gov.in'
-    }
-
-    # The payload for the search API
-    payload = {
-        "key": vehicle_no,
-        "type": "VEHICLE"
-    }
-
-    try:
-        # Send request (Timeout 5 seconds)
-        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        conn = http.client.HTTPSConnection(RAPID_API_HOST)
+        payload = json.dumps({"vehicle_number": v_num})
         
-        if response.status_code == 200:
-            api_data = response.json()
-            
-            # Parse the complex JSON structure returned by Parivahan
-            # The actual data is nested deep inside 'data' -> 'details'
-            
-            details = api_data.get('data', {}).get('details', [])
-            
-            if not details:
-                return None
+        headers = {
+            'x-rapidapi-key': RAPID_API_KEY,
+            'x-rapidapi-host': RAPID_API_HOST,
+            'Content-Type': "application/json"
+        }
 
-            # Extract specific fields (Note: Keys might vary slightly, this covers standard response)
-            owner_info = details[0]
+        conn.request("POST", "/", payload, headers)
+        res = conn.getresponse()
+        
+        # Rate limit check
+        if res.status == 429:
+            return jsonify({"status": "error", "message": "Limit Exceeded"})
             
-            # Fallback logic for missing data
-            owner_name = owner_info.get('name', 'N/A')
-            mobile = owner_info.get('mobile', 'N/A')
-            address = owner_info.get('address', 'N/A')
-            fuel = owner_info.get('fuelType', 'N/A')
-            v_class = owner_info.get('vehicleClass', 'N/A')
-            
-            # Insurance usually in a separate section or nested, trying to find it
-            insurance = "Check RTO for details" 
-            
-            return {
-                "vehicle_no": vehicle_no,
-                "owner_name": owner_name,
-                "mobile": mobile,
-                "address": address,
-                "fuel_type": fuel,
-                "vehicle_class": v_class,
-                "insurance": insurance
-            }
-            
-        else:
-            return None
+        data = res.read()
+        return jsonify(json.loads(data.decode("utf-8")))
 
-    except requests.exceptions.Timeout:
-        raise Exception("API Timeout (Server too slow)")
     except Exception as e:
-        raise Exception(str(e))
+        return jsonify({"status": "error", "message": str(e)})
 
-# --- RUN SCRIPT ---
-if __name__ == "__main__":
-    from flask import Flask
-    app = Flask(__name__)
-    app.register_blueprint(script16_bp)
-    
-    print("🚗 Starting Vehicle Ghost Scanner...")
-    print("Open: http://127.0.0.1:5007")
-    
-    app.run(debug=True, port=5007)
