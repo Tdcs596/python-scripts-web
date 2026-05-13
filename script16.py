@@ -59,24 +59,22 @@ UI = """
                 status.style.display = "none";
                 btn.disabled = false;
 
-                // API response structure handle karna
                 let rData = data.result || data.data || data;
                 
                 if (data.status === "error" || data.message) {
-                    resultBox.innerHTML = `<p style="color:red; text-align:center;">❌ ERROR: \${data.message || "Failed"}</p>`;
+                    resultBox.innerHTML = "<p style='color:red; text-align:center;'>❌ ERROR: " + (data.message || "Failed") + "</p>";
                 } else {
                     let html = "";
-                    // Deep search logic to find keys
                     for (let key in rData) {
                         if (typeof rData[key] !== 'object' && rData[key] !== null && rData[key] !== "") {
-                            html += `
-                            <div class="row">
-                                <span class="label">\${key.replace(/_/g, ' ')}</span>
-                                <span class="val">\${rData[key]}</span>
-                            </div>`;
+                            let cleanKey = key.replace(/_/g, ' ');
+                            html += '<div class="row">' +
+                                '<span class="label">' + cleanKey + '</span>' +
+                                '<span class="val">' + rData[key] + '</span>' +
+                            '</div>';
                         }
                     }
-                    resultBox.innerHTML = html || "<p style='color:red;'>Vehicle details not found in API response.</p>";
+                    resultBox.innerHTML = html || "<p style='color:red;'>No data found.</p>";
                 }
                 resultBox.style.display = "block";
             } catch (e) {
@@ -106,10 +104,6 @@ def fetch_rc():
         }
         conn.request("POST", "/", payload, headers)
         res = conn.getresponse()
-        
-        if res.status == 429:
-            return jsonify({"status": "error", "message": "API Limit Reached!"})
-            
         raw_data = res.read().decode("utf-8")
         return jsonify(json.loads(raw_data))
     except Exception as e:
