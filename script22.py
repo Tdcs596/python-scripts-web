@@ -4,7 +4,7 @@ import requests
 script22_bp = Blueprint('script22', __name__)
 
 # --- CONFIGURATION ---
-API_TOKEN = "1308711346:P09E32lL"
+API_TOKEN = "1308711346:FIIuKm5S"
 API_URL = "https://leakosintapi.com/"
 
 UI = """
