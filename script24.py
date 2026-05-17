@@ -1,108 +1,86 @@
 from flask import Blueprint, render_template_string, request, jsonify
-import http.client
+import mysql.connector
 import json
 
 script24_bp = Blueprint('script24', __name__)
-
-# --- CONFIGURATION ---
-WEBSHARE_API_KEY = "gtauzqw8k9bnapntgzzxvmfx4zuepz3syul8vhzm"
-WEBSHARE_API_HOST = "proxy.webshare.io"
 
 UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WEBSHARE_PROXY_v24</title>
+    <title>SECURE_DB_NODE_v24</title>
     <style>
-        body { background: #0a0a0a; color: #ffeb3b; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
-        .box { border: 2px solid #ffeb3b; background: #000; padding: 25px; box-shadow: 0 0 20px #ffeb3b44; display: inline-block; width: 95%; max-width: 900px; border-radius: 15px; }
-        h2 { text-shadow: 0 0 10px #ffeb3b; margin-bottom: 20px; }
-        button { padding: 12px 30px; background: #ffeb3b; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 16px; transition: 0.3s; }
+        body { background: #050505; color: #00ff66; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
+        .container { border: 2px solid #00ff66; background: #000; padding: 30px; box-shadow: 0 0 25px #00ff6633; display: inline-block; width: 90%; max-width: 700px; border-radius: 10px; text-align: left; }
+        .header { text-align: center; border-bottom: 1px solid #00ff66; padding-bottom: 15px; margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #fff; text-shadow: 0 0 10px #00ff66; }
+        .input-group { margin-bottom: 20px; text-align: center; }
+        input { width: 70%; padding: 12px; background: #111; border: 1px solid #00ff66; color: #fff; font-size: 16px; border-radius: 5px; outline: none; text-align: center; }
+        button { padding: 12px 30px; background: #00ff66; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 15px; transition: 0.3s; }
         button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-        #status { margin: 15px 0; color: #00ffcc; display: none; font-weight: bold; }
-        .table-container { margin-top: 25px; background: #050505; border: 1px solid #333; padding: 10px; border-radius: 8px; display: none; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px; border-bottom: 1px solid #222; font-size: 13px; }
-        th { color: #ffeb3b; text-transform: uppercase; border-bottom: 2px solid #ffeb3b; }
-        td { color: #fff; word-break: break-all; }
-        .copy-btn { padding: 3px 8px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; border-radius: 3px; font-size: 11px; }
-        .copy-btn:hover { background: #ffeb3b; color: #000; }
+        .status-node { color: #ffeb3b; text-align: center; margin: 15px 0; display: none; }
+        .result-box { margin-top: 25px; background: #0a0a0a; border: 1px dashed #00ff66; padding: 15px; border-radius: 5px; display: none; max-height: 300px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #222; text-align: left; font-size: 14px; }
+        th { color: #00ff66; border-bottom: 2px solid #00ff66; }
+        td { color: #fff; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>🌐 WEBSHARE PROXY MANAGER v24</h2>
-        <p style="color: #888;">Fetch active proxy list from your Webshare account</p>
-        
-        <button onclick="fetchProxies()" id="fetch_btn">LOAD ACTIVE PROXIES</button>
-        <div id="status">📡 FETCHING DATA FROM WEBSHARE NETWORKS...</div>
-        
-        <div id="result_container" class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>IP Address</th>
-                        <th>Port</th>
-                        <th>Username</th>
-                        <th>Password</th>
-                        <th>Valid</th>
-                        <th>Credentials</th>
-                    </tr>
-                </thead>
-                <tbody id="proxy_table_body">
-                    </tbody>
-            </table>
+    <div class="container">
+        <div class="header">
+            <h2>🛡️ SECURE DATABASE GATEWAY v24</h2>
+            <p style="color: #666; margin: 0;">MEMBER OF SHIVAM SINGH OMEGA DASHBOARD</p>
         </div>
+
+        <div class="input-group">
+            <input type="text" id="username_input" placeholder="Enter Username to Search Safely">
+            <br><br>
+            <button onclick="queryDatabase()">EXECUTE PARAMETERIZED QUERY</button>
+        </div>
+
+        <div id="status" class="status-node">⚡ QUERIES BEING BOUND SEPARATELY FROM LOGIC...</div>
+        <div id="result" class="result-box"></div>
     </div>
 
     <script>
-        async function fetchProxies() {
-            const btn = document.getElementById('fetch_btn');
+        async function queryDatabase() {
+            const inputVal = document.getElementById('username_input').value;
             const status = document.getElementById('status');
-            const container = document.getElementById('result_container');
-            const tbody = document.getElementById('proxy_table_body');
+            const resultBox = document.getElementById('result');
 
-            btn.disabled = true;
+            if(!inputVal) return alert("Bhai, kuch input toh daal!");
+
             status.style.display = "block";
-            container.style.display = "none";
-            tbody.innerHTML = "";
+            resultBox.style.display = "none";
+            resultBox.innerHTML = "";
 
             try {
-                const res = await fetch('/script24/get_proxies', {
+                const res = await fetch('/script24/vulnerable_endpoint', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_input: inputVal })
                 });
                 const data = await res.json();
-                
                 status.style.display = "none";
-                btn.disabled = false;
 
-                if(data.status === "error" || !data.results) {
-                    alert("Error: " + (data.message || "Failed to fetch data"));
-                } else {
-                    let html = "";
-                    let proxyList = data.results;
-
-                    for (let i = 0; i < proxyList.length; i++) {
-                        let proxy = proxyList[i];
-                        let fullString = proxy.proxy_address + ":" + proxy.port + ":" + proxy.username + ":" + proxy.password;
-                        
-                        html += '<tr>' +
-                            '<td>' + proxy.proxy_address + '</td>' +
-                            '<td>' + proxy.port + '</td>' +
-                            '<td>' + proxy.username + '</td>' +
-                            '<td>' + proxy.password + '</td>' +
-                            '<td style="color:' + (proxy.valid ? "#00ffcc" : "#ff0055") + '">' + proxy.valid + '</td>' +
-                            '<td><button class="copy-btn" onclick="navigator.clipboard.writeText(\'' + fullString + '\'); alert(\'Copied!\');">Copy</button></td>' +
-                        '</tr>';
+                if(data.status === "error") {
+                    resultBox.innerHTML = '<p style="color:red; text-align:center;">❌ Error: ' + data.message + '</p>';
+                } else if(data.results && data.results.length > 0) {
+                    let tableHtml = '<table><thead><tr><th>USER DATA ROW</th></tr></thead><tbody>';
+                    
+                    for(let i = 0; i < data.results.length; i++) {
+                        tableHtml += '<tr><td>' + JSON.stringify(data.results[i]) + '</td></tr>';
                     }
                     
-                    tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No proxies found in this account.</td></tr>';
-                    container.style.display = "block";
+                    tableHtml += '</tbody></table>';
+                    resultBox.innerHTML = tableHtml;
+                } else {
+                    resultBox.innerHTML = '<p style="color:#ff0055; text-align:center;">No records found matching the exact string.</p>';
                 }
+                resultBox.style.display = "block";
             } catch (e) {
-                status.innerText = "❌ Connection Failed!";
-                btn.disabled = false;
+                status.innerText = "❌ Connection to local gateway failed!";
             }
         }
     </script>
@@ -114,21 +92,28 @@ UI = """
 def index():
     return render_template_string(UI)
 
-@script24_bp.route('/get_proxies', methods=['POST'])
-def get_proxies():
+@script24_bp.route('/vulnerable_endpoint', methods=['POST'])
+def vulnerable_endpoint():
+    user_input = request.json.get('user_input')
+    conn = None
     try:
-        conn = http.client.HTTPSConnection(WEBSHARE_API_HOST)
+        # Database connection mapping
+        conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='test')
+        cursor = conn.cursor()
         
-        # Webshare authentication header syntax rule: 'Authorization': 'Token <key>'
-        headers = {
-            'Authorization': "Token " + WEBSHARE_API_KEY
-        }
-
-        # Endpoint as per official Webshare API endpoints documentation
-        conn.request("GET", "/api/v2/proxy/list/?page=1&page_size=100", "", headers)
-        res = conn.getresponse()
-        raw_data = res.read().decode("utf-8")
+        # Vulnerable query syntax
+        query = "SELECT * FROM users WHERE username = '" + user_input + "'"
+        cursor.execute(query)
+        results = cursor.fetchall()
         
-        return jsonify(json.loads(raw_data))
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return jsonify({"status": "success", "results": results})
+        
+    except mysql.connector.Error as err:
+        # Insecure Error Handling: Database exception logs ko user UI par show karna
+        return jsonify({"status": "error", "message": str(err)})
+        
+    finally:
+        # Resource management optimization
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
