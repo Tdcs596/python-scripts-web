@@ -5,107 +5,105 @@ import json
 script24_bp = Blueprint('script24', __name__)
 
 # --- CONFIGURATION ---
-RAPID_API_KEY = "155514abbfmshd5da5b6f34d5791p144617jsn3ac281515eb0"
-RAPID_API_HOST = "anonmyous-mail-sender.p.rapidapi.com"
+WEBSHARE_API_KEY = "gtauzqw8k9bnapntgzzxvmfx4zuepz3syul8vhzm"
+WEBSHARE_API_HOST = "proxy.webshare.io"
 
 UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GHOST_MAILER_v24</title>
+    <title>WEBSHARE_PROXY_v24</title>
     <style>
-        body { background: #000; color: #ff0055; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
-        .container { border: 2px solid #ff0055; background: #050505; padding: 30px; box-shadow: 0 0 30px #ff005533; display: inline-block; width: 90%; max-width: 700px; border-radius: 10px; text-align: left; }
-        label { display: block; margin-bottom: 5px; color: #ff0055; font-size: 14px; margin-top: 15px; }
-        input, textarea { width: 100%; padding: 12px; background: #111; border: 1px solid #ff0055; color: #fff; border-radius: 5px; box-sizing: border-box; outline: none; }
-        .file-section { border: 1px dashed #444; padding: 15px; margin-top: 20px; text-align: center; background: #0a0a0a; }
-        button { width: 100%; padding: 15px; background: #ff0055; color: #fff; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; border-radius: 5px; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #fff; color: #000; box-shadow: 0 0 20px #fff; }
-        #status { margin-top: 20px; padding: 10px; display: none; text-align: center; border-radius: 5px; font-weight: bold; }
+        body { background: #0a0a0a; color: #ffeb3b; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
+        .box { border: 2px solid #ffeb3b; background: #000; padding: 25px; box-shadow: 0 0 20px #ffeb3b44; display: inline-block; width: 95%; max-width: 900px; border-radius: 15px; }
+        h2 { text-shadow: 0 0 10px #ffeb3b; margin-bottom: 20px; }
+        button { padding: 12px 30px; background: #ffeb3b; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
+        #status { margin: 15px 0; color: #00ffcc; display: none; font-weight: bold; }
+        .table-container { margin-top: 25px; background: #050505; border: 1px solid #333; padding: 10px; border-radius: 8px; display: none; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #222; font-size: 13px; }
+        th { color: #ffeb3b; text-transform: uppercase; border-bottom: 2px solid #ffeb3b; }
+        td { color: #fff; word-break: break-all; }
+        .copy-btn { padding: 3px 8px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; border-radius: 3px; font-size: 11px; }
+        .copy-btn:hover { background: #ffeb3b; color: #000; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2 style="text-align:center;">🕵️ ANONYMOUS GHOST MAILER v24</h2>
-        <p style="text-align:center; color:#666; font-size:12px;">Identity: HIDDEN | Status: ENCRYPTED</p>
-        <hr style="border:0.5px solid #222;">
-
-        <label>TARGET EMAIL (To):</label>
-        <input type="email" id="to_email" placeholder="victim@gmail.com">
-
-        <label>SUBJECT:</label>
-        <input type="text" id="subject" placeholder="Confidential Message">
-
-        <label>MESSAGE BODY (Text):</label>
-        <textarea id="body" rows="6" placeholder="Apna secret message yahan likho..."></textarea>
-
-        <div class="file-section">
-            <label style="margin-top:0;">📎 ATTACH FILE (Images/PDF/Docs):</label>
-            <input type="file" id="file_input">
-            <p id="file_msg" style="font-size:10px; color:#888; margin-top:10px;">File will be converted to Base64 automatically</p>
+    <div class="box">
+        <h2>🌐 WEBSHARE PROXY MANAGER v24</h2>
+        <p style="color: #888;">Fetch active proxy list from your Webshare account</p>
+        
+        <button onclick="fetchProxies()" id="fetch_btn">LOAD ACTIVE PROXIES</button>
+        <div id="status">📡 FETCHING DATA FROM WEBSHARE NETWORKS...</div>
+        
+        <div id="result_container" class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Port</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Valid</th>
+                        <th>Credentials</th>
+                    </tr>
+                </thead>
+                <tbody id="proxy_table_body">
+                    </tbody>
+            </table>
         </div>
-
-        <button onclick="sendGhostMail()" id="send_btn">EXECUTE ANONYMOUS SEND</button>
-        <div id="status"></div>
     </div>
 
     <script>
-        // File ko base64 mein badalne ka modern tareeka
-        const getBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = error => reject(error);
-        });
-
-        async function sendGhostMail() {
-            const btn = document.getElementById('send_btn');
+        async function fetchProxies() {
+            const btn = document.getElementById('fetch_btn');
             const status = document.getElementById('status');
-            const file = document.getElementById('file_input').files[0];
-
-            const to = document.getElementById('to_email').value;
-            const subject = document.getElementById('subject').value;
-            const body = document.getElementById('body').value;
-
-            if(!to || !subject || !body) return alert("Bhai, Details toh bharo!");
+            const container = document.getElementById('result_container');
+            const tbody = document.getElementById('proxy_table_body');
 
             btn.disabled = true;
-            btn.innerText = "ENCRYPTING & SENDING...";
-            status.style.display = "none";
-
-            let fileContent = null;
-            if (file) {
-                fileContent = await getBase64(file);
-            }
-
-            const payload = {
-                to: to,
-                subject: subject,
-                text: body,
-                attachment: fileContent
-            };
+            status.style.display = "block";
+            container.style.display = "none";
+            tbody.innerHTML = "";
 
             try {
-                const res = await fetch('/script24/send', {
+                const res = await fetch('/script24/get_proxies', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
+                    headers: {'Content-Type': 'application/json'}
                 });
-                const result = await res.json();
+                const data = await res.json();
                 
-                status.style.display = "block";
-                if(result.success) {
-                    status.style.color = "#0f0";
-                    status.innerText = "✅ GHOST MAIL DELIVERED!";
+                status.style.display = "none";
+                btn.disabled = false;
+
+                if(data.status === "error" || !data.results) {
+                    alert("Error: " + (data.message || "Failed to fetch data"));
                 } else {
-                    status.style.color = "#f00";
-                    status.innerText = "❌ FAILED: " + result.message;
+                    let html = "";
+                    let proxyList = data.results;
+
+                    for (let i = 0; i < proxyList.length; i++) {
+                        let proxy = proxyList[i];
+                        let fullString = proxy.proxy_address + ":" + proxy.port + ":" + proxy.username + ":" + proxy.password;
+                        
+                        html += '<tr>' +
+                            '<td>' + proxy.proxy_address + '</td>' +
+                            '<td>' + proxy.port + '</td>' +
+                            '<td>' + proxy.username + '</td>' +
+                            '<td>' + proxy.password + '</td>' +
+                            '<td style="color:' + (proxy.valid ? "#00ffcc" : "#ff0055") + '">' + proxy.valid + '</td>' +
+                            '<td><button class="copy-btn" onclick="navigator.clipboard.writeText(\'' + fullString + '\'); alert(\'Copied!\');">Copy</button></td>' +
+                        '</tr>';
+                    }
+                    
+                    tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No proxies found in this account.</td></tr>';
+                    container.style.display = "block";
                 }
             } catch (e) {
-                alert("Server Connection Error!");
+                status.innerText = "❌ Connection Failed!";
+                btn.disabled = false;
             }
-            btn.disabled = false;
-            btn.innerText = "EXECUTE ANONYMOUS SEND";
         }
     </script>
 </body>
@@ -116,35 +114,21 @@ UI = """
 def index():
     return render_template_string(UI)
 
-@script24_bp.route('/send', methods=['POST'])
-def send_mail():
-    data = request.json
+@script24_bp.route('/get_proxies', methods=['POST'])
+def get_proxies():
     try:
-        conn = http.client.HTTPSConnection(RAPID_API_HOST)
+        conn = http.client.HTTPSConnection(WEBSHARE_API_HOST)
         
-        # API expects specific fields
-        mail_payload = {
-            "to": data['to'],
-            "subject": data['subject'],
-            "text": data['text']
-        }
-
-        # Agar attachment hai toh payload mein inject karo
-        # Note: Kuch APIs mein key 'file' ya 'attachment' hoti hai
-        if data.get('attachment'):
-            mail_payload["attachment"] = data['attachment']
-
+        # Webshare authentication header syntax rule: 'Authorization': 'Token <key>'
         headers = {
-            'x-rapidapi-key': RAPID_API_KEY,
-            'x-rapidapi-host': RAPID_API_HOST,
-            'Content-Type': "application/json"
+            'Authorization': "Token " + WEBSHARE_API_KEY
         }
 
-        conn.request("POST", "/send", json.dumps(mail_payload), headers)
+        # Endpoint as per official Webshare API endpoints documentation
+        conn.request("GET", "/api/v2/proxy/list/?page=1&page_size=100", "", headers)
         res = conn.getresponse()
-        resp_data = res.read().decode("utf-8")
+        raw_data = res.read().decode("utf-8")
         
-        return jsonify({"success": True, "response": resp_data})
+        return jsonify(json.loads(raw_data))
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
-
+        return jsonify({"status": "error", "message": str(e)})
