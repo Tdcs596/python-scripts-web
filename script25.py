@@ -113,9 +113,9 @@ def scan_breach():
     encoded_term = urllib.parse.quote(search_term)
     
     try:
-        conn = http.http.client.HTTPSConnection(RAPID_API_HOST)
+        # Fixed: http.http.client ko badal kar simple http.client kar diya hai
+        conn = http.client.HTTPSConnection(RAPID_API_HOST)
         
-        # Added User-Agent to avoid server-side blocks
         headers = {
             'x-rapidapi-key': RAPID_API_KEY,
             'x-rapidapi-host': RAPID_API_HOST,
@@ -125,25 +125,19 @@ def scan_breach():
 
         conn.request("GET", "/?func=auto&term=" + encoded_term, headers=headers)
         res = conn.getresponse()
-        
         raw_data = res.read().decode("utf-8")
         
-        # Check if the response is actually empty
         if not raw_data:
             return jsonify({"status": "error", "message": f"API returned an empty response. Status Code: {res.status}"})
             
-        # Try safe parsing to catch formatting errors gracefully
         try:
             parsed_json = json.loads(raw_data)
-            
-            # Handling RapidAPI platform errors (like limit exceed text logs)
             if isinstance(parsed_json, dict) and "message" in parsed_json:
                 return jsonify({"status": "error", "message": parsed_json["message"]})
                 
             return jsonify(parsed_json)
         except json.JSONDecodeError:
-            # If server sends HTML error instead of JSON, print the raw message safely
-            return jsonify({"status": "error", "message": f"Server sent plain text/HTML instead of JSON. Raw: {raw_data[:100]}"})
+            return jsonify({"status": "error", "message": f"Plain text response: {raw_data[:100]}"})
             
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
