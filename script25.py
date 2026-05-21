@@ -74,9 +74,7 @@ UI = """
                 btn.disabled = false;
 
                 if(data.status === "error") {
-                    resultBox.innerHTML = "<p style='color:red; text-align:center;'>❌ ERROR: " + data.message + "</p>";
-                } else if(data.success === false) {
-                    resultBox.innerHTML = "<p style='color:red; text-align:center;'>❌ API Error: Check Key or Limits</p>";
+                    resultBox.innerHTML = "<p style='color:red; text-align:center;'>❌ SERVER ERROR: " + data.message + "</p>";
                 } else if(data.result && data.result.length > 0) {
                     let html = "<h3 style='color:#fff; margin-top:0;'>⚠️ Pwned! Found in " + data.result.length + " Breaches:</h3>";
                     
@@ -112,27 +110,40 @@ def index():
 @script25_bp.route('/scan', methods=['POST'])
 def scan_breach():
     search_term = request.json.get('search_term', '')
-    # URL safe encoding for special characters like @
     encoded_term = urllib.parse.quote(search_term)
     
     try:
-        conn = http.client.HTTPSConnection(RAPID_API_HOST)
+        conn = http.http.client.HTTPSConnection(RAPID_API_HOST)
+        
+        # Added User-Agent to avoid server-side blocks
         headers = {
             'x-rapidapi-key': RAPID_API_KEY,
             'x-rapidapi-host': RAPID_API_HOST,
-            'Content-Type': "application/json"
+            'Content-Type': "application/json",
+            'User-Agent': "Mozilla/5.0"
         }
 
-        # Request triggered with auto function as per specification
         conn.request("GET", "/?func=auto&term=" + encoded_term, headers=headers)
         res = conn.getresponse()
         
-        if res.status == 429:
-            return jsonify({"status": "error", "message": "API Limit Reached or Rate Limited!"})
-            
         raw_data = res.read().decode("utf-8")
-        return jsonify(json.loads(raw_data))
         
+        # Check if the response is actually empty
+        if not raw_data:
+            return jsonify({"status": "error", "message": f"API returned an empty response. Status Code: {res.status}"})
+            
+        # Try safe parsing to catch formatting errors gracefully
+        try:
+            parsed_json = json.loads(raw_data)
+            
+            # Handling RapidAPI platform errors (like limit exceed text logs)
+            if isinstance(parsed_json, dict) and "message" in parsed_json:
+                return jsonify({"status": "error", "message": parsed_json["message"]})
+                
+            return jsonify(parsed_json)
+        except json.JSONDecodeError:
+            # If server sends HTML error instead of JSON, print the raw message safely
+            return jsonify({"status": "error", "message": f"Server sent plain text/HTML instead of JSON. Raw: {raw_data[:100]}"})
+            
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
