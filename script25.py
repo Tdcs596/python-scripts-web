@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template_string, request, jsonify
 import http.client
 import json
-import urllib.parse
 
 script25_bp = Blueprint('script25', __name__)
 
@@ -9,7 +8,7 @@ UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CELL_RESOLVER_NO_API</title>
+    <title>CELL_RESOLVER_v25</title>
     <style>
         body { background: #06090e; color: #00ffcc; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
         .box { border: 2px solid #00ffcc; background: #000; padding: 25px; box-shadow: 0 0 25px #00ffcc33; display: inline-block; width: 95%; max-width: 650px; border-radius: 12px; text-align: left; }
@@ -30,7 +29,7 @@ UI = """
 <body>
     <div class="box">
         <div class="header">
-            <h2>📡 PUBLIC CELL RESOLVER v25 (Bina API Key)</h2>
+            <h2>📡 PUBLIC CELL RESOLVER v25</h2>
             <p style="color: #557099; margin: 5px 0 0 0;">SHIVAM SINGH OMEGA DASHBOARD • OPEN SOURCE INTEL</p>
         </div>
 
@@ -57,7 +56,7 @@ UI = """
             <button onclick="locateCellTower()">SCRAPE & RESOLVE LOCATION</button>
         </div>
 
-        <div id="status">📡 PARSING OPEN CELL REGISTRY WITHOUT KEYS...</div>
+        <div id="status">📡 INTERROGATING MULTIPLE FALLBACK REGISTRIES...</div>
         <div id="result" class="result-display"></div>
     </div>
 
@@ -71,7 +70,7 @@ UI = """
             const status = document.getElementById('status');
             const resultBox = document.getElementById('result');
 
-            if(!mcc || !mnc || !lac || !cid) return alert("Bhai, sab bharo pehle!");
+            if(!mcc || !mnc || !lac || !cid) return alert("Bhai, saare fields bharo pehle!");
 
             status.style.display = "block";
             resultBox.style.display = "none";
@@ -89,13 +88,13 @@ UI = """
                 if(data.status === "error") {
                     resultBox.innerHTML = "<p style='color:red;'>❌ ERROR: " + data.message + "</p>";
                 } else if(data.status === "success") {
-                    resultBox.innerHTML = "<h3 style='color:#fff; margin-top:0;'>📍 Location Scraping Successful!</h3>" +
+                    resultBox.innerHTML = "<h3 style='color:#fff; margin-top:0;'>📍 Location Resolved!</h3>" +
                         "<p><strong>Latitude:</strong> " + data.lat + "</p>" +
                         "<p><strong>Longitude:</strong> " + data.lon + "</p>" +
-                        "<p><strong>Radio Type:</strong> GSM / LTE Mode</p>" +
-                        '<a href="https://www.google.com/maps?q=' + data.lat + ',' + data.lon + '" target="_blank" class="map-link">🗺️ VIEW ON GOOGLE MAPS</a>';
+                        "<p><strong>Database Source:</strong> " + data.source + "</p>" +
+                        '<a href="https://maps.google.com/?q=' + data.lat + ',' + data.lon + '" target="_blank" class="map-link">🗺️ VIEW ON GOOGLE MAPS</a>';
                 } else {
-                    resultBox.innerHTML = "<p style='color:#ffb700;'>Data not found for this tower signature in open source pool.</p>";
+                    resultBox.innerHTML = "<p style='color:#ffb700; text-align:center;'>⚠️ Data not found for this tower signature in any open pool.<br><br><span style='color:#666; font-size:13px;'>Tip: NetMonster app se real-time towers ka live data nikal kar check karein.</span></p>";
                 }
                 resultBox.style.display = "block";
             } catch (e) {
@@ -119,37 +118,41 @@ def free_locate():
     lac = str(req_data.get('lac'))
     cid = str(req_data.get('cid'))
     
+    # ---- SOURCE 1: OpenCellID Public Gateway ----
     try:
-        # Open source database gateway call without personal credentials
-        conn = http.client.HTTPSConnection("opencellid.org")
-        
-        # Public payload endpoint binding
+        conn = http.http.client.HTTPSConnection("opencellid.org") if hasattr(http, 'http') else http.client.HTTPSConnection("opencellid.org")
         query_path = f"/ajax/searchCell.php?mcc={mcc}&mnc={mnc}&lac={lac}&cellid={cid}"
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Accept': 'application/json, text/javascript, */*',
             'X-Requested-With': 'XMLHttpRequest'
         }
-        
         conn.request("GET", query_path, headers=headers)
         res = conn.getresponse()
         raw_data = res.read().decode("utf-8")
         
-        if res.status != 200 or not raw_data:
-            return jsonify({"status": "error", "message": f"Server Refused Connection (Status: {res.status})"})
-            
-        parsed = json.loads(raw_data)
+        if res.status == 200 and raw_data:
+            parsed = json.loads(raw_data)
+            if parsed and "lat" in parsed and float(parsed["lat"]) != 0:
+                return jsonify({"status": "success", "lat": parsed["lat"], "lon": parsed["lon"], "source": "OpenCellID Pool"})
+    except:
+        pass
+
+    # ---- SOURCE 2: CellMapper Alternative Gateway ----
+    try:
+        conn2 = http.client.HTTPSConnection("api.cellmapper.net")
+        query_path2 = f"/v1/getTower?mcc={mcc}&mnc={mnc}&lac={lac}&cid={cid}"
+        headers2 = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        conn2.request("GET", query_path2, headers=headers2)
+        res2 = conn2.getresponse()
+        raw_data2 = res2.read().decode("utf-8")
         
-        # Check if the platform found the row coordinates
-        if parsed and "lat" in parsed and float(parsed["lat"]) != 0:
-            return jsonify({
-                "status": "success",
-                "lat": parsed["lat"],
-                "lon": parsed["lon"]
-            })
-        else:
-            return jsonify({"status": "not_found"})
-            
+        if res2.status == 200 and raw_data2:
+            parsed2 = json.loads(raw_data2)
+            if parsed2 and "latitude" in parsed2:
+                return jsonify({"status": "success", "lat": parsed2["latitude"], "lon": parsed2["longitude"], "source": "CellMapper Pool"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return jsonify({"status": "error", "message": f"Execution failed: {str(e)}"})
+
+    return jsonify({"status": "not_found"})
+
