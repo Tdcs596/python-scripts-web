@@ -28,12 +28,13 @@ UI = """
         #status { margin: 15px 0; color: #ffeb3b; text-align: center; display: none; }
         .result-display { margin-top: 25px; background: #05070a; border: 1px dashed #00ffcc; padding: 15px; border-radius: 8px; display: none; }
         .map-link { display: inline-block; margin-top: 10px; background: #ffb700; color: #000; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .debug-console { background: #111; border: 1px solid #333; padding: 10px; border-radius: 5px; font-size: 12px; color: #aaa; overflow-x: auto; margin-top: 15px; text-align: left; }
     </style>
 </head>
 <body>
     <div class="box">
         <div class="header">
-            <h2>🛰️ CELL GEOLOCATION INSTEL NODE v25</h2>
+            <h2>🛰️ CELL GEOLOCATION INTEL NODE v25</h2>
             <p style="color: #557099; margin: 5px 0 0 0;">SHIVAM SINGH OMEGA DASHBOARD • RAPIDAPI CORE</p>
         </div>
 
@@ -60,7 +61,7 @@ UI = """
             <button onclick="resolveCellTower()">RESOLVE VIA RAPIDAPI</button>
         </div>
 
-        <div id="status">📡 HITING SECURE CELLID GEOLOCATION GATEWAY...</div>
+        <div id="status">📡 INTERROGATING SECURE CELLID GEOLOCATION GATEWAY...</div>
         <div id="result" class="result-display"></div>
     </div>
 
@@ -91,11 +92,18 @@ UI = """
 
                 if (data.status === "error") {
                     resultBox.innerHTML = "<p style='color:red;'>❌ ERROR: " + data.message + "</p>";
-                } else if (data.lat || data.latitude) {
-                    // API ke standard parameters match karne ke liye latitude/longitude handle kiya hai
-                    const finalLat = data.lat || data.latitude;
-                    const finalLon = data.lon || data.longitude;
-                    const accuracy = data.accuracy || 'N/A';
+                } else if (data.lat || data.latitude || data.location) {
+                    // Coordinates Extract karne ke alag alag methods map kiye hain
+                    let finalLat = data.lat || data.latitude;
+                    let finalLon = data.lon || data.longitude;
+                    
+                    // Agar API nested response deti hai (e.g., data.location.lat)
+                    if (data.location && typeof data.location === 'object') {
+                        finalLat = data.location.lat || data.location.latitude;
+                        finalLon = data.location.lon || data.location.longitude;
+                    }
+                    
+                    const accuracy = data.accuracy || data.range || 'N/A';
                     
                     resultBox.innerHTML = "<h3 style='color:#fff; margin-top:0;'>📍 Tower Located Successfully!</h3>" +
                         "<p><strong>Latitude:</strong> " + finalLat + "</p>" +
@@ -103,7 +111,11 @@ UI = """
                         "<p><strong>Accuracy Radius:</strong> " + accuracy + " meters</p>" +
                         '<a href="https://www.google.com/maps?q=' + finalLat + ',' + finalLon + '" target="_blank" class="map-link">🗺️ OPEN IN GOOGLE MAPS</a>';
                 } else {
-                    resultBox.innerHTML = "<p style='color:#ffb700; text-align:center;'>⚠️ RapidAPI Response: Cell signature parameters mismatch or not found.</p>";
+                    // Agar parameters database mein register nahi hain toh complete dump window khulegi
+                    resultBox.innerHTML = "<p style='color:#ffb700; text-align:center;'>⚠️ API Parameter Mismatch or Data Not Found.</p>" +
+                        "<div class='debug-console'>" +
+                        "<strong>Raw API Server Response:</strong><br><pre>" + JSON.stringify(data, null, 2) + "</pre>" +
+                        "</div>";
                 }
                 resultBox.style.display = "block";
             } catch (e) {
@@ -130,7 +142,7 @@ def rapid_locate():
     try:
         conn = http.client.HTTPSConnection(RAPID_API_HOST)
         
-        # Binding your exact custom query syntax string
+        # Exact API endpoint string format setup
         query_path = f"/query?mcc={mcc}&mnc={mnc}&lac={lac}&cid={cid}"
         
         headers = {
@@ -144,14 +156,13 @@ def rapid_locate():
         raw_data = res.read().decode("utf-8")
         
         if res.status != 200:
-            return jsonify({"status": "error", "message": f"RapidAPI Gateway Error (Code: {res.status})" or raw_data})
+            return jsonify({"status": "error", "message": f"RapidAPI Server Error (Status Code: {res.status})"})
             
-        # Try safe JSON decoding
         try:
             parsed_json = json.loads(raw_data)
             return jsonify(parsed_json)
         except json.JSONDecodeError:
-            return jsonify({"status": "error", "message": f"Plain text dump: {raw_data[:100]}"})
+            return jsonify({"status": "error", "message": f"Server sent plain string: {raw_data[:100]}"})
             
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
