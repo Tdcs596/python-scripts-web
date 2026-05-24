@@ -138,11 +138,11 @@ def index():
     
     return f"""
     <div style="background:#000; color:#0f0; font-family:'Courier New', monospace; padding:20px; min-height:100vh; border: 2px solid #0f0;">
-        <h1 style="text-align:center; color:#fff; text-shadow: 0 0 10px #0f0;">🌌 TDCS GHOST RECON - MULTI-TOOL V7.0 🌌</h1>
+        <h1 style="text-align:center; color:#fff; text-shadow: 0 0 10px #0f0;">🌌 GHOST RECON - MULTI-TOOL V7.0 🌌</h1>
         <div style="text-align:center; margin-bottom:20px; color:#555;">[ Spider | PortScan | CMS | VulnScanner | Fuzzer | OSINT ]</div>
         
         <form method="POST" style="text-align:center;">
-            <input name="url" placeholder="Enter target (e.g. tdcs.in)" style="background:#111; color:#0f0; border:1px solid #0f0; padding:12px; width:400px;">
+            <input name="url" placeholder="Enter target (e.g. .in)" style="background:#111; color:#0f0; border:1px solid #0f0; padding:12px; width:400px;">
             <button type="submit" style="background:#0f0; color:#000; border:none; padding:12px 25px; font-weight:bold; cursor:pointer; box-shadow: 0 0 10px #0f0;">RUN DEEP SCAN</button>
         </form>
 
