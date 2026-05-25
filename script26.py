@@ -4,7 +4,7 @@ import json
 
 script26_bp = Blueprint('script26', __name__)
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION CHANNEL ---
 RAPID_API_KEY = "7bab199056msh3df63cfe9c45d9dp1996b2jsn25ec6d748a00"
 RAPID_API_HOST = "mac-address-lookup3.p.rapidapi.com"
 
@@ -12,7 +12,7 @@ UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MAC_INTELLIGENCE_v26</title>
+    <title>MAC_DEEP_INTELLIGENCE_v26</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #05070c; color: #00ffcc; font-family: 'Share Tech Mono', monospace; padding: 30px 20px; text-align: center; }
@@ -29,7 +29,7 @@ UI = """
         #status { margin: 20px 0; color: #ffeb3b; text-align: center; display: none; font-size: 14px; animation: blink 1.5s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         
-        /* Advanced Info Layout */
+        /* Advanced Info UI Matrix */
         .result-display { margin-top: 25px; display: none; }
         .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         .card { background: #09111c; border: 1px solid #112a47; padding: 15px; border-radius: 8px; }
@@ -66,9 +66,9 @@ UI = """
             const status = document.getElementById('status');
             const resultBox = document.getElementById('result');
 
-            if(!mac) return alert("Bhai, MAC Address bina search kaise karein!");
+            if(!mac) return alert("Bhai, MAC Address bina execution workflow kaise test karein!");
 
-            // Strict alphanumeric parsing
+            // Alphanumeric format cleanup stripping spaces or separators
             let cleanMac = mac.replace(/[:\\s-]/g, '');
 
             status.style.display = "block";
@@ -90,7 +90,7 @@ UI = """
                     return;
                 }
 
-                // Building the Advanced Visual Blocks
+                // Building the Premium Information Dashboard Blocks
                 let htmlPayload = `
                     <h3 style="color: #fff; margin-bottom: 10px; font-size: 16px;">📊 RECONNAISSANCE ANALYSIS PACKET:</h3>
                     <div class="grid-layout">
@@ -104,7 +104,7 @@ UI = """
                         </div>
                         <div class="card">
                             <div class="label">🎛️ Transmission Mode</div>
-                            <div class="value" style="color: ${data.transmission_type === 'Unicast (Single Device Connection)' ? '#00ffcc' : '#ffeb3b'}">${data.transmission_type}</div>
+                            <div class="value" style="color: ${data.transmission_type.includes('Unicast') ? '#00ffcc' : '#ffeb3b'}">${data.transmission_type}</div>
                         </div>
                         <div class="card">
                             <div class="label">🌐 Assignment Administration</div>
@@ -121,7 +121,7 @@ UI = """
                     </div>
                 `;
 
-                // If API sent extra debug properties, print them in hidden format
+                // Attaching the full structural data stream backup logs for diagnostics view
                 if(data.raw_payload) {
                     htmlPayload += `
                         <div class="debug-console">
@@ -135,7 +135,7 @@ UI = """
                 resultBox.style.display = "block";
             } catch (e) {
                 status.style.display = "none";
-                alert("Proxy cluster handling exception.");
+                alert("Internal backend routing error or exception timeout.");
             }
         }
     </script>
@@ -153,7 +153,7 @@ def lookup_mac():
     mac_address = str(req_data.get('mac_address', '')).strip().upper()
     
     if len(mac_address) < 6:
-        return jsonify({"status": "error", "message": "Bhai, kam se kam shuruati 6 hex characters (OUI) toh likho!"})
+        return jsonify({"status": "error", "message": "Bhai, kam se kam shuruati 6 hex characters (OUI) toh enter karo!"})
         
     try:
         conn = http.client.HTTPSConnection(RAPID_API_HOST)
@@ -171,49 +171,58 @@ def lookup_mac():
         conn.close()
 
         if res.status != 200:
-            return jsonify({"status": "error", "message": f"RapidAPI Server Error (Status: {res.status})"})
+            return jsonify({"status": "error", "message": f"RapidAPI Gateway Server Error (Status: {res.status})"})
             
         try:
             parsed_json = json.loads(raw_data)
         except json.JSONDecodeError:
             parsed_json = {}
 
-        # --- ADVANCED INTELLIGENCE PROCESSING LAYER (Shivam's Spec) ---
-        
-        # 1. Vendor Resolving
+        # --- CRITICAL BUG FIX LAYER (Shivam Spec) ---
+        # Agar API direct elements list array bhejti hai, toh pehle list validation wrap verify karke index 0 select karenge
+        if isinstance(parsed_json, list):
+            if len(parsed_json) > 0:
+                raw_payload_for_debug = {"api_array_response": parsed_json}
+                parsed_json = parsed_json[0]
+            else:
+                parsed_json = {}
+        else:
+            raw_payload_for_debug = parsed_json
+
+        # --- ADVANCED DATAFRAME EXTRACTOR ---
         vendor = parsed_json.get("companyName") or parsed_json.get("company") or parsed_json.get("vendor")
         if not vendor and parsed_json == {}:
-            vendor = "Unknown Manufacturer (Not in IEEE Registry)"
+            vendor = "Unknown Manufacturer (Not listed in IEEE Global Registry)"
         elif not vendor:
-            vendor = "Generic / Private Assembly"
+            vendor = "Generic Assembly / Private Node"
 
-        address = parsed_json.get("companyAddress") or parsed_json.get("address") or "Not registered in local block schema."
+        address = parsed_json.get("companyAddress") or parsed_json.get("address") or "Not registered in local block database schema."
         prefix = parsed_json.get("macPrefix") or parsed_json.get("oui") or mac_address[:6]
 
-        # 2. Binary Engineering (First Byte Analysis for Transmission & Administration Type)
-        # MAC ke pehle do hex chars se transmission (Unicast/Multicast) pata chalta hai
+        # --- HIGH-LEVEL BITWISE TELEMETRY ENCODING ---
+        # Pehle byte (First 2 hex characters) ko process karke standard flags compute karte hain
         try:
             first_byte_hex = mac_address[:2]
             first_byte_int = int(first_byte_hex, 16)
             
-            # Bit 0 check (Least Significant Bit of 1st byte): 0 = Unicast, 1 = Multicast
-            transmission = "Multicast (Group/Broadcast Frame)" if (first_byte_int & 1) else "Unicast (Single Device Connection)"
+            # Checking Least Significant Bit (Bit 0): 0 = Unicast, 1 = Multicast
+            transmission = "Unicast (Single Device / Dedicated Stream)" if not (first_byte_int & 1) else "Multicast (Group Network/Broadcast Frame)"
             
-            # Bit 1 check: 0 = Globally Unique (IEEE assigned), 1 = Locally Administered (Custom/Spoofed)
-            administration = "Globally Administered (Factory Hardcoded)" if not (first_byte_int & 2) else "Locally Administered (Software Defined / Random Private MAC)"
+            # Checking Universal vs Local Bit (Bit 1): 0 = Global (IEEE Hardcoded), 1 = Local (Randomized/Spoofed)
+            administration = "Globally Unique (Factory Burned-In Address)" if not (first_byte_int & 2) else "Locally Administered (Software Spoofed / Random Private MAC)"
         except:
-            transmission = "Standard Network Frame"
-            administration = "Unspecified Protocol Assignment"
+            transmission = "Standard Ethernet Transmission Node"
+            administration = "Unspecified Protocol Architecture"
 
-        # 3. Environment & Virtualization Fingerprinting
-        infra_guess = "Physical Hardware Node (Laptop/Mobile/Router)"
+        # --- ENVIRONMENT & VIRTUAL SANDBOX FINGERPRINTING ---
+        infra_guess = "Physical Hardware Node (Endpoint Terminal/Mobile/Router Interface)"
         virtual_prefixes = {
-            "005056": "VMware Virtual Machine Node",
-            "000C29": "VMware Virtual Machine Node",
-            "080027": "Oracle VirtualBox Environment",
-            "00155D": "Microsoft Hyper-V Engine",
-            "0242AC": "Docker Container Virtual Network Bridge",
-            "525400": "KVM / QEMU Virtualization Interface"
+            "005056": "VMware ESXi Server Node",
+            "000C29": "VMware Workstation System Instance",
+            "080027": "Oracle VirtualBox Sandbox Machine",
+            "00155D": "Microsoft Hyper-V Engine Cluster",
+            "0242AC": "Docker Daemon Container Containerized Overlay Bridge",
+            "525400": "KVM / QEMU Emulator Kernel Interface"
         }
         
         for virt_pfx, name in virtual_prefixes.items():
@@ -221,7 +230,7 @@ def lookup_mac():
                 infra_guess = name
                 break
 
-        # Compile advanced enhanced response object
+        # Response payload assembly pipeline
         return jsonify({
             "status": "success",
             "resolved_vendor": vendor,
@@ -230,7 +239,7 @@ def lookup_mac():
             "administration_type": administration,
             "infrastructure_type": infra_guess,
             "vendor_address": address,
-            "raw_payload": parsed_json if parsed_json else {"info": "Query executed via standalone pattern fallback."}
+            "raw_payload": raw_payload_for_debug
         })
             
     except Exception as e:
