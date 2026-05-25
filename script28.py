@@ -1,224 +1,127 @@
 from flask import Blueprint, render_template_string, request, jsonify
-import http.client
-import json
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import os
+import logging
 
 script28_bp = Blueprint('script28', __name__)
 
-# --- CONFIGURATION CHANNEL ---
-RAPID_API_KEY = "7bab199056msh3df63cfe9c45d9dp1996b2jsn25ec6d748a00"
-RAPID_API_HOST = "imei-lookup1.p.rapidapi.com"
+# --- SMTP SERVER GATEWAY CONFIGURATION ---
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SENDER_EMAIL = "ramakantd809@gmail.com"       # Bhai yahan apni email address daalna
+SENDER_PASSWORD = "8701043179:AAHZMy3DdfY-gqFETWQ2A_97TGm-Bs_LGPM"
+"       # Bhai yahan apna Google App Password daalna
 
-def verify_luhn(imei_str: str) -> bool:
-    if not imei_str.isdigit() or len(imei_str) != 15:
-        return False
-    total_sum = 0
-    for i in range(15):
-        digit = int(imei_str[i])
-        if i % 2 == 1:
-            digit *= 2
-            if digit > 9:
-                digit = (digit % 10) + 1
-        total_sum += digit
-    return (total_sum % 10 == 0)
-
-# --- DEEP FORENSIC UI ---
-UI = """
+# --- CYBER LINK BULK UI ---
+SMTP_UI = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMEI_FORENSIC_MATRIX_v4.5</title>
+    <title>S-Mail | Payload Delivery Terminal</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #02040a; color: #f43f5e; font-family: 'Consolas', 'Share Tech Mono', monospace; padding: 30px 15px; text-align: center; }
-        .container { display: inline-block; width: 100%; max-width: 900px; text-align: left; }
-        .box { border: 2px solid #f43f5e; background: #000; padding: 35px; box-shadow: 0 0 45px rgba(244, 63, 94, 0.2); border-radius: 14px; position: relative; }
-        .box::before { content: '🚨 ADVANCED FORENSIC NODE RUNNING'; position: absolute; top: -11px; right: 20px; background: #f43f5e; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
-        .header { text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 20px; margin-bottom: 25px; }
-        h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #f43f5e; font-size: 26px; letter-spacing: 1px; }
-        .subtitle { color: #4a5568; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
+        body { background: #020408; color: #38bdf8; font-family: 'Consolas', 'Courier New', monospace; padding: 30px 15px; text-align: center; }
+        .container { display: inline-block; width: 100%; max-width: 800px; text-align: left; }
+        .box { border: 2px solid #38bdf8; background: #000; padding: 35px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.15); border-radius: 14px; position: relative; }
+        .box::before { content: '🖲️ SMTP DISPATCH PROTOCOL ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
+        .header { text-align: center; border-bottom: 1px dashed #1e293b; padding-bottom: 20px; margin-bottom: 25px; }
+        h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #38bdf8; font-size: 24px; letter-spacing: 1px; }
+        .subtitle { color: #475569; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
         
-        .input-group { text-align: center; margin-bottom: 25px; }
-        input { width: 85%; padding: 16px; background: #070a12; border: 1px solid #742a2a; color: #fff; font-size: 24px; border-radius: 8px; outline: none; text-align: center; letter-spacing: 6px; box-shadow: inset 0 0 15px rgba(116, 42, 42, 0.3); font-weight: bold; transition: 0.3s; }
-        input:focus { border-color: #f43f5e; box-shadow: inset 0 0 20px rgba(244, 63, 94, 0.25), 0 0 25px rgba(244, 63, 94, 0.15); }
+        label { font-size: 11px; color: #0284c7; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 15px; margin-bottom: 6px; font-weight: bold; }
+        input[type="text"], input[type="email"], textarea { width: 100%; padding: 14px; background: #050b14; border: 1px solid #0f355c; color: #fff; border-radius: 6px; outline: none; font-size: 14px; font-family: inherit; transition: 0.3s; }
+        textarea { resize: vertical; min-height: 120px; }
+        input[type="file"] { width: 100%; background: #050b14; border: 1px dashed #0f355c; color: #cbd5e1; padding: 15px; border-radius: 6px; outline: none; cursor: pointer; }
         
-        .counter-badge { display: block; margin-top: 8px; font-size: 13px; color: #a0aec0; font-weight: bold; }
-        .counter-badge.warn { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-        .counter-badge.success { color: #10b981; }
-
-        button { padding: 16px 50px; background: #f43f5e; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 15px; margin-top: 15px; transition: 0.2s; letter-spacing: 1.5px; text-transform: uppercase; }
+        input:focus, textarea:focus { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.15); }
+        
+        button { width: 100%; padding: 16px; background: #38bdf8; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 15px; margin-top: 25px; transition: 0.2s; letter-spacing: 1.5px; text-transform: uppercase; font-family: inherit; }
         button:hover { background: #fff; box-shadow: 0 0 25px #fff; transform: translateY(-1px); }
         
-        #status { margin: 20px 0; color: #ecc94b; text-align: center; display: none; font-size: 14px; font-weight: bold; }
-        
-        /* Interactive Blocks Style */
-        .imei-split-container { display: flex; gap: 8px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
-        .imei-chunk { background: #1a1518; padding: 10px 15px; border-radius: 6px; border: 1px solid #4a1d24; text-align: center; }
-        .chunk-val { font-size: 18px; font-weight: bold; color: #fff; display: block; }
-        .chunk-lbl { font-size: 10px; color: #a0aec0; text-transform: uppercase; margin-top: 4px; }
-        
-        /* Grid Display System */
-        .result-display { margin-top: 25px; display: none; }
-        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { background: #090d16; border: 1px solid #1a202c; padding: 18px; border-radius: 10px; transition: 0.2s; }
-        .card:hover { border-color: #f43f5e; background: #0f1524; }
-        .card.full { grid-column: span 2; border-color: rgba(244, 63, 94, 0.35); background: #050914; }
-        .label { color: #718096; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: bold; }
-        .value { color: #fff; font-size: 16px; font-weight: bold; word-break: break-all; }
-        .highlight { color: #f43f5e; }
-        
-        .debug-console { background: #020617; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; font-size: 12px; color: #4a5568; overflow-x: auto; margin-top: 25px; font-family: monospace; max-height: 250px; }
-        @media(max-width: 650px) { .grid-layout { grid-template-columns: 1fr; } .card.full { grid-column: span 1; } }
+        #console-status { margin-top: 20px; padding: 12px; border-radius: 6px; background: #050505; border: 1px solid #111; font-size: 13px; display: none; text-align: center; font-weight: bold; }
+        .success-banner { color: #10b981; border-color: #064e3b !important; background: #022c22 !important; }
+        .error-banner { color: #ef4444; border-color: #7f1d1d !important; background: #450a0a !important; }
+        .warning { font-size: 11px; color: #334155; margin-top: 25px; text-align: center; letter-spacing: 1px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="box">
             <div class="header">
-                <h2>🧬 HARDWARE OVERLORD FORENSIC SCANNER</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • EXPERT HARDWARE REGISTRY DECODER v4.5</p>
+                <h2>📨 CENTRALIZED SECURE MAIL DISPATCHER</h2>
+                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • BINARY ATTACHMENT STREAM v5.0</p>
             </div>
 
-            <div class="input-group">
-                <input type="text" id="imei_input" placeholder="ENTER 15 DIGIT IMEI" maxlength="15" value="356728872022468">
-                <span id="digit_counter" class="counter-badge warn">Length: 14/15 digits (Bhai, 1 digit missing hai!)</span>
-                <br>
-                <button onclick="executeForensicAnalysis()">DECONSTRUCT HARDWARE CELL</button>
-            </div>
+            <form id="mailForm" enctype="multipart/form-data">
+                <label for="emailInput">Target Recipient Address (To)</label>
+                <input type="email" id="emailInput" name="email" placeholder="enter recipient email ID..." required>
 
-            <div id="status">📡 RE-ROUTING GATEWAYS & EXECUTING DEEP SCHEMATIC PACKET DECODING...</div>
-            
-            <div id="result" class="result-display"></div>
+                <label for="subjectInput">Subject Line Protocol</label>
+                <input type="text" id="subjectInput" name="subject" placeholder="enter email subject header..." required>
+
+                <label for="messageInput">Email Body (HTML/Plain Text Payload)</label>
+                <textarea id="messageInput" name="message" placeholder="Type your core content or raw HTML parameters here..." required></textarea>
+
+                <label for="fileInput">Upload Binary Attachments (Multiple Files Supported)</label>
+                <input type="file" id="fileInput" name="files" multiple>
+
+                <button type="button" onclick="fireSmtpPacket()">🚀 Dispatch Secure Packet</button>
+            </form>
+
+            <div id="console-status">Establishing transport routing matrices...</div>
+            <div class="warning">S-MAIL CORE ENGINE • HARDENED TRANSPORT LAYER SECURITY (TLS) ENABLED</div>
         </div>
     </div>
 
     <script>
-        const imeiInput = document.getElementById('imei_input');
-        const counterBadge = document.getElementById('digit_counter');
+        async function fireSmtpPacket() {
+            const form = document.getElementById('mailForm');
+            const consoleStatus = document.getElementById('console-status');
+            
+            const email = document.getElementById('emailInput').value.trim();
+            const subject = document.getElementById('subjectInput').value.trim();
+            const message = document.getElementById('messageInput').value.trim();
 
-        function updateCounter() {
-            let len = imeiInput.value.trim().length;
-            if(len === 15) {
-                counterBadge.className = "counter-badge success";
-                counterBadge.innerText = "Length: 15/15 - Target Ready for Recon!";
-            } else if (len === 0) {
-                counterBadge.className = "counter-badge warn";
-                counterBadge.innerText = "Waiting for terminal input pool...";
-            } else {
-                counterBadge.className = "counter-badge warn";
-                counterBadge.innerText = "Length: " + len + "/15 digits (Bhai, " + (15 - len) + " digit missing hai!)";
-            }
-        }
-
-        imeiInput.addEventListener('input', updateCounter);
-        // Run once on load to catch current default values
-        updateCounter();
-
-        async function executeForensicAnalysis() {
-            let imei = imeiInput.value.trim();
-            const status = document.getElementById('status');
-            const resultBox = document.getElementById('result');
-
-            if(imei.length !== 15 || !/^\\d+$/.test(imei)) {
-                return alert("Bhai, dhyan se check karo, IMEI poore 15-digits ka numeric code hona chahiye!");
+            if(!email || !subject || !message) {
+                alert("Bhai, To, Subject aur Message ka text daalna mandatory hai!");
+                return;
             }
 
-            status.style.display = "block";
-            resultBox.style.display = "none";
-            resultBox.innerHTML = "";
+            consoleStatus.className = "";
+            consoleStatus.style.display = "block";
+            consoleStatus.style.color = "#eab308";
+            consoleStatus.innerText = "⏳ Initializing secure SMTP relay... Streaming packet arrays...";
+
+            // Packaging data using modern multi-part binary data layout
+            const formData = new FormData(form);
 
             try {
-                const res = await fetch('/script28/scan', {
+                // Dynamically tracks integration path parameters
+                const targetEndpoint = window.location.pathname.endsWith('/') ? window.location.pathname + 'dispatch' : window.location.pathname + '/dispatch';
+                const res = await fetch(targetEndpoint, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ imei: imei })
+                    body: formData
                 });
-                const data = await res.json();
-                status.style.display = "none";
+                
+                const callback = await res.json();
 
-                if (data.status === "error") {
-                    resultBox.innerHTML = `<div class='card full' style='border-color:#ef4444; background:#2d1a1a;'><span class='label' style='color:#ef4444;'>CRITICAL CORE CRASH</span><span class='value'>${data.message}</span></div>`;
-                    resultBox.style.display = "block";
-                    return;
+                if(callback.status === "success") {
+                    consoleStatus.className = "success-banner";
+                    consoleStatus.innerText = `✅ SUCCESS: ${callback.message}`;
+                    form.reset();
+                } else {
+                    consoleStatus.className = "error-banner";
+                    consoleStatus.innerText = `❌ CRITICAL ERROR: ${callback.message}`;
                 }
-
-                let htmlPayload = `
-                    <div class="imei-split-container">
-                        <div class="imei-chunk" style="border-color: #38bdf8;">
-                            <span class="chunk-val" style="color: #38bdf8;">${imei.substring(0,8)}</span>
-                            <span class="chunk-lbl">TAC Block</span>
-                        </div>
-                        <div class="imei-chunk" style="border-color: #a855f7;">
-                            <span class="chunk-val" style="color: #a855f7;">${imei.substring(8,14)}</span>
-                            <span class="chunk-lbl">Serial ID</span>
-                        </div>
-                        <div class="imei-chunk" style="border-color: #eab308;">
-                            <span class="chunk-val" style="color: #eab308;">${imei.substring(14)}</span>
-                            <span class="chunk-lbl">Luhn Bit</span>
-                        </div>
-                    </div>
-
-                    <h3 style="color: #fff; margin-bottom: 15px; font-size: 15px; border-left: 3px solid #f43f5e; padding-left: 10px;">📊 RESOLVED CRIME-LAB FORENSIC DATA SHEET:</h3>
-                    
-                    <div class="grid-layout">
-                        <div class="card full" style="background: linear-gradient(135deg, #090d16 0%, #1a0b12 100%);">
-                            <div class="label">📱 Resolved Device Allocation Identity</div>
-                            <div class="value" style="font-size: 20px; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2);">${data.resolved_brand_string}</div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="label">🛡️ Luhn Checksum Status</div>
-                            <div class="value" style="color: ${data.checksum_valid ? '#10b981' : '#ef4444'}">
-                                ${data.checksum_valid ? '✅ VALID INTEGRITY PROFILE' : '❌ CORRUPT / SPOOFED STRUCTURE'}
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="label">⚡ Equipment Hardware Level Tier</div>
-                            <div class="value" style="color: #38bdf8;">${data.hardware_tier}</div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="label">🏢 Reporting Allocation Body (RBI)</div>
-                            <div class="value">${data.rbi_origin}</div>
-                        </div>
-                        <div class="card">
-                            <div class="label">🏭 Probable Final Assembly Origin (FAC)</div>
-                            <div class="value" style="color: #cbd5e1;">${data.assembly_origin}</div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="label">🛠️ TAC (Type Allocation Code)</div>
-                            <div class="value highlight">${data.tac_code}</div>
-                        </div>
-                        <div class="card">
-                            <div class="label">⚙️ Component Unique Serial Index</div>
-                            <div class="value" style="color: #a855f7;">${data.serial_segment}</div>
-                        </div>
-
-                        <div class="card full">
-                            <div class="label">📍 Active Operator Telemetry Alert Log</div>
-                            <div class="value" style="font-size:12px; font-weight:normal; color:#a0aec0; line-height:1.5;">
-                                ${data.operator_alert_log}
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                if(data.raw_data) {
-                    htmlPayload += `
-                        <div class="debug-console">
-                            <span style="color:#f43f5e; font-weight:bold;">[RAW_GATEWAY_METADATA_STREAM]:</span><br>
-                            <pre style="margin-top:8px; white-space: pre-wrap; color: #4a5568;">${JSON.stringify(data.raw_data, null, 2)}</pre>
-                        </div>
-                    `;
-                }
-
-                resultBox.innerHTML = htmlPayload;
-                resultBox.style.display = "block";
             } catch (e) {
-                status.style.display = "none";
-                alert("Matrix core interface query runtime exception.");
+                consoleStatus.className = "error-banner";
+                consoleStatus.innerText = "❌ EXCEPTION: Internal gateway routing connection timeout.";
             }
         }
     </script>
@@ -228,125 +131,58 @@ UI = """
 
 @script28_bp.route('/')
 def index():
-    return render_template_string(UI)
+    return render_template_string(SMTP_UI)
 
-@script28_bp.route('/scan', methods=['POST'])
-def scan_imei():
-    req_data = request.json or {}
-    imei_input = str(req_data.get('imei', '')).strip()
-    
-    if len(imei_input) != 15 or not imei_input.isdigit():
-        return jsonify({"status": "error", "message": "Extraction failure: 15-digit numeric buffer pool violation."})
-    
-    checksum_passed = verify_luhn(imei_input)
-    tac = imei_input[:8]
-    rbi = imei_input[:2]
-    fac_digits = imei_input[6:8]
-    serial = imei_input[8:14]
-    
-    # Global Ranges Match Engine
-    rbi_map = {
-        "01": "CTIA (United States Regulatory Block)",
-        "35": "BABT (United Kingdom Registry Authority)",
-        "44": "BABT (European Union Regulatory Assembly)",
-        "86": "TAF (China Telecommunication Administration Bureau)",
-        "91": "MSAI (India National Telecom Allocation Pool)",
-        "99": "GSMA Global Multi-mode / Satcom Architecture"
-    }
-    origin_rbi = rbi_map.get(rbi, "International GSMA Unassigned Pool Block")
-
-    # Deep Expanded TAC Signature Database Match
-    resolved_brand = "Generic GSM Terminal Device (Model metadata undisclosed on standard tier)"
-    
-    tac_database = {
-        "359061": "Apple iPhone Hardware Node (Premium iOS Terminal)",
-        "353634": "Apple iPhone Sub-System (Global Cellular Architecture)",
-        "351895": "Samsung Galaxy High-End Architecture (Android Flagship Base)",
-        "356728": "Samsung Electronics Co. Ltd (Galaxy Mobile Architecture Block)",
-        "358476": "Samsung Galaxy Fold / Ultra Premium Module",
-        "860845": "Xiaomi Redmi Performance Chipset Terminal",
-        "352452": "OnePlus Premium Performance Hardware Suite",
-        "990004": "Qualcomm Reference Hardware Evaluation Base Station",
-        "358240": "Google Pixel Neural Processing Unit Base Node"
-    }
-    
-    for prefix, name in tac_database.items():
-        if tac.startswith(prefix):
-            resolved_brand = name
-            break
-
-    # Final Assembly Code (FAC) Mapping
-    fac_map = {
-        "01": "Finland Factory Plant Assembly",
-        "02": "Germany Automated Production Line Complex",
-        "10": "Finland / France Central Manufacturing Hub",
-        "20": "Korea High-Tech Hardware Development Facility",
-        "30": "Korea Advanced Production Complex",
-        "50": "Brazil / India Local SMT Assembly Hub",
-        "60": "China Shenzhen Automated Production Line",
-        "70": "China Foxconn Technology Group Node",
-        "80": "China Foxconn High-Tier Production Facility"
-    }
-    assembly = fac_map.get(fac_digits, "Global Multi-Region SMT Manufacturing Node")
-
-    # Device Hardware Level Profiling Layer
-    first_char = int(imei_input[0])
-    if first_char in [3, 4]:
-        hardware_tier = "High-End / Flagship Consumer Endpoint (Premium Smartphone Series)"
-    elif first_char == 8:
-        hardware_tier = "Mid-Tier Commercial Node / Mass Market Terminal Device"
-    elif first_char == 9:
-        hardware_tier = "Enterprise Multimode Baseband Core / Satellite IoT Terminal"
-    else:
-        hardware_tier = "Standard Legacy Cellular Module Interface"
-
-    alert_log = (
-        "LAYER-3 LOG: Tracking requests on physical hardware nodes require explicit Base Station Transceiver (BTS) "
-        "triangulation vectors. Core metadata indicates hardware profile is structural."
-    )
-
-    # --- LIVE API EXTRACTION PIPELINE WITH PARSING FAILSAFE ---
-    api_payload_data = None
+@script28_bp.route('/dispatch', methods=['POST'])
+def dispatch_email():
     try:
-        conn = http.client.HTTPSConnection(RAPID_API_HOST)
-        headers = {
-            'x-rapidapi-key': RAPID_API_KEY,
-            'x-rapidapi-host': RAPID_API_HOST
-        }
-        conn.request("GET", f"/api/imei/{imei_input}", headers=headers)
-        res = conn.getresponse()
-        
-        if res.status == 200:
-            raw_res = res.read().decode("utf-8")
-            api_payload_data = json.loads(raw_res)
-            
-            if api_payload_data:
-                upstream_model = (
-                    api_payload_data.get("model") or 
-                    api_payload_data.get("deviceName") or 
-                    api_payload_data.get("device_name") or 
-                    api_payload_data.get("brand")
-                )
-                if upstream_model:
-                    resolved_brand = f"⚠️ [LIVE MATCHED]: {upstream_model} ({api_payload_data.get('manufacturer', 'Samsung Electronics')})"
-        conn.close()
-    except Exception:
-        pass
+        recipient = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message_body = request.form.get('message', '').strip()
+        uploaded_files = request.files.getlist('files')
 
-    return jsonify({
-        "status": "success",
-        "imei": imei_input,
-        "checksum_valid": checksum_passed,
-        "tac_code": f"{tac[:4]}-{tac[4:]}",
-        "rbi_origin": origin_rbi,
-        "resolved_brand_string": resolved_brand,
-        "assembly_origin": assembly,
-        "hardware_tier": hardware_tier,
-        "serial_segment": serial,
-        "check_digit": imei_input[14],
-        "operator_alert_log": alert_log,
-        "raw_data": api_payload_data or {"status": "Local Core Active", "info": "Database rules applied dynamically."}
-    })
+        if not recipient or not subject or not message_body:
+            return jsonify({"status": "error", "message": "Required parameter extraction failure inside packet processing line."}), 400
+
+        # Building standard MIME wrapper array structure
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = recipient
+        msg['Subject'] = subject
+
+        # Dynamic Content Profiling: Automatically checks if string content is raw layout code
+        if "<html>" in message_body.lower() or "</div>" in message_body.lower():
+            msg.attach(MIMEText(message_body, 'html'))
+        else:
+            msg.attach(MIMEText(message_body, 'plain'))
+
+        # --- MULTI-ATTACHMENT PROCESSOR STREAM ---
+        for file_storage in uploaded_files:
+            if file_storage.filename == '':
+                continue # Skip empty upload streams safely
+            
+            # Read binary raw data directly from server cache buffers
+            file_data = file_storage.read()
+            filename = file_storage.filename
+
+            attachment = MIMEBase('application', 'octet-stream')
+            attachment.set_payload(file_data)
+            encoders.encode_base64(attachment)
+            attachment.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+            msg.attach(attachment)
+
+        # --- SECURE RELAY RUNTIME PIPELINE ---
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()  # Upgrade connection stream safely via explicit cryptographic TLS upgrade protocol
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, recipient, msg.as_string())
+        server.quit()
+
+        return jsonify({"status": "success", "message": f"All packets sent successfully! Delivered payload directly to [{recipient}]."})
+    
+    except Exception as e:
+        logging.error(f"SMTP Gateway Relay Runtime Crash: {e}")
+        return jsonify({"status": "error", "message": f"SMTP Gateway execution exception thrown: {str(e)}"}), 500
 
 if __name__ == '__main__':
     from flask import Flask
