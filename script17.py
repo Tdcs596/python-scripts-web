@@ -124,7 +124,7 @@ UI = """
         
         <label for="key">Master Passphrase Key</label>
         <div class="pass-wrapper">
-            <input type="password" id="key" placeholder="Enter security passphrase...">
+            <input type="password" id="key" placeholder="Enter security... ">
             <button type="button" class="toggle-btn" id="togglePass" onclick="togglePasswordVisibility()">Show</button>
         </div>
         
