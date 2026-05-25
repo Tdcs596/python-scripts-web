@@ -12,35 +12,51 @@ UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MAC_LOOKUP_v26</title>
+    <title>MAC_INTELLIGENCE_v26</title>
     <style>
-        body { background: #07090e; color: #00ffcc; font-family: 'Share Tech Mono', monospace; padding: 20px; text-align: center; }
-        .box { border: 2px solid #00ffcc; background: #000; padding: 25px; box-shadow: 0 0 25px #00ffcc33; display: inline-block; width: 95%; max-width: 650px; border-radius: 12px; text-align: left; }
-        .header { text-align: center; border-bottom: 1px solid #00ffcc; padding-bottom: 15px; margin-bottom: 20px; }
-        h2 { margin: 0; color: #fff; text-shadow: 0 0 10px #00ffcc; }
-        .input-group { text-align: center; margin-bottom: 20px; }
-        input { width: 80%; padding: 12px; background: #111; border: 1px solid #00ffcc; color: #fff; font-size: 16px; border-radius: 5px; outline: none; text-align: center; letter-spacing: 2px; }
-        button { padding: 12px 35px; background: #00ffcc; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; font-size: 15px; margin-top: 15px; transition: 0.3s; }
-        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-        #status { margin: 15px 0; color: #ffeb3b; text-align: center; display: none; }
-        .result-display { margin-top: 25px; background: #05070a; border: 1px dashed #00ffcc; padding: 15px; border-radius: 8px; display: none; }
-        .debug-console { background: #111; border: 1px solid #333; padding: 10px; border-radius: 5px; font-size: 12px; color: #aaa; overflow-x: auto; margin-top: 15px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #05070c; color: #00ffcc; font-family: 'Share Tech Mono', monospace; padding: 30px 20px; text-align: center; }
+        .box { border: 2px solid #00ffcc; background: #000; padding: 30px; box-shadow: 0 0 35px #00ffcc22; display: inline-block; width: 95%; max-width: 750px; border-radius: 16px; text-align: left; position: relative; overflow: hidden; }
+        .box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #00ffcc, #0055ff); }
+        .header { text-align: center; border-bottom: 1px solid #113333; padding-bottom: 20px; margin-bottom: 25px; }
+        h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #00ffcc; font-size: 26px; letter-spacing: 1px; }
+        .subtitle { color: #557099; font-size: 13px; margin-top: 6px; letter-spacing: 2px; }
+        .input-group { text-align: center; margin-bottom: 25px; }
+        input { width: 85%; padding: 14px; background: #0a0f1d; border: 1px solid #0055ff; color: #fff; font-size: 18px; border-radius: 8px; outline: none; text-align: center; letter-spacing: 3px; box-shadow: inset 0 0 10px #0055ff11; transition: 0.3s; }
+        input:focus { border-color: #00ffcc; box-shadow: inset 0 0 15px #00ffcc22, 0 0 15px #00ffcc22; }
+        button { padding: 14px 40px; background: #00ffcc; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 15px; margin-top: 15px; transition: 0.3s; letter-spacing: 1px; }
+        button:hover { background: #fff; box-shadow: 0 0 20px #fff; transform: translateY(-1px); }
+        #status { margin: 20px 0; color: #ffeb3b; text-align: center; display: none; font-size: 14px; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        /* Advanced Info Layout */
+        .result-display { margin-top: 25px; display: none; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .card { background: #09111c; border: 1px solid #112a47; padding: 15px; border-radius: 8px; }
+        .card.full { grid-column: span 2; border-color: #00ffcc44; background: #041619; }
+        .label { color: #557099; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .value { color: #fff; font-size: 15px; font-weight: bold; }
+        .highlight { color: #00ffcc; }
+        .debug-console { background: #05070a; border: 1px solid #222; padding: 15px; border-radius: 8px; font-size: 12px; color: #888; overflow-x: auto; margin-top: 20px; font-family: monospace; }
+        
+        @media(max-width: 600px) { .grid-layout { grid-template-columns: 1fr; } .card.full { grid-column: span 1; } }
     </style>
 </head>
 <body>
     <div class="box">
         <div class="header">
-            <h2>🔍 MAC ADDRESS INTELLIGENCE NODE v26</h2>
-            <p style="color: #557099; margin: 5px 0 0 0;">SHIVAM SINGH OMEGA DASHBOARD • OUI OVERSIGHT</p>
+            <h2>🔍 MAC LAYER DEEP INTELLIGENCE NODE</h2>
+            <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • METRIC TELEMETRY v2.0</p>
         </div>
 
         <div class="input-group">
-            <input type="text" id="mac_input" placeholder="00:23:AB:00:00:00 or 0023AB000000" value="0023AB000000">
+            <input type="text" id="mac_input" placeholder="00:23:AB:00:00:00" value="0023AB000000">
             <br>
-            <button onclick="lookupMacAddress()">RESOLVE VENDOR DATA</button>
+            <button onclick="lookupMacAddress()">EXTRACT LAYER-2 METRICS</button>
         </div>
 
-        <div id="status">📡 QUERYING MAC OUI MANUFACTURER REGISTRIES...</div>
+        <div id="status">📡 INTERROGATING GLOBAL REGISTRIES & PARSING HEX STREAM...</div>
+        
         <div id="result" class="result-display"></div>
     </div>
 
@@ -50,10 +66,10 @@ UI = """
             const status = document.getElementById('status');
             const resultBox = document.getElementById('result');
 
-            if(!mac) return alert("Bhai, MAC Address toh daal!");
+            if(!mac) return alert("Bhai, MAC Address bina search kaise karein!");
 
-            // Clean spaces or hyphens just in case
-            mac = mac.replace(/[:\\s-]/g, '');
+            // Strict alphanumeric parsing
+            let cleanMac = mac.replace(/[:\\s-]/g, '');
 
             status.style.display = "block";
             resultBox.style.display = "none";
@@ -63,32 +79,63 @@ UI = """
                 const res = await fetch('/script26/lookup', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ mac_address: mac })
+                    body: JSON.stringify({ mac_address: cleanMac })
                 });
                 const data = await res.json();
                 status.style.display = "none";
 
                 if (data.status === "error") {
-                    resultBox.innerHTML = "<p style='color:red;'>❌ ERROR: " + data.message + "</p>";
-                } else if (data.companyName || data.company || data.vendor) {
-                    // API signature checks
-                    const company = data.companyName || data.company || data.vendor;
-                    const address = data.companyAddress || data.address || 'Not Provided';
-                    const prefix = data.macPrefix || data.oui || 'N/A';
-                    
-                    resultBox.innerHTML = "<h3 style='color:#fff; margin-top:0;'>✅ Vendor Signature Resolved!</h3>" +
-                        "<p><strong>Hardware Company:</strong> <span style='color:#fff; font-weight:bold;'>" + company + "</span></p>" +
-                        "<p><strong>OUI Prefix:</strong> " + prefix + "</p>" +
-                        "<p><strong>Factory Assignment Address:</strong> " + address + "</p>";
-                } else {
-                    resultBox.innerHTML = "<p style='color:#ffb700; text-align:center;'>⚠️ Signature signature parsed but no direct mapping found.</p>" +
-                        "<div class='debug-console' style='text-align:left;'>" +
-                        "<strong>Raw Server Payload Response:</strong><br><pre>" + JSON.stringify(data, null, 2) + "</pre>" +
-                        "</div>";
+                    resultBox.innerHTML = "<div class='card full' style='border-color:red;'><span class='label' style='color:red;'>EXECUTION ERROR</span><span class='value'>" + data.message + "</span></div>";
+                    resultBox.style.display = "block";
+                    return;
                 }
+
+                // Building the Advanced Visual Blocks
+                let htmlPayload = `
+                    <h3 style="color: #fff; margin-bottom: 10px; font-size: 16px;">📊 RECONNAISSANCE ANALYSIS PACKET:</h3>
+                    <div class="grid-layout">
+                        <div class="card full">
+                            <div class="label">🏢 Primary Hardware Vendor / Manufacturer</div>
+                            <div class="value" style="font-size: 18px; color: #00ffcc;">${data.resolved_vendor}</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">📡 OUI Registry Prefix</div>
+                            <div class="value highlight">${data.oui_prefix}</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">🎛️ Transmission Mode</div>
+                            <div class="value" style="color: ${data.transmission_type === 'Unicast (Single Device Connection)' ? '#00ffcc' : '#ffeb3b'}">${data.transmission_type}</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">🌐 Assignment Administration</div>
+                            <div class="value">${data.administration_type}</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">🤖 Infrastructure Guess</div>
+                            <div class="value" style="color:#60a5fa;">${data.infrastructure_type}</div>
+                        </div>
+                        <div class="card full">
+                            <div class="label">📍 Corporate Registry Address</div>
+                            <div class="value" style="font-size:13px; font-weight:normal; color:#cbd5e1;">${data.vendor_address}</div>
+                        </div>
+                    </div>
+                `;
+
+                // If API sent extra debug properties, print them in hidden format
+                if(data.raw_payload) {
+                    htmlPayload += `
+                        <div class="debug-console">
+                            <span style="color:#00ffcc; font-weight:bold;">[DEBUG_CONSOLE_LOGS]:</span><br>
+                            <pre style="margin-top:5px; white-space: pre-wrap;">${JSON.stringify(data.raw_payload, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+
+                resultBox.innerHTML = htmlPayload;
                 resultBox.style.display = "block";
             } catch (e) {
-                status.innerText = "❌ Connection to RapidAPI Proxy Gateway Failed!";
+                status.style.display = "none";
+                alert("Proxy cluster handling exception.");
             }
         }
     </script>
@@ -102,13 +149,14 @@ def index():
 
 @script26_bp.route('/lookup', methods=['POST'])
 def lookup_mac():
-    req_data = request.json
-    mac_address = str(req_data.get('mac_address', '')).strip()
+    req_data = request.json or {}
+    mac_address = str(req_data.get('mac_address', '')).strip().upper()
     
+    if len(mac_address) < 6:
+        return jsonify({"status": "error", "message": "Bhai, kam se kam shuruati 6 hex characters (OUI) toh likho!"})
+        
     try:
         conn = http.client.HTTPSConnection(RAPID_API_HOST)
-        
-        # Exact request endpoint target formatting string setup
         query_path = f"/{mac_address}"
         
         headers = {
@@ -120,15 +168,70 @@ def lookup_mac():
         conn.request("GET", query_path, headers=headers)
         res = conn.getresponse()
         raw_data = res.read().decode("utf-8")
-        
+        conn.close()
+
         if res.status != 200:
-            return jsonify({"status": "error", "message": f"RapidAPI Node Error (Status Code: {res.status})"})
+            return jsonify({"status": "error", "message": f"RapidAPI Server Error (Status: {res.status})"})
             
         try:
             parsed_json = json.loads(raw_data)
-            return jsonify(parsed_json)
         except json.JSONDecodeError:
-            return jsonify({"status": "error", "message": f"Text payload: {raw_data[:100]}"})
+            parsed_json = {}
+
+        # --- ADVANCED INTELLIGENCE PROCESSING LAYER (Shivam's Spec) ---
+        
+        # 1. Vendor Resolving
+        vendor = parsed_json.get("companyName") or parsed_json.get("company") or parsed_json.get("vendor")
+        if not vendor and parsed_json == {}:
+            vendor = "Unknown Manufacturer (Not in IEEE Registry)"
+        elif not vendor:
+            vendor = "Generic / Private Assembly"
+
+        address = parsed_json.get("companyAddress") or parsed_json.get("address") or "Not registered in local block schema."
+        prefix = parsed_json.get("macPrefix") or parsed_json.get("oui") or mac_address[:6]
+
+        # 2. Binary Engineering (First Byte Analysis for Transmission & Administration Type)
+        # MAC ke pehle do hex chars se transmission (Unicast/Multicast) pata chalta hai
+        try:
+            first_byte_hex = mac_address[:2]
+            first_byte_int = int(first_byte_hex, 16)
+            
+            # Bit 0 check (Least Significant Bit of 1st byte): 0 = Unicast, 1 = Multicast
+            transmission = "Multicast (Group/Broadcast Frame)" if (first_byte_int & 1) else "Unicast (Single Device Connection)"
+            
+            # Bit 1 check: 0 = Globally Unique (IEEE assigned), 1 = Locally Administered (Custom/Spoofed)
+            administration = "Globally Administered (Factory Hardcoded)" if not (first_byte_int & 2) else "Locally Administered (Software Defined / Random Private MAC)"
+        except:
+            transmission = "Standard Network Frame"
+            administration = "Unspecified Protocol Assignment"
+
+        # 3. Environment & Virtualization Fingerprinting
+        infra_guess = "Physical Hardware Node (Laptop/Mobile/Router)"
+        virtual_prefixes = {
+            "005056": "VMware Virtual Machine Node",
+            "000C29": "VMware Virtual Machine Node",
+            "080027": "Oracle VirtualBox Environment",
+            "00155D": "Microsoft Hyper-V Engine",
+            "0242AC": "Docker Container Virtual Network Bridge",
+            "525400": "KVM / QEMU Virtualization Interface"
+        }
+        
+        for virt_pfx, name in virtual_prefixes.items():
+            if mac_address.startswith(virt_pfx):
+                infra_guess = name
+                break
+
+        # Compile advanced enhanced response object
+        return jsonify({
+            "status": "success",
+            "resolved_vendor": vendor,
+            "oui_prefix": prefix,
+            "transmission_type": transmission,
+            "administration_type": administration,
+            "infrastructure_type": infra_guess,
+            "vendor_address": address,
+            "raw_payload": parsed_json if parsed_json else {"info": "Query executed via standalone pattern fallback."}
+        })
             
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
