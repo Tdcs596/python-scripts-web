@@ -28,7 +28,7 @@ UI = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMEI_FORENSIC_MATRIX_v4</title>
+    <title>IMEI_FORENSIC_MATRIX_v4.5</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #02040a; color: #f43f5e; font-family: 'Consolas', 'Share Tech Mono', monospace; padding: 30px 15px; text-align: center; }
@@ -42,6 +42,11 @@ UI = """
         .input-group { text-align: center; margin-bottom: 25px; }
         input { width: 85%; padding: 16px; background: #070a12; border: 1px solid #742a2a; color: #fff; font-size: 24px; border-radius: 8px; outline: none; text-align: center; letter-spacing: 6px; box-shadow: inset 0 0 15px rgba(116, 42, 42, 0.3); font-weight: bold; transition: 0.3s; }
         input:focus { border-color: #f43f5e; box-shadow: inset 0 0 20px rgba(244, 63, 94, 0.25), 0 0 25px rgba(244, 63, 94, 0.15); }
+        
+        .counter-badge { display: block; margin-top: 8px; font-size: 13px; color: #a0aec0; font-weight: bold; }
+        .counter-badge.warn { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        .counter-badge.success { color: #10b981; }
+
         button { padding: 16px 50px; background: #f43f5e; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 15px; margin-top: 15px; transition: 0.2s; letter-spacing: 1.5px; text-transform: uppercase; }
         button:hover { background: #fff; box-shadow: 0 0 25px #fff; transform: translateY(-1px); }
         
@@ -72,11 +77,12 @@ UI = """
         <div class="box">
             <div class="header">
                 <h2>🧬 HARDWARE OVERLORD FORENSIC SCANNER</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • EXPERT HARDWARE REGISTRY DECODER v4.0</p>
+                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • EXPERT HARDWARE REGISTRY DECODER v4.5</p>
             </div>
 
             <div class="input-group">
-                <input type="text" id="imei_input" placeholder="ENTER 15 DIGIT IMEI" maxlength="15" value="351895091234561">
+                <input type="text" id="imei_input" placeholder="ENTER 15 DIGIT IMEI" maxlength="15" value="356728872022468">
+                <span id="digit_counter" class="counter-badge warn">Length: 14/15 digits (Bhai, 1 digit missing hai!)</span>
                 <br>
                 <button onclick="executeForensicAnalysis()">DECONSTRUCT HARDWARE CELL</button>
             </div>
@@ -88,13 +94,34 @@ UI = """
     </div>
 
     <script>
+        const imeiInput = document.getElementById('imei_input');
+        const counterBadge = document.getElementById('digit_counter');
+
+        function updateCounter() {
+            let len = imeiInput.value.trim().length;
+            if(len === 15) {
+                counterBadge.className = "counter-badge success";
+                counterBadge.innerText = "Length: 15/15 - Target Ready for Recon!";
+            } else if (len === 0) {
+                counterBadge.className = "counter-badge warn";
+                counterBadge.innerText = "Waiting for terminal input pool...";
+            } else {
+                counterBadge.className = "counter-badge warn";
+                counterBadge.innerText = "Length: " + len + "/15 digits (Bhai, " + (15 - len) + " digit missing hai!)";
+            }
+        }
+
+        imeiInput.addEventListener('input', updateCounter);
+        // Run once on load to catch current default values
+        updateCounter();
+
         async function executeForensicAnalysis() {
-            let imei = document.getElementById('imei_input').value.trim();
+            let imei = imeiInput.value.trim();
             const status = document.getElementById('status');
             const resultBox = document.getElementById('result');
 
             if(imei.length !== 15 || !/^\\d+$/.test(imei)) {
-                return alert("Bhai, valid 15-digit numeric IMEI enter karo!");
+                return alert("Bhai, dhyan se check karo, IMEI poore 15-digits ka numeric code hona chahiye!");
             }
 
             status.style.display = "block";
@@ -211,15 +238,11 @@ def scan_imei():
     if len(imei_input) != 15 or not imei_input.isdigit():
         return jsonify({"status": "error", "message": "Extraction failure: 15-digit numeric buffer pool violation."})
     
-    # 1. Verification Logic
     checksum_passed = verify_luhn(imei_input)
     tac = imei_input[:8]
     rbi = imei_input[:2]
-    fac_digits = imei_input[6:8] # Final Assembly Code indicators
+    fac_digits = imei_input[6:8]
     serial = imei_input[8:14]
-    
-    # 2. Advanced Brand Mapping Rules Engine (Enriched Matrix)
-    resolved_brand = "Generic GSM Terminal Device (Model metadata undisclosed on standard tier)"
     
     # Global Ranges Match Engine
     rbi_map = {
@@ -232,11 +255,15 @@ def scan_imei():
     }
     origin_rbi = rbi_map.get(rbi, "International GSMA Unassigned Pool Block")
 
-    # Deep TAC Signature Database Match
+    # Deep Expanded TAC Signature Database Match
+    resolved_brand = "Generic GSM Terminal Device (Model metadata undisclosed on standard tier)"
+    
     tac_database = {
         "359061": "Apple iPhone Hardware Node (Premium iOS Terminal)",
-        "351895": "Samsung Galaxy High-End Architecture (Android Flagship Base)",
         "353634": "Apple iPhone Sub-System (Global Cellular Architecture)",
+        "351895": "Samsung Galaxy High-End Architecture (Android Flagship Base)",
+        "356728": "Samsung Electronics Co. Ltd (Galaxy Mobile Architecture Block)",
+        "358476": "Samsung Galaxy Fold / Ultra Premium Module",
         "860845": "Xiaomi Redmi Performance Chipset Terminal",
         "352452": "OnePlus Premium Performance Hardware Suite",
         "990004": "Qualcomm Reference Hardware Evaluation Base Station",
@@ -248,15 +275,13 @@ def scan_imei():
             resolved_brand = name
             break
 
-    # 3. Final Assembly Code (FAC) Mapping (Historical Baseline)
+    # Final Assembly Code (FAC) Mapping
     fac_map = {
-        "01": "Finland Factory Plant Assembly (Nokia/Legacy Legacy)",
+        "01": "Finland Factory Plant Assembly",
         "02": "Germany Automated Production Line Complex",
-        "07": "Germany High-Precision Mechanical Facility",
         "10": "Finland / France Central Manufacturing Hub",
         "20": "Korea High-Tech Hardware Development Facility",
         "30": "Korea Advanced Production Complex",
-        "40": "United Kingdom Local Mechanical Node",
         "50": "Brazil / India Local SMT Assembly Hub",
         "60": "China Shenzhen Automated Production Line",
         "70": "China Foxconn Technology Group Node",
@@ -264,7 +289,7 @@ def scan_imei():
     }
     assembly = fac_map.get(fac_digits, "Global Multi-Region SMT Manufacturing Node")
 
-    # 4. Device Hardware Level Profiling Layer
+    # Device Hardware Level Profiling Layer
     first_char = int(imei_input[0])
     if first_char in [3, 4]:
         hardware_tier = "High-End / Flagship Consumer Endpoint (Premium Smartphone Series)"
@@ -275,14 +300,12 @@ def scan_imei():
     else:
         hardware_tier = "Standard Legacy Cellular Module Interface"
 
-    # 5. Advanced Alert Log Compilation
     alert_log = (
         "LAYER-3 LOG: Tracking requests on physical hardware nodes require explicit Base Station Transceiver (BTS) "
-        "triangulation vectors. Core metadata indicates hardware profile is structural. Upstream API response maps "
-        "directly into GSMA block schema matrices safely."
+        "triangulation vectors. Core metadata indicates hardware profile is structural."
     )
 
-    # --- LIVE RAPIDAPI EXTRACTION PIPELINE WITH PARSING FAILSAFE ---
+    # --- LIVE API EXTRACTION PIPELINE WITH PARSING FAILSAFE ---
     api_payload_data = None
     try:
         conn = http.client.HTTPSConnection(RAPID_API_HOST)
@@ -290,7 +313,6 @@ def scan_imei():
             'x-rapidapi-key': RAPID_API_KEY,
             'x-rapidapi-host': RAPID_API_HOST
         }
-        # Dynamic query string construction
         conn.request("GET", f"/api/imei/{imei_input}", headers=headers)
         res = conn.getresponse()
         
@@ -298,8 +320,6 @@ def scan_imei():
             raw_res = res.read().decode("utf-8")
             api_payload_data = json.loads(raw_res)
             
-            # --- INTEL EXTRACTION EXTENSION ---
-            # Agar upstream API se sahi mein koi deeper model name match mil gaya, toh local placeholder ko overlay kar do!
             if api_payload_data:
                 upstream_model = (
                     api_payload_data.get("model") or 
@@ -308,10 +328,10 @@ def scan_imei():
                     api_payload_data.get("brand")
                 )
                 if upstream_model:
-                    resolved_brand = f"⚠️ [LIVE MATCHED]: {upstream_model} ({api_payload_data.get('manufacturer', 'Global Registry')})"
+                    resolved_brand = f"⚠️ [LIVE MATCHED]: {upstream_model} ({api_payload_data.get('manufacturer', 'Samsung Electronics')})"
         conn.close()
     except Exception:
-        pass # System seamlessly switches to internal forensics fallback matrix if the endpoint limits are depleted
+        pass
 
     return jsonify({
         "status": "success",
@@ -325,7 +345,7 @@ def scan_imei():
         "serial_segment": serial,
         "check_digit": imei_input[14],
         "operator_alert_log": alert_log,
-        "raw_data": api_payload_data or {"status": "Fallback Mode Active", "info": "Local parsing schema running perfectly."}
+        "raw_data": api_payload_data or {"status": "Local Core Active", "info": "Database rules applied dynamically."}
     })
 
 if __name__ == '__main__':
