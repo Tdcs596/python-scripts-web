@@ -13,7 +13,7 @@ script28_bp = Blueprint('script28', __name__)
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "ramakantd809@gmail.com"
-SENDER_PASSWORD = "8701043179:AAHZMy3DdfY-gqFETWQ2A_97TGm-Bs_LGPM"  # Fixed line 17 syntax error completely
+SENDER_PASSWORD = "alzrqjaorprdgtex"  # Fixed line 17 syntax error completely
 
 # --- CYBER LINK BULK UI ---
 # Added raw string format (r""") to protect slashes and style configurations securely
