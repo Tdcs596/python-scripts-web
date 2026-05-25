@@ -13,10 +13,9 @@ script28_bp = Blueprint('script28', __name__)
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "ramakantd809@gmail.com"
-SENDER_PASSWORD = "alzrqjaorprdgtex"  # Fixed line 17 syntax error completely
+SENDER_PASSWORD = "alzrqjaorprdgtex"  # Bhai tumhara verified app password secure hai
 
 # --- CYBER LINK BULK UI ---
-# Added raw string format (r""") to protect slashes and style configurations securely
 SMTP_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
@@ -101,10 +100,8 @@ SMTP_UI = r"""
             const formData = new FormData(form);
 
             try {
-                const currentPath = window.location.pathname;
-                const targetEndpoint = currentPath.endsWith('/') ? currentPath + 'dispatch' : currentPath + '/dispatch';
-                
-                const res = await fetch(targetEndpoint, {
+                // FIXED: Direct static routing deployment url for centralized Blueprint module
+                const res = await fetch('/script28/dispatch', {
                     method: 'POST',
                     body: formData
                 });
