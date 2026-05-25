@@ -12,12 +12,12 @@ script28_bp = Blueprint('script28', __name__)
 # --- SMTP SERVER GATEWAY CONFIGURATION ---
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = "ramakantd809@gmail.com"       # Bhai yahan apni email address daalna
-SENDER_PASSWORD = "8701043179:AAHZMy3DdfY-gqFETWQ2A_97TGm-Bs_LGPM"
-"       # Bhai yahan apna Google App Password daalna
+SENDER_EMAIL = "ramakantd809@gmail.com"
+SENDER_PASSWORD = "8701043179:AAHZMy3DdfY-gqFETWQ2A_97TGm-Bs_LGPM"  # Fixed line 17 syntax error completely
 
 # --- CYBER LINK BULK UI ---
-SMTP_UI = """
+# Added raw string format (r""") to protect slashes and style configurations securely
+SMTP_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,12 +98,12 @@ SMTP_UI = """
             consoleStatus.style.color = "#eab308";
             consoleStatus.innerText = "⏳ Initializing secure SMTP relay... Streaming packet arrays...";
 
-            // Packaging data using modern multi-part binary data layout
             const formData = new FormData(form);
 
             try {
-                // Dynamically tracks integration path parameters
-                const targetEndpoint = window.location.pathname.endsWith('/') ? window.location.pathname + 'dispatch' : window.location.pathname + '/dispatch';
+                const currentPath = window.location.pathname;
+                const targetEndpoint = currentPath.endsWith('/') ? currentPath + 'dispatch' : currentPath + '/dispatch';
+                
                 const res = await fetch(targetEndpoint, {
                     method: 'POST',
                     body: formData
@@ -144,13 +144,11 @@ def dispatch_email():
         if not recipient or not subject or not message_body:
             return jsonify({"status": "error", "message": "Required parameter extraction failure inside packet processing line."}), 400
 
-        # Building standard MIME wrapper array structure
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
         msg['To'] = recipient
         msg['Subject'] = subject
 
-        # Dynamic Content Profiling: Automatically checks if string content is raw layout code
         if "<html>" in message_body.lower() or "</div>" in message_body.lower():
             msg.attach(MIMEText(message_body, 'html'))
         else:
@@ -159,9 +157,8 @@ def dispatch_email():
         # --- MULTI-ATTACHMENT PROCESSOR STREAM ---
         for file_storage in uploaded_files:
             if file_storage.filename == '':
-                continue # Skip empty upload streams safely
+                continue
             
-            # Read binary raw data directly from server cache buffers
             file_data = file_storage.read()
             filename = file_storage.filename
 
@@ -173,7 +170,7 @@ def dispatch_email():
 
         # --- SECURE RELAY RUNTIME PIPELINE ---
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()  # Upgrade connection stream safely via explicit cryptographic TLS upgrade protocol
+        server.starttls()
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.sendmail(SENDER_EMAIL, recipient, msg.as_string())
         server.quit()
