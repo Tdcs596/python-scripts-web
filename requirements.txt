@@ -7,3 +7,8 @@ python-nmap
 cryptography
 google-generativeai
 gunicorn
+Flask==3.0.3
+requests==2.32.3
+beautifulsoup4==4.12.3
+pandas==2.2.2
+openpyxl==3.1.2
