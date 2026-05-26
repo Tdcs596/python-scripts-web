@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template_string, request, jsonify, send_file
 import re
 import requests
+from bs4 import BeautifulSoup  # <-- Yeh line missing thi, ab add kar di hai!
 import pandas as pd
 import io
 import logging
@@ -127,65 +128,51 @@ def scrape_leads():
         results = []
         EMAIL_REGEX = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
 
-        # --- REVOLUTIONARY DATA PIPE PROTOCOL ---
-        # Google Maps backend search query stream simulating actual maps widget client injection
         session = requests.Session()
         session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "Accept-Language": "en-US,en;q=0.9"
         })
 
-        # Hitting Google Maps backend proxy injection endpoint 
         endpoint_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}&tbm=map&fp=1&tch=1"
         response = session.get(endpoint_url, timeout=15)
         
-        # Raw string streaming pattern parsing node
         raw_text = response.text
-        
-        # Extracting data arrays via text pattern mapping instead of broken html selectors
         entries = raw_text.split('/*""*/')
         
         for entry in entries:
             try:
-                # Proper Extraction Regex Targets
-                # 1. Title/Name
                 name_match = re.search(r'\[null,null,\s*\"([^\"]+)\"\s*,\s*\[\[\[\s*\"[^\"]+\"\s*,\s*\"[^\"]*\"', entry)
                 if not name_match:
                     name_match = re.search(r'\"([^\"]+)\",\s*\[null,\s*null,\s*null,\s*null,\s*\[\s*\[\s*\d+\.\d+', entry)
                 
                 if name_match:
                     name = name_match.group(1).encode().decode('unicode-escape', errors='ignore')
-                    # Clean unwanted system blocks
                     if any(x in name for x in ["http", "/", "\\", "Menu", "Order"]):
                         continue
                 else:
                     continue
 
-                # 2. Rating & Reviews count
                 rating_match = re.search(r'\[(\d+\.\d+),\s*(\d+),\s*\[', entry)
                 rating = f"{rating_match.group(1)} ★" if rating_match else "4.2 ★"
                 reviews = f"{rating_match.group(2)} reviews" if rating_match else "Verified"
 
-                # 3. Dynamic Phone Number match
                 phone_match = re.search(r'\"(\+?\d{2,4}\s*\d{3,5}\s*\d{4,6})\"', entry)
                 if not phone_match:
                     phone_match = re.search(r'\"(0\d{2,4}[-\s]?\d{6,8})\"', entry)
                 phone = phone_match.group(1) if phone_match else "Available on Website"
 
-                # 4. Asli Address Field Matching
                 address_match = re.search(r'\"([^\"]+\s*,\s*[^\"]+\s*,\s*[^\"]+,\s*India)\"', entry)
                 if not address_match:
                     address_match = re.search(r'\"([^\"]+\s*[0-9]{6}[^\"]*)\"', entry)
                 address = address_match.group(1).encode().decode('unicode-escape', errors='ignore') if address_match else f"Commercial Market, {search_query.split()[-1].title()}"
 
-                # 5. Website Endpoint Extraction
                 web_match = re.search(r'\"(https?:\/\/[^\s\"]+\.[^\s\"]+)\"', entry)
                 website = web_match.group(1) if web_match else ""
                 
                 if website and ("google.com" in website or "ggpht" in website):
                     website = ""
 
-                # --- EXTENDED DEEP WEBSITE CRAWLER FOR EMAIL & SOCIALS ---
                 email, instagram, facebook, linkedin, youtube = "", "", "", "", ""
                 
                 if website:
@@ -193,12 +180,10 @@ def scrape_leads():
                         web_res = session.get(website, timeout=5)
                         html_data = web_res.text
                         
-                        # Find emails
                         emails_found = list(set(re.findall(EMAIL_REGEX, html_data)))
                         if emails_found:
                             email = ", ".join(emails_found[:2])
                         
-                        # Social loops mapping
                         insta_m = re.findall(r'https?:\/\/(?:www\.)?instagram\.com\/[A-Za-z0-9_.]+', html_data)
                         if insta_m: instagram = insta_m[0]
                             
@@ -210,7 +195,6 @@ def scrape_leads():
                     except:
                         pass
 
-                # Fill placeholders securely if crawler skipped
                 if not email and website:
                     clean_domain = website.split('//')[-1].split('/')[0].replace('www.', '')
                     email = f"info@{clean_domain}"
@@ -234,7 +218,6 @@ def scrape_leads():
             except:
                 continue
 
-        # --- SAFETynet LAYER (If primary pipeline arrays get heavily rate-limited) ---
         if len(results) < 2:
             soup = BeautifulSoup(raw_text, "html.parser")
             fallback_blocks = soup.find_all('div', class_='g') or soup.find_all('div', class_='ZIN2nd')
@@ -261,7 +244,6 @@ def scrape_leads():
                 except:
                     continue
 
-        # Generate data sheet stream array proper layout
         df = pd.DataFrame(results)
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
