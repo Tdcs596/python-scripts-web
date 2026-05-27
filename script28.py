@@ -3,11 +3,11 @@ import requests
 import pandas as pd
 import io
 import logging
+import re
 
 script28_bp = Blueprint('script28', __name__)
 
 # --- GOOGLE PLACES OFFICIAL API CONFIG ---
-# Bhai teri di hui official API key yahan safe lagadi hai
 GOOGLE_API_KEY = "AIzaSyAjr-0FqcNy5EA-PnLu9_X9bXC_4sjd-ZI"
 
 # --- GHOST TERMINAL OFFICIAL API UI ---
@@ -17,7 +17,7 @@ SCRAPER_UI = r"""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Scraper V12.0 | Official Maps Engine</title>
+    <title>Ghost Scraper V12.1 | Official Maps Engine</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #020408; color: #38bdf8; font-family: 'Consolas', 'Courier New', monospace; padding: 30px 15px; text-align: center; }
@@ -46,7 +46,7 @@ SCRAPER_UI = r"""
         <div class="box">
             <div class="header">
                 <h2>🛰️ GHOST MAPS API PREMIUM TERMINAL</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • 100% UNBLOCKABLE ENGINE</p>
+                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • FIXED SYNTAX ENGINE</p>
             </div>
 
             <form id="scraperForm">
@@ -76,7 +76,7 @@ SCRAPER_UI = r"""
             consoleStatus.className = "";
             consoleStatus.style.display = "block";
             consoleStatus.style.color = "#eab308";
-            consoleStatus.innerHTML = "⏳ Authenticating Google API Token Credentials...<br>⏳ Hitting official Google Places matrix servers...<br>⏳ Downloading raw real-time arrays (Isme thoda time lagega par data 100% real aayega)...";
+            consoleStatus.innerHTML = "⏳ Authenticating Google API Token Credentials...<br>⏳ Hitting official Google Places matrix servers...<br>⏳ Downloading raw real-time arrays and compiling to Excel...";
 
             try {
                 const res = await fetch('/script28/scrape', {
@@ -127,11 +127,10 @@ def scrape_leads():
         if not search_query:
             return jsonify({"status": "error", "message": "Search query parameter missing."}), 400
 
-        # Optimization: Agar user "near me" likhta hai, toh India region (Mumbai/Mira Road center coordinates) automatically bias kar deta hai
-        # Taaki Render server America ke badle India ka data nikal kar de!
-        bias_location = "location=19.2813,72.8554&radius=15000" # Coordinates for Mumbai/Mira Road area
+        # Location biasing for Mumbai/Mira Road coordinates so "near me" works on cloud
+        bias_location = "location=19.2813,72.8554&radius=15000"
         
-        # 1. Hitting Official TextSearch Endpoint
+        # 1. Google Places Text Search Endpoint
         text_search_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?query={requests.utils.quote(search_query)}&{bias_location}&key={GOOGLE_API_KEY}"
         
         response = requests.get(text_search_url, timeout=15)
@@ -144,7 +143,6 @@ def scrape_leads():
         places = api_data.get('results', [])
         final_leads = []
 
-        # Process limit up to top 20 active businesses
         for place in places[:20]:
             try:
                 name = place.get('name', 'N/A')
@@ -153,10 +151,10 @@ def scrape_leads():
                 user_ratings = f"{place.get('user_ratings_total', '0')} reviews"
                 place_id = place.get('place_id', '')
 
-                # 2. Hitting Official Place Details Endpoint to grab Real Phone & Website
                 phone = "Available on Request"
                 website = "N/A"
                 
+                # 2. Fetch detailed phone & website using Place Details API
                 if place_id:
                     details_url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=formatted_phone_number,website&key={GOOGLE_API_KEY}"
                     details_res = requests.get(details_url, timeout=5).json()
@@ -165,8 +163,9 @@ def scrape_leads():
                     phone = details_result.get('formatted_phone_number', 'Check Web Handle')
                     website = details_result.get('website', 'N/A')
 
-                # Social handles dynamic builders
-                clean_name = name.lower().replace(/[^a-z0-9]/g, '')
+                # Fixed Python Regex Substitution Syntax (No more SyntaxError!)
+                clean_name = re.sub(r'[^a-z0-9]', '', name.lower())
+                
                 email = "contact@business.com"
                 if website != "N/A":
                     try:
@@ -195,7 +194,7 @@ def scrape_leads():
         if not final_leads:
             return jsonify({"status": "error", "message": "No verified profiles returned for this keyword configuration."}), 404
 
-        # Generate premium structured Excel output stream
+        # Saving data directly into clean Excel (.xlsx) format
         df = pd.DataFrame(final_leads)
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
@@ -214,8 +213,7 @@ def scrape_leads():
         return jsonify({"status": "error", "message": f"Server processing crashed: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    from flask import Flask
+    from Flask import Flask
     app = Flask(__name__)
     app.register_blueprint(script28_bp, url_prefix='/script28')
     app.run(debug=True, port=5000)
-
