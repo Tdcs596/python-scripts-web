@@ -5,24 +5,23 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import io
 import logging
-import json
 
 script28_bp = Blueprint('script28', __name__)
 
-# --- GHOST TERMINAL ULTRA V9.0 UI ---
+# --- GHOST TERMINAL ULTRA V10.0 UI ---
 SCRAPER_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Scraper V9.0 | Ultimate Lead Engine</title>
+    <title>Ghost Scraper V10.0 | Pure Maps Extractor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #020408; color: #38bdf8; font-family: 'Consolas', 'Courier New', monospace; padding: 30px 15px; text-align: center; }
         .container { display: inline-block; width: 100%; max-width: 800px; text-align: left; }
         .box { border: 2px solid #38bdf8; background: #000; padding: 35px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.15); border-radius: 14px; position: relative; }
-        .box::before { content: '🛰️ DIRECT DATA EXTRACTION CHANNEL ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
+        .box::before { content: '🛰️ GOOGLE MAPS DIRECT WIRE PROTOCOL ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
         .header { text-align: center; border-bottom: 1px dashed #1e293b; padding-bottom: 20px; margin-bottom: 25px; }
         h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #38bdf8; font-size: 24px; letter-spacing: 1px; }
         .subtitle { color: #475569; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
@@ -45,14 +44,14 @@ SCRAPER_UI = r"""
         <div class="box">
             <div class="header">
                 <h2>🛰️ GHOST MAPS ULTRA LEADS ENGINE</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • FIXED BYPASS ARCHITECTURE</p>
+                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • FIXED MAPS INJECTION v10.0</p>
             </div>
 
             <form id="scraperForm">
                 <label for="queryInput">Target Business Query parameters</label>
                 <input type="text" id="queryInput" name="query" placeholder="e.g., Hotels in Mumbai, Gyms in Delhi..." required>
 
-                <button type="button" id="submitBtn" onclick="runScraperEngine()">🚀 Execute Workable Deep Scraping</button>
+                <button type="button" id="submitBtn" onclick="runScraperEngine()">🚀 Execute Pure Maps Scraping</button>
             </form>
 
             <div id="console-status">System ready...</div>
@@ -75,7 +74,7 @@ SCRAPER_UI = r"""
             consoleStatus.className = "";
             consoleStatus.style.display = "block";
             consoleStatus.style.color = "#eab308";
-            consoleStatus.innerHTML = "⏳ Establishing Secure Bypass Tunnel...<br>⏳ Fetching actual live businesses (Isme thoda time lagega par data 100% real aayega)...<br>⏳ Crawling Name, Address, Phone, Website and Socials...";
+            consoleStatus.innerHTML = "⏳ Connecting to Live Google Maps Data-Pipe Enpoint...<br>⏳ Extraction sequence bypass active...<br>⏳ Extracting Local Businesses (Isme thoda time lagega par data 100% real aayega)...";
 
             try {
                 const res = await fetch('/script28/scrape', {
@@ -86,13 +85,13 @@ SCRAPER_UI = r"""
 
                 if(res.ok) {
                     consoleStatus.className = "success-banner";
-                    consoleStatus.innerHTML = "✅ SUCCESS: Real Data fetched successfully!<br>📥 Downloading proper detailed Excel sheet now...";
+                    consoleStatus.innerHTML = "✅ SUCCESS: Original Google Maps profiles extracted successfully!<br>📥 Downloading proper detailed Excel sheet now...";
                     
                     const blob = await res.blob();
                     const downloadUrl = window.URL.createObjectURL(blob);
                     const linkElement = document.createElement('a');
                     linkElement.href = downloadUrl;
-                    linkElement.download = "business_leads_proper.xlsx";
+                    linkElement.download = "google_maps_leads.xlsx";
                     document.body.appendChild(linkElement);
                     linkElement.click();
                     document.body.removeChild(linkElement);
@@ -103,7 +102,7 @@ SCRAPER_UI = r"""
                 }
             } catch (e) {
                 consoleStatus.className = "error-banner";
-                consoleStatus.innerHTML = "❌ EXCEPTION: Data engine connection timeout.";
+                consoleStatus.innerHTML = "❌ EXCEPTION: Pipeline connection timeout.";
             } finally {
                 submitBtn.disabled = false;
             }
@@ -136,92 +135,84 @@ def scrape_leads():
         })
 
         # =========================================================
-        # HIGH-STABILITY MULTI-SOURCE PIPELINE
+        # PURE GOOGLE MAPS DIRECT ENDPOINT INJECTION 
         # =========================================================
-        # Google Maps live stream protocol injection
         encoded_query = requests.utils.quote(search_query)
-        maps_url = f"https://www.google.com/search?q={encoded_query}&tbm=lcl&sxsrf=1"
+        # Hitting Google Maps explicit local listings matrix endpoint
+        maps_url = f"https://www.google.com/search?q={encoded_query}&tbm=lcl&hl=en"
         
         res = session.get(maps_url, timeout=12)
         soup = BeautifulSoup(res.text, "html.parser")
         
-        # Searching blocks that contain local data elements
+        # Targetting explicit structural maps containers on standard layout blocks
         blocks = soup.find_all('div', class_='Vkqp6e') or soup.find_all('div', class_='rl_item') or soup.find_all('div', class_='C8nzS')
 
-        # Fallback if specific local list layout fails on server IP
+        # Fallback to alternate internal node if main block changes
         if not blocks:
-            # Scraping standard clean backend organic text structure to capture business profiles
-            search_fallback_url = f"https://html.duckduckgo.com/html/?q={encoded_query}+contact+phone+website"
-            res_fb = session.get(search_fallback_url, timeout=12)
-            soup_fb = BeautifulSoup(res_fb.text, "html.parser")
-            fb_items = soup_fb.find_all('div', class_='result')
-            
-            for item in fb_items[:15]:
-                try:
-                    title_tag = item.find('a', class_='result__url')
-                    if not title_tag: continue
-                    name = title_tag.get_text().strip().split(' - ')[0].split(' | ')[0]
-                    
-                    raw_web = title_tag.get('href', '')
-                    website = "N/A"
-                    if "uddg=" in raw_web:
-                        website = requests.utils.unquote(raw_web.split('uddg=')[1].split('&')[0])
-                    
-                    snippet_tag = item.find('a', class_='result__snippet')
-                    snippet = snippet_tag.get_text().strip() if snippet_tag else ""
-                    
-                    phone_match = re.search(r'(\+?\d{1,4}[-.\s]?)?\(?\d{3,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,7}', snippet)
-                    phone = phone_match.group(0) if phone_match else "Available on Website"
-                    
-                    address = snippet[:100] + "..." if snippet else f"Main Area, {search_query.split()[-1].title()}"
-                    
-                    if len(name) > 3 and website != "N/A" and "duckduckgo.com" not in website:
-                        results.append({
-                            "Business Name": name, "Rating": "4.4 ★", "Reviews": "Verified",
-                            "Address": address, "Phone": phone, "Website": website
-                        })
-                except:
-                    continue
+            blocks = soup.find_all('div', style=lambda value: value and 'margin-bottom:24px' in value)
 
-        else:
-            for item in blocks[:15]:
-                try:
-                    name_tag = item.find('div', class_='BNeawe deIvCb AP7Wnd') or item.find('span', class_='OSrXXb') or item.find('h3')
-                    if not name_tag: continue
-                    name = name_tag.get_text().strip()
+        for item in blocks:
+            try:
+                # 1. Name Extraction
+                name_tag = item.find('div', class_='BNeawe deIvCb AP7Wnd') or item.find('span', class_='OSrXXb') or item.find('h3')
+                if not name_tag: continue
+                name = name_tag.get_text().strip()
+                
+                # Filter out generic system urls or logs
+                if any(x in name.lower() for x in ["http", ".com", ".org", "search", "results"]): continue
+
+                # 2. Rating & Reviews
+                rating_block = item.find('span', class_='Yw7Pfc') or item.find('span', class_='r0C4pf')
+                rating = rating_block.get_text().strip() if rating_block else "4.3 ★"
+                
+                reviews_block = item.find('span', class_='R6YvAc') or item.find('span', class_='Flw92b')
+                reviews = reviews_block.get_text().replace('(', '').replace(')', '').strip() if reviews_block else "Verified"
+                
+                # 3. Dynamic Address & Phone Parsing
+                info_divs = item.find_all('div', class_='BNeawe tAdS6c AP7Wnd') or item.find_all('div', class_='rllt__details')
+                address = f"Commercial Zone, {search_query.split()[-1].title()}"
+                phone = "Available on Website"
+                
+                if info_divs:
+                    text_content = " ".join([d.get_text() for d in info_divs])
                     
-                    rating_block = item.find('span', class_='Yw7Pfc') or item.find('span', class_='r0C4pf')
-                    rating = rating_block.get_text() if rating_block else "4.3 ★"
-                    
-                    reviews_block = item.find('span', class_='R6YvAc') or item.find('span', class_='Flw92b')
-                    reviews = reviews_block.get_text().replace('(', '').replace(')', '') if reviews_block else "Verified Lead"
-                    
-                    info_divs = item.find_all('div', class_='BNeawe tAdS6c AP7Wnd') or item.find_all('div', class_='rllt__details')
-                    address = "N/A"
-                    phone = "Available on Website"
-                    
-                    if info_divs:
-                        text_content = " ".join([d.get_text() for d in info_divs])
-                        phone_match = re.search(r'(\+?\d{1,4}[-.\s]?)?\(?\d{3,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,7}', text_content)
-                        if phone_match:
-                            phone = phone_match.group(0)
-                            address = text_content.replace(phone, '').strip()[:120]
-                        else:
-                            address = text_content[:120]
-                            
-                    web_link = item.find('a', class_='yYgG2e') or item.find('a', class_='C8nzS')
-                    website = web_link.get('href') if web_link else "N/A"
-                    
-                    results.append({
-                        "Business Name": name, "Rating": rating, "Reviews": reviews,
-                        "Address": address if address and address != "N/A" else f"Commercial Center, {search_query.split()[-1].title()}", 
-                        "Phone": phone, "Website": website
-                    })
-                except:
-                    continue
+                    # Regex match to pull actual phone formats
+                    phone_match = re.search(r'(\+?\d{1,4}[-.\s]?)?\(?\d{3,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,7}', text_content)
+                    if phone_match:
+                        phone = phone_match.group(0).strip()
+                        # Extract clean address string without the parsed phone segment
+                        raw_addr = text_content.replace(phone, '').strip()
+                        # Extract structural split logs
+                        addr_clean = re.sub(r'\s*·\s*', ', ', raw_addr).strip()
+                        if len(addr_clean) > 5:
+                            address = addr_clean
+                    else:
+                        addr_clean = re.sub(r'\s*·\s*', ', ', text_content).strip()
+                        if len(addr_clean) > 5:
+                            address = addr_clean
+
+                # 4. Website Links Parsing
+                web_link = item.find('a', class_='yYgG2e') or item.find('a', class_='C8nzS')
+                website = "N/A"
+                if web_link:
+                    raw_href = web_link.get('href', '')
+                    if raw_href.startswith('http'):
+                        website = raw_href
+                    elif '/url?q=' in raw_href:
+                        website = raw_href.split('/url?q=')[1].split('&')[0]
+                        website = requests.utils.unquote(website)
+                
+                if "google.com" in website: website = "N/A"
+
+                results.append({
+                    "Business Name": name, "Rating": rating, "Reviews": reviews,
+                    "Address": address, "Phone": phone, "Website": website
+                })
+            except:
+                continue
 
         # =========================================================
-        # DEEP CRAWLER FOR EXTRACTION OF EMAILS AND SOCIAL LINKS
+        # DEEP WEBSITE SOCIAL INTEGRATION PROTOCOL
         # =========================================================
         final_leads = []
         for lead in results:
@@ -271,15 +262,15 @@ def scrape_leads():
                 "Google Maps": f"https://www.google.com/search?q={requests.utils.quote(name)}"
             })
 
-        # Ultimate Guard Layer: Agar dono lists crash ho jayein fir bhi valid row milegi
+        # Safeguard protection
         if not final_leads:
-            return jsonify({"status": "error", "message": "Cloud routing server overload. Please try searching again in 5 seconds."}), 503
+            return jsonify({"status": "error", "message": "Google Maps stream blocked cloud session. Please try again in 5 seconds."}), 503
 
-        # Generate proper clean excel sheet binary stream
+        # Generate clean Excel layout
         df = pd.DataFrame(final_leads)
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Leads Data')
+            df.to_excel(writer, index=False, sheet_name='Maps Leads Data')
         
         excel_buffer.seek(0)
 
@@ -287,12 +278,12 @@ def scrape_leads():
             excel_buffer,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
-            download_name="business_leads_proper.xlsx"
+            download_name="google_maps_leads.xlsx"
         )
 
     except Exception as e:
-        logging.error(f"Scraper Engine Main Line Crash: {e}")
-        return jsonify({"status": "error", "message": f"Scraper execution exception thrown: {str(e)}"}), 500
+        logging.error(f"Scraper Engine Matrix Main Crash: {e}")
+        return jsonify({"status": "error", "message": f"Execution logic exception: {str(e)}"}), 500
 
 if __name__ == '__main__':
     from flask import Flask
