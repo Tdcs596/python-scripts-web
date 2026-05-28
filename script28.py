@@ -17,13 +17,13 @@ SCRAPER_UI = r"""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Scraper V12.1 | Official Maps Engine</title>
+    <title>Ghost Scraper V12.5 | Fortifiedbytes Engine</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #020408; color: #38bdf8; font-family: 'Consolas', 'Courier New', monospace; padding: 30px 15px; text-align: center; }
         .container { display: inline-block; width: 100%; max-width: 800px; text-align: left; }
         .box { border: 2px solid #38bdf8; background: #000; padding: 35px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.15); border-radius: 14px; position: relative; }
-        .box::before { content: '🛰️ OFFICIAL GOOGLE PLACES API ENGINE ONLINE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
+        .box::before { content: '🛰️ FORTIFIEDBYTES PLACES PROTOCOL ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
         .header { text-align: center; border-bottom: 1px dashed #1e293b; padding-bottom: 20px; margin-bottom: 25px; }
         h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #38bdf8; font-size: 24px; letter-spacing: 1px; }
         .subtitle { color: #475569; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
@@ -46,7 +46,7 @@ SCRAPER_UI = r"""
         <div class="box">
             <div class="header">
                 <h2>🛰️ GHOST MAPS API PREMIUM TERMINAL</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • FIXED SYNTAX ENGINE</p>
+                <p class="subtitle">FORTIFIEDBYTES OMEGA DASHBOARD • PLACES V2 PROTOCOL</p>
             </div>
 
             <form id="scraperForm">
@@ -56,8 +56,8 @@ SCRAPER_UI = r"""
                 <button type="button" id="submitBtn" onclick="runOfficialApiScraper()">🚀 Fetch Verified Google Maps Data</button>
             </form>
 
-            <div id="console-status">System primed. Ready for authorized API requests...</div>
-            <div class="warning">AUTHENTICATED CHANNEL • GUARANTEED REAL LIVE DATA ARRAY</div>
+            <div id="console-status">System primed. Connected to Fortifiedbytes Cloud Core...</div>
+            <div class="warning">PLACES API (NEW) ENCRYPTED CONNECTION CHANNEL</div>
         </div>
     </div>
 
@@ -76,7 +76,7 @@ SCRAPER_UI = r"""
             consoleStatus.className = "";
             consoleStatus.style.display = "block";
             consoleStatus.style.color = "#eab308";
-            consoleStatus.innerHTML = "⏳ Authenticating Google API Token Credentials...<br>⏳ Hitting official Google Places matrix servers...<br>⏳ Downloading raw real-time arrays and compiling to Excel...";
+            consoleStatus.innerHTML = "⏳ Authenticating via Places API (New) Protocol...<br>⏳ Streaming direct response nodes from Google Maps...<br>⏳ Extracting Name, Rating, Address, Phone, Website and compiling to Excel...";
 
             try {
                 const res = await fetch('/script28/scrape', {
@@ -127,43 +127,51 @@ def scrape_leads():
         if not search_query:
             return jsonify({"status": "error", "message": "Search query parameter missing."}), 400
 
-        # Location biasing for Mumbai/Mira Road coordinates so "near me" works on cloud
-        bias_location = "location=19.2813,72.8554&radius=15000"
+        # =========================================================
+        # GOOGLE PLACES API (NEW) TEXT SEARCH IMPLEMENTATION
+        # =========================================================
+        new_search_url = "https://places.googleapis.com/v1/places:searchText"
         
-        # 1. Google Places Text Search Endpoint
-        text_search_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?query={requests.utils.quote(search_query)}&{bias_location}&key={GOOGLE_API_KEY}"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GOOGLE_API_KEY,
+            "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.websiteUri,places.id"
+        }
         
-        response = requests.get(text_search_url, timeout=15)
+        # Location biasing for Mumbai/Mira Road center coordinates
+        payload = {
+            "textQuery": search_query,
+            "languageCode": "en",
+            "locationBias": {
+                "circle": {
+                    "center": {"latitude": 19.2813, "longitude": 72.8554},
+                    "radius": 15000.0
+                }
+            }
+        }
+
+        response = requests.post(new_search_url, json=payload, headers=headers, timeout=15)
         api_data = response.json()
 
-        if api_data.get('status') != 'OK':
-            error_msg = api_data.get('error_message', 'Invalid response status from Google API.')
-            return jsonify({"status": "error", "message": f"Google API Error: {api_data.get('status')} - {error_msg}"}), 400
+        if "error" in api_data:
+            err_details = api_data["error"].get("message", "Unknown error from Places API (New)")
+            return jsonify({"status": "error", "message": f"Places API (New) Error: {err_details}"}), 400
 
-        places = api_data.get('results', [])
+        places = api_data.get('places', [])
         final_leads = []
 
-        for place in places[:20]:
+        for place in places:
             try:
-                name = place.get('name', 'N/A')
-                address = place.get('formatted_address', 'N/A')
+                name = place.get('displayName', {}).get('text', 'N/A')
+                address = place.get('formattedAddress', 'N/A')
                 rating = f"{place.get('rating', '4.3')} ★"
-                user_ratings = f"{place.get('user_ratings_total', '0')} reviews"
-                place_id = place.get('place_id', '')
+                user_ratings = f"{place.get('userRatingCount', '0')} reviews"
+                place_id = place.get('id', '')
 
-                phone = "Available on Request"
-                website = "N/A"
-                
-                # 2. Fetch detailed phone & website using Place Details API
-                if place_id:
-                    details_url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=formatted_phone_number,website&key={GOOGLE_API_KEY}"
-                    details_res = requests.get(details_url, timeout=5).json()
-                    details_result = details_res.get('result', {})
-                    
-                    phone = details_result.get('formatted_phone_number', 'Check Web Handle')
-                    website = details_result.get('website', 'N/A')
+                phone = place.get('nationalPhoneNumber', 'Available on Request')
+                website = place.get('websiteUri', 'N/A')
 
-                # Fixed Python Regex Substitution Syntax (No more SyntaxError!)
+                # Python Regex substitution for social handles formatting
                 clean_name = re.sub(r'[^a-z0-9]', '', name.lower())
                 
                 email = "contact@business.com"
@@ -192,7 +200,7 @@ def scrape_leads():
                 continue
 
         if not final_leads:
-            return jsonify({"status": "error", "message": "No verified profiles returned for this keyword configuration."}), 404
+            return jsonify({"status": "error", "message": f"No data returned for query: '{search_query}'. Ensure 'Places API (New)' is enabled in Cloud Console."}), 404
 
         # Saving data directly into clean Excel (.xlsx) format
         df = pd.DataFrame(final_leads)
@@ -213,7 +221,7 @@ def scrape_leads():
         return jsonify({"status": "error", "message": f"Server processing crashed: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    from Flask import Flask
+    from flask import Flask
     app = Flask(__name__)
     app.register_blueprint(script28_bp, url_prefix='/script28')
     app.run(debug=True, port=5000)
