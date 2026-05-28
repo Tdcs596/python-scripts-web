@@ -58,7 +58,7 @@ LOOKUP_UI = r"""
             <form id="lookupForm" onsubmit="event.preventDefault(); executeIpScan();">
                 <label for="ipInput">Target IPv4 / IPv6 Address</label>
                 <div class="input-group">
-                    <input type="text" id="ipInput" placeholder="e.g., 8.8.8.8, 103.241.x.x (Blank chhodoge toh khud ki IP trace hogi)" autocomplete="off">
+                    <input type="text" id="ipInput" placeholder="e.g., 8.8.8.8 (Blank chhodoge toh khud ki IP trace hogi)" autocomplete="off">
                     <button type="submit" id="submitBtn">🚀 Scan IP Network</button>
                 </div>
             </form>
@@ -131,7 +131,7 @@ LOOKUP_UI = r"""
             consoleStatus.innerHTML = "⏳ Establishing direct browser socket tunnel...<br>⏳ Bypassing cloud datacenter firewalls...<br>⏳ Streaming real-time carrier nodes & ASN matrix data...";
 
             try {
-                // LAYER 1: Hit premium ipwho.is client-side endpoint (No cloud blocks)
+                // LAYER 1: Hit premium ipwho.is client-side endpoint
                 const targetUrl = `https://ipwho.is/${ipInput}`;
                 const res = await fetch(targetUrl);
                 const data = await res.json();
@@ -143,12 +143,12 @@ LOOKUP_UI = r"""
                     document.getElementById('resIp').innerText = data.ip || 'N/A';
                     document.getElementById('resIsp').innerText = data.isp || 'N/A';
                     document.getElementById('resOrg').innerText = data.org || 'N/A';
-                    document.getElementById('resAsn').innerText = data.asn || 'N/A';
+                    document.getElementById('resAsn').innerText = data.connection?.asn || data.asn || 'N/A';
                     document.getElementById('resCountry').innerText = `${data.country || 'N/A'} (${data.country_code || 'N/A'})`;
                     document.getElementById('resRegion').innerText = data.region || 'N/A';
                     document.getElementById('resCity').innerText = data.city || 'N/A';
                     document.getElementById('resZip').innerText = data.postal || 'N/A';
-                    document.getElementById('resTimezone').innerText = `${data.timezone || 'N/A'} (${data.timezone_gmt || ''})`;
+                    document.getElementById('resTimezone').innerText = `${data.timezone?.id || 'N/A'} (${data.timezone?.utc || ''})`;
                     document.getElementById('resCoords').innerText = `${data.latitude} / ${data.longitude}`;
                     
                     document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
@@ -157,31 +157,34 @@ LOOKUP_UI = r"""
                     throw new Error(data.message || "Invalid target configuration.");
                 }
             } catch (e) {
-                // LAYER 2: Emergency Fail-safe Fallback directly inside the client browser
+                console.log("Layer 1 Failed, shifting to Layer 2...", e);
+                // LAYER 2: Highly reliable fallback (ip-api.com) - No CORS issues
                 try {
-                    const fallbackUrl = `https://ipapi.co/${ipInput ? ipInput + '/' : ''}json/`;
+                    const fallbackUrl = `https://ip-api.com/json/${ipInput}`;
                     const resBackup = await fetch(fallbackUrl);
                     const dataBackup = await resBackup.json();
                     
-                    if(!dataBackup.error) {
+                    if(dataBackup.status === "success") {
                         consoleStatus.style.display = "none";
                         resultBlock.style.display = "block";
 
-                        document.getElementById('resIp').innerText = dataBackup.ip || 'N/A';
-                        document.getElementById('resIsp').innerText = dataBackup.org || 'N/A';
-                        document.getElementById('resOrg').innerText = dataBackup.asn || 'N/A';
-                        document.getElementById('resAsn').innerText = dataBackup.asn || 'N/A';
-                        document.getElementById('resCountry').innerText = `${dataBackup.country_name || 'N/A'} (${dataBackup.country_code || 'N/A'})`;
-                        document.getElementById('resRegion').innerText = dataBackup.region || 'N/A';
+                        document.getElementById('resIp').innerText = dataBackup.query || 'N/A';
+                        document.getElementById('resIsp').innerText = dataBackup.isp || 'N/A';
+                        document.getElementById('resOrg').innerText = dataBackup.org || 'N/A';
+                        document.getElementById('resAsn').innerText = dataBackup.as || 'N/A';
+                        document.getElementById('resCountry').innerText = `${dataBackup.country || 'N/A'} (${dataBackup.countryCode || 'N/A'})`;
+                        document.getElementById('resRegion').innerText = dataBackup.regionName || 'N/A';
                         document.getElementById('resCity').innerText = dataBackup.city || 'N/A';
-                        document.getElementById('resZip').innerText = dataBackup.postal || 'N/A';
+                        document.getElementById('resZip').innerText = dataBackup.zip || 'N/A';
                         document.getElementById('resTimezone').innerText = dataBackup.timezone || 'N/A';
-                        document.getElementById('resCoords').innerText = `${dataBackup.latitude} / ${dataBackup.longitude}`;
+                        document.getElementById('resCoords').innerText = `${dataBackup.lat} / ${dataBackup.lon}`;
                         
-                        document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${dataBackup.latitude},${dataBackup.longitude}`;
+                        document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${dataBackup.lat},${dataBackup.lon}`;
                         return;
                     }
-                } catch(backupErr) {}
+                } catch(backupErr) {
+                    console.log("Layer 2 Failed as well.", backupErr);
+                }
 
                 consoleStatus.className = "error-banner";
                 consoleStatus.innerHTML = `❌ DISCOVERY ERROR: Both secure network streams were rate-limited or target IP structure is faulty.`;
@@ -198,7 +201,6 @@ LOOKUP_UI = r"""
 def index():
     return render_template_string(LOOKUP_UI)
 
-# Keeping the endpoint active as a standard blueprint template format
 @script29_bp.route('/scan', methods=['POST'])
 def scan_ip():
     return jsonify({"status": "error", "message": "Deprecated server route. UI safely shifted to Client-Side Edge Tunnel."}), 400
