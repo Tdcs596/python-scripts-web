@@ -1,23 +1,22 @@
 from flask import Blueprint, render_template_string, request, jsonify
 import requests
-import json
 
 script29_bp = Blueprint('script29', __name__)
 
-# --- GHOST TERMINAL IP LOOKUP UI (ULTRA ADVANCE V1.0) ---
+# --- GHOST TERMINAL IP LOOKUP UI (FORTIFIEDBYTES EDITION) ---
 LOOKUP_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost IP Tracker | Advanced Intel Node</title>
+    <title>Ghost IP Tracker | Fortifiedbytes Intel Node</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #020408; color: #38bdf8; font-family: 'Consolas', 'Courier New', monospace; padding: 30px 15px; text-align: center; }
         .container { display: inline-block; width: 100%; max-width: 850px; text-align: left; }
         .box { border: 2px solid #38bdf8; background: #000; padding: 35px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.15); border-radius: 14px; position: relative; }
-        .box::before { content: '⚡ ADVANCED IP INTEL INTELLIGENCE WIRE ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
+        .box::before { content: '⚡ FORTIFIEDBYTES IP INTEL WIRE ACTIVE'; position: absolute; top: -11px; right: 20px; background: #38bdf8; color: #000; font-size: 11px; padding: 2px 10px; font-weight: bold; border-radius: 4px; letter-spacing: 1px; }
         .header { text-align: center; border-bottom: 1px dashed #1e293b; padding-bottom: 20px; margin-bottom: 25px; }
         h2 { margin: 0; color: #fff; text-shadow: 0 0 15px #38bdf8; font-size: 24px; letter-spacing: 1px; }
         .subtitle { color: #475569; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
@@ -31,7 +30,8 @@ LOOKUP_UI = r"""
         button:hover { background: #fff; box-shadow: 0 0 25px #fff; transform: translateY(-1px); }
         
         #console-status { margin-top: 20px; padding: 14px; border-radius: 6px; background: #050505; border: 1px solid #111; font-size: 13px; display: none; text-align: left; line-height: 1.6; }
-        
+        .error-banner { color: #ef4444; border-color: #7f1d1d !important; background: #450a0a !important; padding: 14px; border-radius: 6px; border: 1px solid; margin-top: 20px; text-align: left;}
+
         /* Result Grid Style */
         .result-container { margin-top: 25px; display: none; animation: fadeIn 0.5s ease; }
         .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
@@ -53,7 +53,7 @@ LOOKUP_UI = r"""
         <div class="box">
             <div class="header">
                 <h2>🛰️ GHOST ADVANCED IP TRACKER BLOCK</h2>
-                <p class="subtitle">SHIVAM SINGH OMEGA DASHBOARD • SCRIPT29 SYSTEM</p>
+                <p class="subtitle">FORTIFIEDBYTES OMEGA DASHBOARD • SCRIPT29 SYSTEM</p>
             </div>
 
             <form id="lookupForm" onsubmit="event.preventDefault(); executeIpScan();">
@@ -129,7 +129,7 @@ LOOKUP_UI = r"""
             consoleStatus.className = "";
             consoleStatus.style.display = "block";
             consoleStatus.style.color = "#eab308";
-            consoleStatus.innerHTML = "⏳ Injecting lookup stream on global geo-IP servers...<br>⏳ Extracting ASN matrix, carrier networks, and routing layouts without token locks...";
+            consoleStatus.innerHTML = "⏳ Injecting lookup stream on global geo-IP servers...<br>⏳ Extracting ASN matrix, carrier networks, and routing layouts safely...";
 
             try {
                 const res = await fetch('/script29/scan', {
@@ -144,7 +144,6 @@ LOOKUP_UI = r"""
                     consoleStatus.style.display = "none";
                     resultBlock.style.display = "block";
 
-                    // Injecting array elements straight to the matrix view blocks
                     document.getElementById('resIp').innerText = data.data.ip || 'N/A';
                     document.getElementById('resIsp').innerText = data.data.isp || 'N/A';
                     document.getElementById('resOrg').innerText = data.data.org || 'N/A';
@@ -156,16 +155,14 @@ LOOKUP_UI = r"""
                     document.getElementById('resTimezone').innerText = data.data.timezone || 'N/A';
                     document.getElementById('resCoords').innerText = `${data.data.lat} / ${data.data.lon}`;
                     
-                    // Direct dynamic Google Maps builder inject
                     document.getElementById('resMapLink').href = `https://www.google.com/maps/search/?api=1&query=${data.data.lat},${data.data.lon}`;
                 } else {
                     consoleStatus.className = "error-banner";
-                    consoleStatus.style.color = "#ef4444";
                     consoleStatus.innerHTML = `❌ DISCOVERY ERROR: ${data.message}`;
                 }
             } catch (e) {
-                consoleStatus.style.color = "#ef4444";
-                consoleStatus.innerHTML = "❌ EXCEPTION: Node connection lost or target unreachable.";
+                consoleStatus.className = "error-banner";
+                consoleStatus.innerHTML = "❌ EXCEPTION: Node connection lost or response structure unreadable.";
             } finally {
                 submitBtn.disabled = false;
             }
@@ -185,59 +182,94 @@ def scan_ip():
         req_data = request.get_json() or {}
         target_ip = req_data.get('ip', '').strip()
 
-        # Secure zero-fail connection endpoints for un-authenticated deep querying
-        # Isme bina kisi key ke, unlimited secure scanning hoti hai
-        fallback_url = f"http://ip-api.com/json/{target_ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
-        
-        response = requests.get(fallback_url, timeout=10)
-        raw_res = response.json()
+        payload = None
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-        if raw_res.get('status') == 'fail':
-            # Secondary wire bypass alternative in case node 1 drops
-            backup_url = f"https://ipapi.co/{target_ip}/json/"
-            backup_res = requests.get(backup_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).json()
-            
-            if "error" in backup_res:
-                return jsonify({"status": "error", "message": backup_res.get('reason', 'IP mapping rejected.')}), 400
-                
-            payload = {
-                "ip": backup_res.get('ip'),
-                "isp": backup_res.get('org', 'Unknown Carrier'),
-                "org": backup_res.get('asn', 'Commercial Node'),
-                "asn": backup_res.get('asn', 'N/A'),
-                "country": backup_res.get('country_name'),
-                "country_code": backup_res.get('country_code'),
-                "region": backup_res.get('region'),
-                "city": backup_res.get('city'),
-                "postal": backup_res.get('postal', 'N/A'),
-                "timezone": backup_res.get('timezone'),
-                "lat": backup_res.get('latitude', '0.0'),
-                "lon": backup_res.get('longitude', '0.0')
-            }
+        # --- LAYER 1: IP-API.COM (PRIMARY SCANNER WITH EXCEPTION CATCH) ---
+        try:
+            url1 = f"http://ip-api.com/json/{target_ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
+            res1 = requests.get(url1, headers=headers, timeout=6)
+            if res1.status_code == 200:
+                raw_res = res1.json()
+                if raw_res.get('status') == 'success':
+                    payload = {
+                        "ip": raw_res.get('query'),
+                        "isp": raw_res.get('isp', 'N/A'),
+                        "org": raw_res.get('org', 'N/A'),
+                        "asn": raw_res.get('as', 'N/A'),
+                        "country": raw_res.get('country', 'N/A'),
+                        "country_code": raw_res.get('countryCode', 'N/A'),
+                        "region": raw_res.get('regionName', 'N/A'),
+                        "city": raw_res.get('city', 'N/A'),
+                        "postal": raw_res.get('zip', 'N/A'),
+                        "timezone": raw_res.get('timezone', 'N/A'),
+                        "lat": raw_res.get('lat', '0.0'),
+                        "lon": raw_res.get('lon', '0.0')
+                    }
+        except Exception:
+            pass  # Fail-safe protection triggered, skips to Layer 2
+
+        # --- LAYER 2: IPAPI.CO (BACKUP SCANNER) ---
+        if not payload:
+            try:
+                url2 = f"https://ipapi.co/{target_ip}/json/" if target_ip else "https://ipapi.co/json/"
+                res2 = requests.get(url2, headers=headers, timeout=6)
+                if res2.status_code == 200:
+                    backup_res = res2.json()
+                    if "error" not in backup_res:
+                        payload = {
+                            "ip": backup_res.get('ip', target_ip),
+                            "isp": backup_res.get('org', 'Unknown Carrier'),
+                            "org": backup_res.get('asn', 'Commercial Node'),
+                            "asn": backup_res.get('asn', 'N/A'),
+                            "country": backup_res.get('country_name', 'N/A'),
+                            "country_code": backup_res.get('country_code', 'N/A'),
+                            "region": backup_res.get('region', 'N/A'),
+                            "city": backup_res.get('city', 'N/A'),
+                            "postal": backup_res.get('postal', 'N/A'),
+                            "timezone": backup_res.get('timezone', 'N/A'),
+                            "lat": backup_res.get('latitude', '0.0'),
+                            "lon": backup_res.get('longitude', '0.0')
+                        }
+            except Exception:
+                pass
+
+        # --- LAYER 3: IP.SEEIP.ORG & GEOPLUGIN (EMERGENCY ULTRA-BYPASS LAYER) ---
+        if not payload:
+            try:
+                # Agar input target_ip blank h, toh pehle server public IP nikalo
+                working_ip = target_ip if target_ip else requests.get("https://ip.seeip.org", timeout=4).text.strip()
+                url3 = f"http://www.geoplugin.net/json.gp?ip={working_ip}"
+                res3 = requests.get(url3, timeout=6)
+                if res3.status_code == 200:
+                    g_res = res3.json()
+                    payload = {
+                        "ip": working_ip,
+                        "isp": g_res.get('geoplugin_credit', 'Emergency Infrastructure Node'),
+                        "org": "Multi-Route Secure Node",
+                        "asn": "N/A",
+                        "country": g_res.get('geoplugin_countryName', 'N/A'),
+                        "country_code": g_res.get('geoplugin_countryCode', 'N/A'),
+                        "region": g_res.get('geoplugin_regionName', 'N/A'),
+                        "city": g_res.get('geoplugin_city', 'N/A'),
+                        "postal": "N/A",
+                        "timezone": g_res.get('geoplugin_timezone', 'N/A'),
+                        "lat": g_res.get('geoplugin_latitude', '0.0'),
+                        "lon": g_res.get('geoplugin_longitude', '0.0')
+                    }
+            except Exception as e:
+                return jsonify({"status": "error", "message": f"All fallback routing nodes are currently rate-limited. Try after 2 minutes. Internal Error: {str(e)}"}), 500
+
+        if payload:
+            return jsonify({"status": "success", "data": payload})
         else:
-            payload = {
-                "ip": raw_res.get('query'),
-                "isp": raw_res.get('isp', 'N/A'),
-                "org": raw_res.get('org', 'N/A'),
-                "asn": raw_res.get('as', 'N/A'),
-                "country": raw_res.get('country', 'N/A'),
-                "country_code": raw_res.get('countryCode', 'N/A'),
-                "region": raw_res.get('regionName', 'N/A'),
-                "city": raw_res.get('city', 'N/A'),
-                "postal": raw_res.get('zip', 'N/A'),
-                "timezone": raw_res.get('timezone', 'N/A'),
-                "lat": raw_res.get('lat', '0.0'),
-                "lon": raw_res.get('lon', '0.0')
-            }
+            return jsonify({"status": "error", "message": "Failed to decode response architecture from scanning clusters."}), 400
 
-        return jsonify({"status": "success", "data": payload})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Deep Scanning Engine Failed: {str(e)}"}), 500
+    except Exception as main_err:
+        return jsonify({"status": "error", "message": f"Global core thread fault: {str(main_err)}"}), 500
 
 if __name__ == '__main__':
     from flask import Flask
     app = Flask(__name__)
     app.register_blueprint(script29_bp, url_prefix='/script29')
     app.run(debug=True, port=5001)
-
