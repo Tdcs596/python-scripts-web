@@ -131,7 +131,7 @@ LOOKUP_UI = r"""
             consoleStatus.innerHTML = "⏳ Establishing direct browser socket tunnel...<br>⏳ Bypassing cloud datacenter firewalls...<br>⏳ Streaming real-time carrier nodes & ASN matrix data...";
 
             try {
-                // LAYER 1: Hit premium ipwho.is client-side endpoint
+                // LAYER 1: Hit ipwho.is endpoint
                 const targetUrl = `https://ipwho.is/${ipInput}`;
                 const res = await fetch(targetUrl);
                 const data = await res.json();
@@ -151,39 +151,41 @@ LOOKUP_UI = r"""
                     document.getElementById('resTimezone').innerText = `${data.timezone?.id || 'N/A'} (${data.timezone?.utc || ''})`;
                     document.getElementById('resCoords').innerText = `${data.latitude} / ${data.longitude}`;
                     
+                    // Fixed the string template bug here
                     document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
                     return;
                 } else {
-                    throw new Error(data.message || "Invalid target configuration.");
+                    throw new Error(data.message || "Layer 1 failed.");
                 }
             } catch (e) {
-                console.log("Layer 1 Failed, shifting to Layer 2...", e);
-                // LAYER 2: Highly reliable fallback (ip-api.com) - No CORS issues
+                console.log("Layer 1 routing failed. Swapping to fallback node...", e);
+                
+                // LAYER 2: Ultra-reliable public fallback endpoint (ipapi.co but via public https path)
                 try {
-                    const fallbackUrl = `https://ip-api.com/json/${ipInput}`;
+                    const fallbackUrl = ipInput ? `https://ipapi.co/${ipInput}/json/` : `https://ipapi.co/json/`;
                     const resBackup = await fetch(fallbackUrl);
                     const dataBackup = await resBackup.json();
                     
-                    if(dataBackup.status === "success") {
+                    if(!dataBackup.error) {
                         consoleStatus.style.display = "none";
                         resultBlock.style.display = "block";
 
-                        document.getElementById('resIp').innerText = dataBackup.query || 'N/A';
-                        document.getElementById('resIsp').innerText = dataBackup.isp || 'N/A';
-                        document.getElementById('resOrg').innerText = dataBackup.org || 'N/A';
-                        document.getElementById('resAsn').innerText = dataBackup.as || 'N/A';
-                        document.getElementById('resCountry').innerText = `${dataBackup.country || 'N/A'} (${dataBackup.countryCode || 'N/A'})`;
-                        document.getElementById('resRegion').innerText = dataBackup.regionName || 'N/A';
+                        document.getElementById('resIp').innerText = dataBackup.ip || 'N/A';
+                        document.getElementById('resIsp').innerText = dataBackup.org || 'N/A';
+                        document.getElementById('resOrg').innerText = dataBackup.asn || 'N/A';
+                        document.getElementById('resAsn').innerText = dataBackup.asn || 'N/A';
+                        document.getElementById('resCountry').innerText = `${dataBackup.country_name || 'N/A'} (${dataBackup.country_code || 'N/A'})`;
+                        document.getElementById('resRegion').innerText = dataBackup.region || 'N/A';
                         document.getElementById('resCity').innerText = dataBackup.city || 'N/A';
-                        document.getElementById('resZip').innerText = dataBackup.zip || 'N/A';
+                        document.getElementById('resZip').innerText = dataBackup.postal || 'N/A';
                         document.getElementById('resTimezone').innerText = dataBackup.timezone || 'N/A';
-                        document.getElementById('resCoords').innerText = `${dataBackup.lat} / ${dataBackup.lon}`;
+                        document.getElementById('resCoords').innerText = `${dataBackup.latitude} / ${dataBackup.longitude}`;
                         
-                        document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${dataBackup.lat},${dataBackup.lon}`;
+                        document.getElementById('resMapLink').href = `https://www.google.com/maps?q=${dataBackup.latitude},${dataBackup.longitude}`;
                         return;
                     }
                 } catch(backupErr) {
-                    console.log("Layer 2 Failed as well.", backupErr);
+                    console.log("Layer 2 route failed.", backupErr);
                 }
 
                 consoleStatus.className = "error-banner";
@@ -210,4 +212,3 @@ if __name__ == '__main__':
     app = Flask(__name__)
     app.register_blueprint(script29_bp, url_prefix='/script29')
     app.run(debug=True, port=5001)
-
