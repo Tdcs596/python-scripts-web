@@ -30,6 +30,7 @@ from script27 import script27_bp
 from script28 import script28_bp
 from script29 import script29_bp
 from script30 import script30_bp
+from script31 import script31_bp
 
 
 
@@ -138,6 +139,7 @@ def home():
             <a href="/script28/" class="btn"> IMEI Finder</a>
             <a href="/script29/" class="btn"> Ip Finder</a>
             <a href="/script30/" class="btn"> ADB </a>
+            <a href="/script31/" class="btn"> Google Dorking </a>
         </div>
     </body>
     </html>
@@ -172,6 +174,7 @@ app.register_blueprint(script27_bp, url_prefix='/script27')
 app.register_blueprint(script28_bp, url_prefix='/script28')
 app.register_blueprint(script29_bp, url_prefix='/script29')
 app.register_blueprint(script30_bp, url_prefix='/script30')
+app.register_blueprint(script31_bp, url_prefix='/script31')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
