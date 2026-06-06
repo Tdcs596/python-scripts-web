@@ -2,22 +2,21 @@ from flask import Blueprint, render_template_string, jsonify, request, redirect
 import hashlib
 import urllib.parse
 
+# Blueprint registered as 'script3'
 script3_bp = Blueprint('script3', __name__)
 
-# Real-time transactional memory grid for mappings
+# Global runtime transactional grid memory
 SHORTENER_DATABASE = {}
 
 def convert_to_punycode_stream(raw_url):
     """
-    Parses structural layers to extract Internationalized Domain Names (IDN).
-    Safely transliterates lookalike unicode boundaries into standard ascii punycode.
+    Parses structural domain parameters to evaluate Internationalized Domain Names (IDN).
+    Safely translates lookalike characters into clear ascii punycode (xn--).
     """
     try:
-        # Lowercase scheme and netloc for uniform structural matching
         parsed = urllib.parse.urlparse(raw_url)
         hostname = parsed.hostname
         if hostname:
-            # Core processing: Converts to xn-- notation if homograph characters exist
             puny_host = hostname.encode('idna').decode('ascii')
             reconstructed_netloc = puny_host
             if parsed.port:
@@ -37,7 +36,6 @@ SHORTENER_UI = r"""
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FORTIFIEDBYTES | Elite Shortener & IDN Compiler</title>
     <style>
-        /* --- RESET & ROOT CUSTOM VARIABLES --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body { 
@@ -52,7 +50,6 @@ SHORTENER_UI = r"""
             overflow-x: hidden;
         }
 
-        /* --- BACKGROUND SHINING STARS CANVAS --- */
         #star-canvas {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -60,7 +57,6 @@ SHORTENER_UI = r"""
             pointer-events: none;
         }
 
-        /* --- FLEXIBLE RESPONDENT WORKSPACE FRAME --- */
         .workspace {
             position: relative;
             z-index: 10;
@@ -69,7 +65,7 @@ SHORTENER_UI = r"""
             width: 100%;
             max-width: 1100px;
             height: 85vh;
-            min-height: 550px;
+            min-height: 580px;
             border: 2px solid #1e293b;
             background: rgba(4, 7, 16, 0.85);
             backdrop-filter: blur(12px);
@@ -79,7 +75,6 @@ SHORTENER_UI = r"""
             transition: all 0.3s ease-in-out;
         }
 
-        /* --- LEFT PANEL: CONTROL MATRIX INPUTS --- */
         .control-deck {
             width: 40%;
             min-width: 360px;
@@ -151,7 +146,6 @@ SHORTENER_UI = r"""
             transform: translateY(-1px);
         }
 
-        /* --- RIGHT PANEL: HIGH-VISIBILITY VIEWPORT --- */
         .terminal-viewport {
             flex: 1;
             background: rgba(1, 2, 5, 0.9);
@@ -169,15 +163,6 @@ SHORTENER_UI = r"""
             word-break: break-all;
         }
 
-        /* --- RUNTIME BLOCK HIGHLIGHTS --- */
-        .log-success-card {
-            margin-top: 15px;
-            background: rgba(16, 185, 129, 0.04);
-            border-left: 4px solid #10b981;
-            padding: 15px;
-            border-radius: 4px;
-        }
-
         .brand-tag { 
             font-size: 10px; 
             color: #475569; 
@@ -189,7 +174,7 @@ SHORTENER_UI = r"""
             margin-top: 20px;
         }
 
-        /* --- MEDIA QUERY QUOTAS FOR EXTREME RESPONSIVENESS --- */
+        /* --- MEDIA QUERIES FOR ULTIMATE RESPONSIVENESS --- */
         @media (max-width: 868px) {
             body { padding: 10px; }
             .workspace {
@@ -233,7 +218,7 @@ SHORTENER_UI = r"""
                 <input type="url" id="long_url" class="short-input" placeholder="e.g., https://gооgle.com" required>
 
                 <label for="custom_slug">Custom Routing Token / Alias (Optional)</label>
-                <input type="text" id="custom_slug" class="short-input" placeholder="e.g., system-patch">
+                <input type="text" id="custom_slug" class="short-input" placeholder="e.g., update-logs">
 
                 <button class="btn-execute" onclick="compileShortLink()">⚡ Compress & Analyze Payload</button>
             </div>
@@ -241,21 +226,17 @@ SHORTENER_UI = r"""
         </div>
 
         <div class="terminal-viewport">
-            <div id="terminal-output">Fortifiedbytes real URL conversion console ready.<br>Awaiting outbound target payload mappings...</div>
+            <div id="terminal-output">Fortifiedbytes link converter environment initialized.<br>Awaiting outbound target tracking tokens...</div>
         </div>
     </div>
 
     <script>
-        // --- STARFIELD INTERACTION GENERATOR ---
+        // Background Particle Space Loop
         const canvas = document.getElementById('star-canvas');
         const ctx = canvas.getContext('2d');
         let stars = [];
 
-        function resizeCanvas() { 
-            canvas.width = window.innerWidth; 
-            canvas.height = window.innerHeight; 
-            initStars(); 
-        }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; initStars(); }
         function initStars() {
             stars = [];
             const count = Math.floor((canvas.width * canvas.height) / 4500);
@@ -264,37 +245,29 @@ SHORTENER_UI = r"""
             }
         }
         function drawStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-            ctx.fillStyle = '#ffffff';
-            stars.forEach(star => { 
-                ctx.globalAlpha = Math.abs(Math.sin(star.alpha)); 
-                ctx.beginPath(); 
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2); 
-                ctx.fill(); 
-                star.alpha += star.speed; 
-            });
-            ctx.globalAlpha = 1.0; 
-            requestAnimationFrame(drawStars);
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#ffffff';
+            stars.forEach(star => { ctx.globalAlpha = Math.abs(Math.sin(star.alpha)); ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2); ctx.fill(); star.alpha += star.speed; });
+            ctx.globalAlpha = 1.0; requestAnimationFrame(drawStars);
         }
-        window.addEventListener('resize', resizeCanvas); 
-        resizeCanvas(); 
-        drawStars();
+        window.addEventListener('resize', resizeCanvas); resizeCanvas(); drawStars();
 
-        // --- PIPELINE LOGIC CONTROLLER ---
+        // Shortener Dispatch Request Handler
         async function compileShortLink() {
             const destination = document.getElementById('long_url').value.trim();
             const slug = document.getElementById('custom_slug').value.trim();
             const term = document.getElementById('terminal-output');
 
             if(!destination) {
-                alert("Bhai, Target Destination URL space compile karna mandatory hai!");
+                alert("Bhai, Target Destination URL compile karna mandatory hai!");
                 return;
             }
 
-            term.innerHTML += `\n\n[INGEST] Resolving packet string formatting rules...`;
+            term.innerHTML += `\n\n[INGEST] Cleaning data packages and analyzing string formatting...`;
 
             try {
-                const response = await fetch(window.location.pathname + '/shorten', {
+                // Fixed relative blueprint handshake invocation path
+                const currentPath = window.location.pathname.replace(/\/$/, "");
+                const response = await fetch(currentPath + '/shorten', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ url: destination, alias: slug })
@@ -306,17 +279,16 @@ SHORTENER_UI = r"""
                     return;
                 }
 
-                let outputHtml = `\n\n[SUCCESS] Structural Matrix Stabilized!\n`;
+                let outputHtml = `\n\n[SUCCESS] Structural Matrix Sync Complete!\n`;
                 outputHtml += `-------------------------------------------------------------\n`;
-                outputHtml += `📥 Ingestion Vector:  ${destination}\n`;
+                outputHtml += `📥 Ingestion Target:  ${destination}\n`;
                 outputHtml += `🛡️ IDN Spec Target:   ${data.punycode_host}\n`;
-                outputHtml += `🔗 Decoded Destination: ${data.parsed_url}\n\n`;
-                outputHtml += `🚀 Short Link Route:   <a href="${data.short_url}" target="_blank" style="color:#10b981; font-weight:bold; text-decoration:underline;">${data.short_url}</a>\n`;
+                outputHtml += `🔗 Parsed Domain:     ${data.parsed_url}\n\n`;
+                outputHtml += `🚀 Super Short Link:  <a href="${data.short_url}" target="_blank" style="color:#10b981; font-weight:bold; text-decoration:underline;">${data.short_url}</a>\n`;
                 outputHtml += `-------------------------------------------------------------\n`;
 
                 term.innerHTML += outputHtml;
 
-                // Seamless scroll tracking optimization
                 const vp = document.querySelector('.terminal-viewport');
                 vp.scrollTop = vp.scrollHeight;
 
@@ -340,28 +312,31 @@ def process_shortener_request():
     alias = data.get('alias', '').strip()
 
     if not raw_url:
-        return jsonify({"error": "Empty parameters payload received."}), 400
+        return jsonify({"error": "Parameters input field missing destination path."}), 400
 
-    # Ensure protocols exist on initialization string
+    # Format protocol schemes cleanly
     if not (raw_url.startswith('http://') or raw_url.startswith('https://')):
         raw_url = 'http://' + raw_url
 
-    # Execute conversion filters
+    # Convert Homograph unicodes into safe Punycode notations (xn--)
     reconstructed_url, punycode_host = convert_to_punycode_stream(raw_url)
 
-    # Establish slug routing keys
+    # Shorten the routing tokens mapping
     if alias:
         slug = alias
     else:
         slug = hashlib.md5(reconstructed_url.encode('utf-8')).hexdigest()[:6]
 
-    # Save mapping link into global application states dictionary
+    # Save mapping straight to transactional standard memory states
     SHORTENER_DATABASE[slug] = reconstructed_url
 
-    # Resolve blueprint path cleanly to ensure stability on remote staging environments
-    root_url = request.url_root.rstrip('/')
-    # Absolute routing boundary context verification
-    final_short_path = f"{root_url}{request.blueprint}/go/{slug}"
+    # Strict structural formatting validation for proxies like Render.com
+    # Parses host domain string with exact clean slashes
+    host_base = request.host_url.rstrip('/')
+    blueprint_prefix = request.blueprint.strip('/')
+    
+    # Generated Super Short Link structure matching your requested style perfectly
+    final_short_path = f"{host_base}/{blueprint_prefix}/s/{slug}"
 
     return jsonify({
         "status": "synchronized",
@@ -370,19 +345,18 @@ def process_shortener_request():
         "short_url": final_short_path
     }), 200
 
-@script3_bp.route('/go/<slug>')
+@script3_bp.route('/s/<slug>')
 def dynamic_redirect_gateway(slug):
     """
-    Handles redirection loops based on mapped slug values.
+    Centralized high-performance link route matching distribution gateway.
     """
     target_destination = SHORTENER_DATABASE.get(slug)
     if target_destination:
         return redirect(target_destination)
-    return "<h3>[404] Core Routing Error: Mapped URL context token expired from runtime stack framework.</h3>", 404
+    return "<h3>[404] Fortifiedbytes Core Error: Link token missing or state record expired from stack memory.</h3>", 404
 
 if __name__ == '__main__':
     from flask import Flask
     app = Flask(__name__)
     app.register_blueprint(script3_bp, url_prefix='/script3')
     app.run(debug=True, port=5000)
-
