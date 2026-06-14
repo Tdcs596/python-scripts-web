@@ -1,28 +1,30 @@
 from flask import Blueprint, render_template_string, request, jsonify
 from PIL import Image
-from PIL.ExifTags import TAGS
+from PIL.ExifTags import TAGS, GPSTAGS
 import io
 import base64
 
 script24_bp = Blueprint('script24', __name__)
 
-FORENSIC_UI = r"""
+ADVANCED_FORENSIC_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FORTIFIEDBYTES | Image Forensics Node</title>
+  <title>FORTIFIEDBYTES | Elite Image Forensics Core</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     :root {
-        --bg-color: #020617;
-        --panel-bg: rgba(15, 23, 42, 0.8);
+        --bg-color: #030712;
+        --panel-bg: rgba(17, 24, 39, 0.7);
         --neon-cyan: #06b6d4;
         --neon-amber: #f59e0b;
-        --border-color: rgba(6, 182, 212, 0.2);
-        --text-main: #f8fafc;
+        --neon-rose: #f43f5e;
+        --neon-emerald: #10b981;
+        --border-color: rgba(6, 182, 212, 0.15);
+        --text-main: #f3f4f6;
         --text-muted: #64748b;
     }
 
@@ -34,46 +36,44 @@ FORENSIC_UI = r"""
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 20px;
+        padding: 15px;
         overflow-x: hidden;
     }
 
-    /* --- BACKGROUND DECORATION --- */
-    .grid-bg {
+    .matrix-bg {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
-        background-image: linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
-                          linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
-        background-size: 30px 30px;
+        background-image: linear-gradient(rgba(6, 182, 212, 0.02) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(6, 182, 212, 0.02) 1px, transparent 1px);
+        background-size: 25px 25px;
         z-index: 1;
         pointer-events: none;
     }
 
-    /* --- MAIN WORKSPACE --- */
     .workspace {
         position: relative;
         z-index: 10;
         display: flex;
         flex-direction: row;
         width: 100%;
-        max-width: 1300px;
-        height: 85vh;
-        min-height: 650px;
+        max-width: 1400px;
+        height: 90vh;
+        min-height: 700px;
         border: 1px solid var(--border-color);
         background: var(--panel-bg);
-        backdrop-filter: blur(16px);
+        backdrop-filter: blur(25px);
         border-radius: 20px;
         overflow: hidden;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(6, 182, 212, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     }
 
-    /* --- LEFT SECTION: UPLOAD & INPUTS --- */
+    /* --- LEFT SIDE: CONFIG DECK --- */
     .control-deck {
-        width: 45%;
-        min-width: 400px;
-        background: rgba(8, 13, 28, 0.95);
+        width: 40%;
+        min-width: 380px;
+        background: rgba(3, 7, 18, 0.95);
         border-right: 1px solid var(--border-color);
-        padding: 30px;
+        padding: 25px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -87,51 +87,73 @@ FORENSIC_UI = r"""
     }
 
     .deck-title {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: bold;
-        letter-spacing: 1.5px;
+        letter-spacing: 2px;
         color: #fff;
     }
-    .deck-title span { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(6, 182, 212, 0.4); }
+    .deck-title span { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(6, 182, 212, 0.5); }
 
     label { 
-        font-size: 11px; 
+        font-size: 10px; 
         color: var(--neon-cyan); 
         text-transform: uppercase; 
         letter-spacing: 1px; 
         display: block; 
-        margin-top: 20px; 
-        margin-bottom: 8px; 
+        margin-top: 15px; 
+        margin-bottom: 5px; 
         font-weight: bold; 
     }
 
     .forensic-input { 
         width: 100%; 
-        padding: 12px; 
-        background: #02040a; 
-        border: 1px solid rgba(6, 182, 212, 0.3); 
+        padding: 10px; 
+        background: #010204; 
+        border: 1px solid rgba(6, 182, 212, 0.25); 
         color: #fff; 
         font-family: inherit; 
-        border-radius: 8px; 
+        border-radius: 6px; 
         outline: none; 
-        font-size: 13px;
-        transition: all 0.2s;
+        font-size: 12px;
     }
-    .forensic-input:focus { border-color: var(--neon-cyan); }
+    .forensic-input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
 
-    .metadata-editor-box {
+    .editor-section-title {
+        font-size: 11px;
+        color: var(--neon-amber);
         margin-top: 15px;
-        background: rgba(255, 255, 255, 0.02);
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 3px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
 
-    /* --- RIGHT SECTION: FORENSIC MATRIX LOGS --- */
+    /* --- TIMELINE ACTION MATRIX BUTTONS --- */
+    .btn { 
+        width: 100%; 
+        padding: 12px; 
+        font-weight: bold; 
+        border: none; 
+        font-family: inherit; 
+        cursor: pointer; 
+        border-radius: 6px; 
+        margin-top: 12px; 
+        transition: all 0.2s ease; 
+        text-transform: uppercase; 
+        letter-spacing: 1px; 
+        font-size: 12px;
+    }
+    .btn-compile { background: var(--neon-cyan); color: #000; }
+    .btn-compile:hover { background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+
+    .btn-erase { background: rgba(244, 63, 94, 0.1); color: var(--neon-rose); border: 1px solid var(--neon-rose); }
+    .btn-erase:hover { background: var(--neon-rose); color: #000; box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
+
+    /* --- RIGHT SIDE: TERMINAL VIEWER --- */
     .terminal-viewport {
         flex: 1;
-        background: rgba(2, 6, 12, 0.95);
-        padding: 30px;
+        background: rgba(2, 4, 8, 0.98);
+        padding: 25px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -139,113 +161,117 @@ FORENSIC_UI = r"""
 
     #terminal-output { 
         white-space: pre-wrap; 
-        font-size: 13px; 
-        line-height: 1.8; 
-        color: #e2e8f0; 
+        font-size: 12px; 
+        line-height: 1.7; 
+        color: #cbd5e1; 
     }
 
-    .btn-execute { 
-        width: 100%; 
-        padding: 15px; 
-        font-weight: bold; 
-        background: var(--neon-cyan); 
-        color: #000; 
-        border: none; 
-        font-family: inherit; 
-        cursor: pointer; 
-        border-radius: 8px; 
-        margin-top: 20px; 
-        transition: all 0.25s ease; 
-        text-transform: uppercase; 
-        letter-spacing: 1.5px; 
-    }
-    .btn-execute:hover { background: #fff; box-shadow: 0 0 20px #fff; }
-
-    .download-wrapper {
-        margin-top: 20px;
+    .download-container {
+        margin-top: 15px;
         padding: 15px;
-        background: rgba(245, 158, 11, 0.05);
-        border: 1px dashed var(--neon-amber);
-        border-radius: 10px;
+        border-radius: 8px;
         text-align: center;
+        animation: fadeIn 0.3s ease;
     }
+    .dl-wrap-mod { background: rgba(245, 158, 11, 0.03); border: 1px dashed var(--neon-amber); }
+    .dl-wrap-wipe { background: rgba(16, 185, 129, 0.03); border: 1px dashed var(--neon-emerald); }
 
-    .download-link {
+    .dl-link {
         display: inline-block;
         padding: 10px 20px;
-        background: var(--neon-amber);
-        color: #000;
         text-decoration: none;
         font-weight: bold;
         border-radius: 6px;
         transition: 0.2s;
         text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 1px;
+        font-size: 11px;
     }
-    .download-link:hover { box-shadow: 0 0 15px var(--neon-amber); background: #fff; }
+    .dl-mod { background: var(--neon-amber); color: #000; }
+    .dl-mod:hover { box-shadow: 0 0 15px var(--neon-amber); background: #fff; }
+    .dl-wipe { background: var(--neon-emerald); color: #000; }
+    .dl-wipe:hover { box-shadow: 0 0 15px var(--neon-emerald); background: #fff; }
+
+    .location-btn {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+        font-size: 11px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    .location-btn:hover { background: #fff; color: #000; }
 
     .brand-tag { 
-        font-size: 10px; 
+        font-size: 9px; 
         color: var(--text-muted); 
         text-align: center; 
         letter-spacing: 3px; 
         text-transform: uppercase; 
-        border-top: 1px dashed rgba(6, 182, 212, 0.2); 
+        border-top: 1px dashed rgba(6, 182, 212, 0.1); 
         padding-top: 15px; 
-        margin-top: 20px;
+        margin-top: 15px;
     }
 
-    @media (max-width: 900px) {
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    @media (max-width: 950px) {
         .workspace { flex-direction: column; height: auto; }
         .control-deck { width: 100%; min-width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
-        .terminal-viewport { min-height: 400px; }
+        .terminal-viewport { min-height: 450px; }
     }
   </style>
 </head>
 <body>
 
-    <div class="grid-bg"></div>
+    <div class="matrix-bg"></div>
 
     <div class="workspace">
         <div class="control-deck">
             <div>
                 <div class="deck-header">
-                    <div class="deck-title">🛰️ FORTIFIEDBYTES <span>IMAGE-FORENSICS</span></div>
+                    <div class="deck-title">🛰️ FORTIFIEDBYTES <span>OSINT-FORENSICS</span></div>
                 </div>
 
-                <label for="image_file">Upload Image For Metadata Analysis</label>
-                <input type="file" id="image_file" class="forensic-input" accept="image/*" onchange="analyzeImageMetadata()" required>
+                <label for="image_file">Target Image Stream (JPEG Recommended)</label>
+                <input type="file" id="image_file" class="forensic-input" accept="image/*" onchange="extractQuantumMetadata()">
 
-                <div class="metadata-editor-box">
-                  <h4 style="font-size:12px; color:var(--neon-cyan); letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">✍️ EXIF METADATA INJECTOR / EDITOR</h4>
-                  
-                  <label for="edit_make">Camera Manufacturer (Make)</label>
-                  <input type="text" id="edit_make" class="forensic-input" placeholder="e.g., Apple / Canon">
+                <div class="editor-section-title">⚙️ Device & Software Layer</div>
+                <label for="edit_make">Camera Brand (Make)</label>
+                <input type="text" id="edit_make" class="forensic-input" placeholder="e.g., Apple / Samsung">
 
-                  <label for="edit_model">Device Model</label>
-                  <input type="text" id="edit_model" class="forensic-input" placeholder="e.g., iPhone 15 Pro">
+                <label for="edit_model">Device Structure Model</label>
+                <input type="text" id="edit_model" class="forensic-input" placeholder="e.g., iPhone 15 Pro Max">
 
-                  <label for="edit_software">Software / Firmware Layer</label>
-                  <input type="text" id="edit_software" class="forensic-input" placeholder="e.g., Adobe Photoshop 2026">
+                <label for="edit_software">Processing Software</label>
+                <input type="text" id="edit_software" class="forensic-input" placeholder="e.g., iOS 17.4">
 
-                  <label for="edit_datetime">Creation Timestamp (YYYY:MM:DD HH:MM:SS)</label>
-                  <input type="text" id="edit_datetime" class="forensic-input" placeholder="e.g., 2026:06:14 12:30:00">
-                </div>
+                <label for="edit_datetime">Capture Timestamp</label>
+                <input type="text" id="edit_datetime" class="forensic-input" placeholder="YYYY:MM:DD HH:MM:SS">
 
-                <button class="btn-execute" onclick="injectMetadataVector()">⚡ Rewrite EXIF & Compile Asset</button>
+                <div class="editor-section-title">📍 GPS Satellite Geolocation</div>
+                <label for="edit_lat">Latitude Decimal Coordinate</label>
+                <input type="text" id="edit_lat" class="forensic-input" placeholder="e.g., 19.2812">
+
+                <label for="edit_lon">Longitude Decimal Coordinate</label>
+                <input type="text" id="edit_lon" class="forensic-input" placeholder="e.g., 72.8554">
+
+                <button class="btn btn-compile" onclick="compileExifModification()">⚡ Modify & Rebuild Asset</button>
+                <button class="btn btn-erase" onclick="wipeAllExifMetadata()">🚨 Wipe All Data & Download Clean Image</button>
             </div>
-            <div class="brand-tag">EXIF DATA FRAUD DETECTION MATRIX</div>
+            <div class="brand-tag">SHIVAM SINGH OMEGA FORENSIC HUB</div>
         </div>
 
         <div class="terminal-viewport">
-            <div id="terminal-output"><span style="color:var(--neon-cyan);">[METADATA MONITOR]</span> Awaiting target graphic stream asset...<br>Upload an image to extract forensic signatures, GPS tags, and core properties.</div>
+            <div id="terminal-output"><span style="color:var(--neon-cyan);">[TELEMETRY CORE ACTIVE]</span> Core modules awaiting image bitstream layout...<br>Upload an asset file to extract A to Z parameters, hardware specs, and satellite paths.</div>
         </div>
     </div>
 
     <script>
-        // --- STEP 1: READ & EXTRACT METADATA ---
-        async function analyzeImageMetadata() {
+        // --- EXTRACTION ROUTINE (A TO Z DETAILS + GPS) ---
+        async function extractQuantumMetadata() {
             const fileInput = document.getElementById('image_file');
             const term = document.getElementById('terminal-output');
             
@@ -254,14 +280,14 @@ FORENSIC_UI = r"""
             const file = fileInput.files[0];
             const reader = new FileReader();
             
-            term.innerHTML = `<span style="color:var(--neon-cyan);">[INSPECTING SYSTEM]</span> Reading file byte sequences for: ${file.name}...\n`;
+            term.innerHTML = `<span style="color:var(--neon-cyan);">[SYSTEM COUPLING]</span> Parsing file bytes for forensic patterns: ${file.name}...\n`;
             
             reader.onload = async function(e) {
                 const base64Image = e.target.result.split(',')[1];
                 
                 try {
                     const currentPath = window.location.pathname.replace(/\/$/, "");
-                    const response = await fetch(`${currentPath}/extract_exif`, {
+                    const response = await fetch(`${currentPath}/extract_all`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ image: base64Image })
@@ -269,109 +295,155 @@ FORENSIC_UI = r"""
                     const data = await response.json();
                     
                     if (data.error) {
-                        term.innerHTML += `\n<span style="color:#f43f5e;">[ERROR]</span> ${data.error}`;
+                        term.innerHTML += `\n<span style="color:var(--neon-rose);">[FAULT]</span> ${data.error}`;
                         return;
                     }
                     
-                    // Populate inputs with current fields for smooth modifications
-                    document.getElementById('edit_make').value = data.extracted_exif.Make || '';
-                    document.getElementById('edit_model').value = data.extracted_exif.Model || '';
-                    document.getElementById('edit_software').value = data.extracted_exif.Software || '';
-                    document.getElementById('edit_datetime').value = data.extracted_exif.DateTime || '';
+                    // Core UI field updates
+                    document.getElementById('edit_make').value = data.basic_data.Make || '';
+                    document.getElementById('edit_model').value = data.basic_data.Model || '';
+                    document.getElementById('edit_software').value = data.basic_data.Software || '';
+                    document.getElementById('edit_datetime').value = data.basic_data.DateTime || '';
+                    document.getElementById('edit_lat').value = data.gps_data.latitude || '';
+                    document.getElementById('edit_lon').value = data.gps_data.longitude || '';
                     
-                    // Build highly descriptive Forensic Log Table
-                    let logHtml = `\n🌟 <span style="color:#10b981;">[ANALYSIS SUCCESS] TARGET METADATA STREAM VERIFIED</span>\n`;
-                    logHtml += `-------------------------------------------------------------\n`;
-                    logHtml += `📐 Dimensions  : ${data.dimensions[0]}x${data.dimensions[1]} Pixels\n`;
-                    logHtml += `🎨 Color Mode : ${data.format_mode}\n`;
-                    logHtml += `📁 File Size  : ${(file.size / 1024).toFixed(2)} KB\n`;
-                    logHtml += `-------------------------------------------------------------\n`;
-                    logHtml += `⚙️ RAW EXIF PROPERTIES FOUND:\n`;
+                    // Comprehensive forensic log reporting printout
+                    let report = `\n🧬 <span style="color:var(--neon-emerald);">[PARSING COMPLETED] TOTAL IMAGE DATA REPORT MATRIX</span>\n`;
+                    report += `=============================================================\n`;
+                    report += `📁 Structural Name : ${file.name}\n`;
+                    report += `📐 Grid Resolution  : ${data.dimensions[0]} x ${data.dimensions[1]} Pixels\n`;
+                    report += `🎨 Memory Channel  : ${data.format_mode}\n`;
+                    report += `📦 Allocation Size : ${(file.size / 1024).toFixed(2)} KB\n`;
+                    report += `=============================================================\n`;
+                    report += `📡 EXTRACTED HARDWARE & IMAGE PARAMETERS:\n`;
                     
-                    if (Object.keys(data.extracted_exif).length === 0) {
-                        logHtml += `<span style="color:#eab308;">⚠️ No pre-existing EXIF header bits found in this image. Ready for raw initialization.</span>\n`;
+                    if (Object.keys(data.all_exif).length === 0) {
+                        report += `  <span style="color:var(--neon-amber);">No EXIF attributes embedded within image standard headers.</span>\n`;
                     } else {
-                        for (const [key, value] of Object.entries(data.extracted_exif)) {
-                            logHtml += `🔹 ${key.padEnd(15)} : ${value}\n`;
+                        for (const [key, val] of Object.entries(data.all_exif)) {
+                            report += `  🔹 ${key.padEnd(22)} : ${val}\n`;
                         }
                     }
-                    logHtml += `-------------------------------------------------------------\n`;
-                    term.innerHTML = logHtml;
+                    
+                    report += `=============================================================\n`;
+                    report += `🛰️ SATELLITE GPS METRICS:\n`;
+                    if (data.gps_data.has_gps) {
+                        report += `  🎯 Latitude (Raw)  : ${data.gps_data.latitude}\n`;
+                        report += `  🎯 Longitude (Raw) : ${data.gps_data.longitude}\n`;
+                        report += `  🗺️ Geolocation     : Coordinates Found. Open tracing vector path down below:\n\n`;
+                        report += `  <a href="https://www.google.com/maps/search/?api=1&query=${data.gps_data.latitude},${data.gps_data.longitude}" target="_blank" class="location-btn">🗺️ Open Map Vector Coordinates</a>\n`;
+                    } else {
+                        report += `  <span style="color:var(--text-muted);">No GPS coordinates mapped into asset structures.</span>\n`;
+                    }
+                    report += `=============================================================\n`;
+                    
+                    term.innerHTML = report;
                     
                 } catch(err) {
-                    term.innerHTML += `\n<span style="color:#f43f5e;">[CRITICAL ERROR]</span> Connection to telemetry engine dropped.`;
+                    term.innerHTML += `\n<span style="color:var(--neon-rose);">[CRITICAL FAULT]</span> Telemetry ingestion broken.`;
                 }
             };
             reader.readAsDataURL(file);
         }
 
-        // --- STEP 2: WRITE / INJECT CUSTOM METADATA ---
-        async function injectMetadataVector() {
+        // --- OPTION 1: REWRITE / MODIFY METADATA ---
+        async function compileExifModification() {
             const fileInput = document.getElementById('image_file');
             const term = document.getElementById('terminal-output');
             
-            if (fileInput.files.length === 0) {
-                alert("Bhai, pehle forensic trace ke liye image select karo!");
-                return;
-            }
+            if (fileInput.files.length === 0) { alert("Bhai, pehle image select karo!"); return; }
             
-            const payloadData = {
+            const payload = {
                 Make: document.getElementById('edit_make').value.trim(),
                 Model: document.getElementById('edit_model').value.trim(),
                 Software: document.getElementById('edit_software').value.trim(),
-                DateTime: document.getElementById('edit_datetime').value.trim()
+                DateTime: document.getElementById('edit_datetime').value.trim(),
+                lat: document.getElementById('edit_lat').value.trim(),
+                lon: document.getElementById('edit_lon').value.trim()
             };
             
-            const file = fileInput.files[0];
             const reader = new FileReader();
-            
-            term.innerHTML += `\n\n<span style="color:var(--neon-amber);">[COMPILE]</span> Executing image array manipulation & injecting custom header blocks...`;
+            term.innerHTML += `\n\n<span style="color:var(--neon-amber);">[MODIFICATION ENGINE]</span> Syncing array blocks and overwriting metadata structures...`;
             
             reader.onload = async function(e) {
                 const base64Image = e.target.result.split(',')[1];
-                
                 try {
                     const currentPath = window.location.pathname.replace(/\/$/, "");
-                    const response = await fetch(`${currentPath}/modify_exif`, {
+                    const response = await fetch(`${currentPath}/modify_exif_advanced`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ image: base64Image, modifications: payloadData })
+                        body: JSON.stringify({ image: base64Image, modifications: payload })
                     });
                     const data = await response.json();
                     
-                    if (data.error) {
-                        term.innerHTML += `\n<span style="color:#f43f5e;">[MOD_ERR]</span> ${data.error}\n`;
-                        return;
-                    }
+                    cleanDownloadWrappers();
                     
-                    term.innerHTML += `\n\n🎯 <span style="color:#10b981;">[SUCCESS] EXIF Headers Overwritten Flawlessly!</span>\n`;
-                    term.innerHTML += `The modified forensic layer asset is compiled. Use the module anchor link to download:\n`;
-                    
-                    // Rebuild Download Card
-                    const oldWrapper = document.querySelector('.download-wrapper');
-                    if (oldWrapper) oldWrapper.remove();
-                    
-                    const wrap = document.createElement('div');
-                    wrap.className = 'download-wrapper';
-                    wrap.innerHTML = `<p style="color:#fde047; margin-bottom:10px; font-size:11px;">METADATA FRAUD SHIELD MODULATION COMPLETED</p>`;
-                    
-                    const dl = document.createElement('a');
-                    dl.href = "data:image/jpeg;base64," + data.result_image;
-                    dl.download = "fortified_forensic_output.jpg";
-                    dl.className = "download-link";
-                    dl.innerText = "📥 Download Modified Image";
-                    
-                    wrap.appendChild(dl);
-                    term.appendChild(wrap);
+                    const div = document.createElement('div');
+                    div.className = 'download-container dl-wrap-mod';
+                    div.innerHTML = `<p style="color:var(--neon-amber); font-size:11px; margin-bottom:8px;">MODIFIED METADATA STRUCTURE RECORDED</p>
+                                     <a href="data:image/jpeg;base64,${data.result_image}" download="modified_forensic_output.jpg" class="dl-link dl-mod">📥 Download Modified Asset</a>`;
+                    term.appendChild(div);
+                    term.innerHTML += `\n\n✅ <span style="color:var(--neon-emerald);">Asset headers patched successfully. Download ready below.</span>`;
                     
                     const vp = document.querySelector('.terminal-viewport');
                     vp.scrollTop = vp.scrollHeight;
-                    
                 } catch(err) {
-                    term.innerHTML += `\n<span style="color:#f43f5e;">[CRITICAL FAULT]</span> Re-compilation script linkage broken.`;
+                    term.innerHTML += `\n[ERROR] Injection failed.`;
                 }
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+
+        // --- OPTION 2: CLEAR ALL METADATA (ANTI-FORENSICS WIPE) ---
+        async function wipeAllExifMetadata() {
+            const fileInput = document.getElementById('image_file');
+            const term = document.getElementById('terminal-output');
+            
+            if (fileInput.files.length === 0) { alert("Bhai, wipe out karne ke liye ek image select karo!"); return; }
+            
+            const reader = new FileReader();
+            term.innerHTML += `\n\n<span style="color:var(--neon-rose);">[ANTI-FORENSICS]</span> Executing zero-fill wipe cycle... Stripping ALL headers, GPS logs, and signatures...`;
+            
+            reader.onload = async function(e) {
+                const base64Image = e.target.result.split(',')[1];
+                try {
+                    const currentPath = window.location.pathname.replace(/\/$/, "");
+                    const response = await fetch(`${currentPath}/wipe_all`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ image: base64Image })
+                    });
+                    const data = await response.json();
+                    
+                    cleanDownloadWrappers();
+                    
+                    const div = document.createElement('div');
+                    div.className = 'download-container dl-wrap-wipe';
+                    div.innerHTML = `<p style="color:var(--neon-emerald); font-size:11px; margin-bottom:8px;">💥 ALL METADATA TRACES TOTALLY PURGED - ANONYMOUS ASSET READY</p>
+                                     <a href="data:image/jpeg;base64,${data.result_image}" download="wiped_anonymous_image.jpg" class="dl-link dl-wipe">📥 Download Anonymous Image</a>`;
+                    term.appendChild(div);
+                    term.innerHTML += `\n\n💥 <span style="color:var(--neon-emerald);">Anti-Forensic wipe sequence complete. Location data, system logs, and tracking headers have been 100% neutralized.</span>`;
+                    
+                    // Reset input view controls to represent clean state
+                    document.getElementById('edit_make').value = '';
+                    document.getElementById('edit_model').value = '';
+                    document.getElementById('edit_software').value = '';
+                    document.getElementById('edit_datetime').value = '';
+                    document.getElementById('edit_lat').value = '';
+                    document.getElementById('edit_lon').value = '';
+                    
+                    const vp = document.querySelector('.terminal-viewport');
+                    vp.scrollTop = vp.scrollHeight;
+                } catch(err) {
+                    term.innerHTML += `\n[ERROR] Wipe operation aborted.`;
+                }
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+
+        function cleanDownloadWrappers() {
+            const items = document.querySelectorAll('.download-container');
+            items.forEach(el => el.remove());
         }
     </script>
 </body>
@@ -380,78 +452,146 @@ FORENSIC_UI = r"""
 
 @script24_bp.route('/')
 def index():
-    return render_template_string(FORENSIC_UI)
+    return render_template_string(ADVANCED_FORENSIC_UI)
 
-@script24_bp.route('/extract_exif', methods=['POST'])
-def extract_exif_endpoint():
+@script24_bp.route('/extract_all', methods=['POST'])
+def extract_all_endpoint():
     data = request.json or {}
     image_b64 = data.get('image', '')
-    
     if not image_b64:
-        return jsonify({"error": "Null graphics stream vector data received."}), 400
+        return jsonify({"error": "Empty tracking stream data context."}), 400
         
     try:
         img_bytes = base64.b64decode(image_b64)
         image = Image.open(io.BytesIO(img_bytes))
         
-        exif_data = {}
-        raw_exif = image._getexif()
+        all_exif = {}
+        basic_data = {}
+        gps_data = {"has_gps": False}
         
+        raw_exif = image._getexif()
         if raw_exif:
             for tag_id, value in raw_exif.items():
                 tag_name = TAGS.get(tag_id, tag_id)
-                # Filter values so they don't break JSON serializer arrays
-                if isinstance(value, (str, int, float)):
-                    exif_data[tag_name] = str(value)
-                elif isinstance(value, bytes):
-                    exif_data[tag_name] = value.decode('utf-8', errors='ignore')
+                
+                # GPS Information Extract Matrix Logic
+                if tag_name == "GPSInfo":
+                    gps_info = {}
+                    for gps_tag in value:
+                        gps_sub_name = GPSTAGS.get(gps_tag, gps_tag)
+                        gps_info[gps_sub_name] = value[gps_tag]
                     
+                    # Convert EXIF Rational formats to standard coordinate mappings
+                    if "GPSLatitude" in gps_info and "GPSLongitude" in gps_info:
+                        try:
+                            lat_data = gps_info["GPSLatitude"]
+                            lon_data = gps_info["GPSLongitude"]
+                            lat_ref = gps_info.get("GPSLatitudeRef", "N")
+                            lon_ref = gps_info.get("GPSLongitudeRef", "E")
+                            
+                            lat = float(lat_data[0]) + float(lat_data[1])/60.0 + float(lat_data[2])/3600.0
+                            lon = float(lon_data[0]) + float(lon_data[1])/60.0 + float(lon_data[2])/3600.0
+                            
+                            if lat_ref == "S": lat = -lat
+                            if lon_ref == "W": lon = -lon
+                            
+                            gps_data["latitude"] = round(lat, 5)
+                            gps_data["longitude"] = round(lon, 5)
+                            gps_data["has_gps"] = True
+                        except:
+                            pass
+                
+                # String value casting for normal arrays
+                if tag_name != "GPSInfo":
+                    if isinstance(value, (str, int, float)):
+                        all_exif[tag_name] = str(value)
+                    elif isinstance(value, bytes):
+                        all_exif[tag_name] = value.decode('utf-8', errors='ignore')
+            
+            # Populate essential key hooks
+            basic_data["Make"] = all_exif.get("Make", "")
+            basic_data["Model"] = all_exif.get("Model", "")
+            basic_data["Software"] = all_exif.get("Software", "")
+            basic_data["DateTime"] = all_exif.get("DateTime", "") or all_exif.get("DateTimeOriginal", "")
+
         return jsonify({
             "dimensions": image.size,
             "format_mode": image.mode,
-            "extracted_exif": exif_data
+            "all_exif": all_exif,
+            "basic_data": basic_data,
+            "gps_data": gps_data
         }), 200
-        
     except Exception as e:
-        return jsonify({"error": f"Failed compiling structural signatures: {str(e)}"}), 200
+        return jsonify({"error": f"Extraction matrix analysis drop error: {str(e)}"}), 200
 
-@script24_bp.route('/modify_exif', methods=['POST'])
-def modify_exif_endpoint():
+@script24_bp.route('/modify_exif_advanced', methods=['POST'])
+def modify_exif_advanced_endpoint():
     data = request.json or {}
     image_b64 = data.get('image', '')
-    modifications = data.get('modifications', {})
+    mods = data.get('modifications', {})
     
-    if not image_b64:
-        return jsonify({"error": "Empty target source binary."}), 400
-        
     try:
         img_bytes = base64.b64decode(image_b64)
         image = Image.open(io.BytesIO(img_bytes)).convert('RGB')
         
-        # Ingesting clean runtime Pillow EXIF context mapping blocks
         new_exif = image.getexif()
         
-        # Mapping properties to their correct EXIF standard hex key mappings
-        # 271 = Make, 272 = Model, 305 = Software, 306 = DateTime
+        # Mapping base configuration structural tags
+        # 271=Make, 272=Model, 305=Software, 306=DateTime
         exif_map = {"Make": 271, "Model": 272, "Software": 305, "DateTime": 306}
-        
-        for key, val in modifications.items():
+        for key, val in mods.items():
             if key in exif_map and val:
                 new_exif[exif_map[key]] = str(val)
                 
-        # Compiling stream back into memory buffer array
-        output_buffer = io.BytesIO()
-        image.save(output_buffer, format="JPEG", exif=new_exif)
-        compiled_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
-        
-        return jsonify({"result_image": compiled_base64}), 200
-        
+        # Patching / Modifying GPS Coordinate Data Array Maps if input exists
+        if mods.get('lat') and mods.get('lon'):
+            try:
+                lat_deg = float(mods['lat'])
+                lon_deg = float(mods['lon'])
+                
+                # Build raw tuple constraints matching EXIF standards format blocks
+                def convert_to_exif_rational(val):
+                    abs_val = abs(val)
+                    d = int(abs_val)
+                    m = int((abs_val - d) * 60)
+                    s = round((abs_val - d - m/60) * 3600, 3)
+                    return ((d, 1), (m, 1), (int(s*1000), 1000))
+                
+                gps_dict = {
+                    1: "N" if lat_deg >= 0 else "S",
+                    2: convert_to_exif_rational(lat_deg),
+                    3: "E" if lon_deg >= 0 else "W",
+                    4: convert_to_exif_rational(lon_deg)
+                }
+                # 34853 is the universal standard hex lookup token identifier for GPS tags array blocks
+                new_exif[34853] = gps_dict
+            except:
+                pass
+
+        output = io.BytesIO()
+        image.save(output, format="JPEG", exif=new_exif)
+        compiled_result = base64.b64encode(output.getvalue()).decode('utf-8')
+        return jsonify({"result_image": compiled_result}), 200
     except Exception as e:
-        return jsonify({"error": f"EXIF rewriting stream compilation fault: {str(e)}"}), 200
+        return jsonify({"error": str(e)}), 200
 
-if __name__ == '__main__':
-    from flask import Flask
-    app = Flask(__name__)
-    app.register_blueprint(script24_bp, url_prefix='/forensic')
-    app.run(debug=True, port=5000)
-
+@script24_bp.route('/wipe_all', methods=['POST'])
+def wipe_all_endpoint():
+    data = request.json or {}
+    image_b64 = data.get('image', '')
+    
+    try:
+        img_bytes = base64.b64decode(image_b64)
+        image = Image.open(io.BytesIO(img_bytes))
+        
+        # Pure Image Core Extraction - Discards any background header binary buffers
+        clean_img = Image.new(image.mode, image.size)
+        clean_img.putdata(image.getdata())
+        
+        output = io.BytesIO()
+        clean_img.save(output, format="JPEG") # Saving directly without parsing the exif mapping parameters
+        compiled_result = base64.b64encode(output.getvalue()).decode('utf-8')
+        
+        return jsonify({"result_image": compiled_result}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
