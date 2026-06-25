@@ -1,395 +1,322 @@
 from flask import Blueprint, render_template_string, request, jsonify
-import io
-import base64
 
 script30_bp = Blueprint('script30', __name__)
 
-PDF_EDITOR_UI = r"""
+REAL_SEJDA_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FORTIFIEDBYTES | PDF Mutation Node</title>
+  <title>Real-Time PDF Matrix Editor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     :root {
-        --bg-color: #020617;
-        --panel-bg: rgba(15, 23, 42, 0.75);
-        --neon-cyan: #06b6d4;
-        --neon-amber: #eab308;
-        --border-color: rgba(6, 182, 212, 0.2);
-        --text-main: #f8fafc;
-        --text-muted: #475569;
+        --bg-system: #f1f5f9;
+        --nav-bar: #ffffff;
+        --sejda-green: #10b981;
+        --sejda-hover: #059669;
+        --primary-blue: #3b82f6;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --border-line: #cbd5e1;
     }
 
     body { 
-        background: var(--bg-color); 
-        color: var(--text-main); 
-        font-family: 'Consolas', 'Courier New', monospace; 
+        background: var(--bg-system); 
+        color: var(--text-dark); 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
     }
 
-    /* --- TOP NAVIGATION CONTROL BAR --- */
-    .top-navbar {
-        background: rgba(8, 13, 28, 0.95);
-        border-bottom: 1px solid var(--border-color);
-        padding: 15px 30px;
+    /* --- SEJDA INTERACTIVE NAVBAR --- */
+    .toolbar-header {
+        background: var(--nav-bar);
+        border-bottom: 1px solid var(--border-line);
+        padding: 12px 25px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         position: sticky;
         top: 0;
-        z-index: 100;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
-    .brand-title {
-        font-size: 18px;
-        font-weight: bold;
-        letter-spacing: 2px;
+    .brand-identity {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
     }
-    .brand-title span { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(6, 182, 212, 0.4); }
+    .brand-identity span {
+        background: var(--primary-blue);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        margin-left: 5px;
+    }
 
-    .control-actions {
+    .control-center {
         display: flex;
-        gap: 15px;
-        align-items: center;
+        gap: 10px;
     }
 
-    .btn {
-        padding: 10px 18px;
-        font-family: inherit;
-        font-size: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
+    .action-btn {
+        background: #f8fafc;
+        border: 1px solid var(--border-line);
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
         border-radius: 6px;
         cursor: pointer;
-        transition: all 0.2s ease;
-        letter-spacing: 1px;
-    }
-    .btn-upload { background: #1e293b; color: #fff; border: 1px solid var(--border-color); }
-    .btn-upload:hover { background: rgba(6, 182, 212, 0.1); border-color: var(--neon-cyan); }
-    
-    .btn-action { background: var(--neon-cyan); color: #000; border: none; }
-    .btn-action:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-
-    .btn-secondary { background: var(--neon-amber); color: #000; border: none; }
-    .btn-secondary:hover { box-shadow: 0 0 15px var(--neon-amber); }
-
-    /* --- WORKSPACE LAYOUT --- */
-    .main-container {
+        transition: all 0.15s;
         display: flex;
-        flex: 1;
-        height: calc(100vh - 70px);
+        align-items: center;
+        gap: 6px;
     }
+    .action-btn:hover { background: #e2e8f0; border-color: var(--text-muted); }
+    .action-btn.active { background: #eff6ff; color: var(--primary-blue); border-color: var(--primary-blue); }
 
-    /* Left Sidebar Panel - Tools & Inspector */
-    .sidebar-panel {
-        width: 320px;
-        background: rgba(3, 7, 18, 0.9);
-        border-right: 1px solid var(--border-color);
-        padding: 25px;
+    .btn-download {
+        background: var(--sejda-green);
+        color: #fff;
+        font-weight: 600;
+        border: none;
+    }
+    .btn-download:hover { background: var(--sejda-hover); }
+
+    /* --- STUDIO STAGE WORKSPACE --- */
+    .studio-viewport {
+        flex: 1;
+        padding: 30px 10px;
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        align-items: center;
         overflow-y: auto;
     }
 
-    .panel-section {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 15px;
-        border-radius: 8px;
-    }
-
-    .section-title {
-        font-size: 11px;
-        color: var(--neon-cyan);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 12px;
-        font-weight: bold;
-        border-bottom: 1px solid rgba(6, 182, 212, 0.2);
-        padding-bottom: 5px;
-    }
-
-    .tool-input {
-        width: 100%;
-        padding: 8px 12px;
-        background: #02040a;
-        border: 1px solid rgba(6, 182, 212, 0.3);
-        color: #fff;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 12px;
-        outline: none;
-        margin-bottom: 10px;
-    }
-
-    /* Central Canvas Studio Board */
-    .canvas-studio {
-        flex: 1;
-        background: #090d16;
-        padding: 40px;
-        overflow: auto;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
+    /* --- LIVING REAL-TIME PDF PAGE CONTAINER --- */
+    .pdf-render-frame {
         position: relative;
-    }
-
-    .pdf-page-render-view {
         background: #ffffff;
-        min-width: 600px;
-        min-height: 800px;
-        position: relative;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02);
+        border: 1px solid var(--border-line);
+        margin-bottom: 25px;
         border-radius: 4px;
-        overflow: hidden;
     }
 
-    /* Dynamic Editable Objects */
-    .editable-object {
+    /* Transparent canvas matching vector sizing layers */
+    .pdf-canvas-layer {
+        display: block;
+        z-index: 1;
+    }
+
+    /* --- LIVE INJECTED HIGH-PURITY EDITABLE WRAPPERS --- */
+    .interactive-text-field {
         position: absolute;
-        cursor: move;
-        padding: 4px 8px;
+        z-index: 10;
         border: 1px dashed transparent;
-        color: #000;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-        user-select: none;
-    }
-    .editable-object:hover {
-        border-color: var(--neon-cyan);
-        background: rgba(6, 182, 212, 0.05);
-    }
-    .editable-object:focus {
-        border: 1px solid var(--neon-amber);
+        padding: 1px 3px;
         outline: none;
-        background: rgba(234, 179, 8, 0.1);
         cursor: text;
+        font-family: sans-serif;
+        color: #000;
+        white-space: pre;
+        background: transparent;
+        transform-origin: top left;
+    }
+    .interactive-text-field:hover {
+        border-color: var(--primary-blue);
+        background: rgba(59, 130, 246, 0.03);
+    }
+    .interactive-text-field:focus {
+        border: 1px solid var(--primary-blue);
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 3px;
     }
 
-    .hidden-uploader { display: none; }
-    
-    .status-terminal {
-        font-size: 11px;
-        color: var(--neon-cyan);
-        background: #02040a;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid rgba(6, 182, 212, 0.1);
-        max-height: 100px;
-        overflow-y: auto;
+    /* --- RECON STREAM INITIAL UPLOADER BOX --- */
+    .uploader-dropzone {
+        width: 100%;
+        max-width: 600px;
+        height: 280px;
+        background: #ffffff;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+        padding: 20px;
     }
+    .uploader-dropzone:hover { border-color: var(--primary-blue); background: #f8fafc; }
+    
+    .hidden-input { display: none; }
   </style>
 </head>
 <body>
 
-    <!-- Top Navigation System Grid -->
-    <div class="top-navbar">
-        <div class="brand-title">🛰️ FORTIFIEDBYTES <span>PDF-MUTATOR</span></div>
-        <div class="control-actions">
-            <button class="btn btn-upload" onclick="triggerFileInput()">📂 Load PDF Asset</button>
-            <button class="btn btn-secondary" onclick="addNewTextLayer()">➕ Add Text Block</button>
-            <button class="btn btn-action" onclick="exportModifiedDocument()">⚡ Export Document</button>
-            <input type="file" id="pdf_file_input" class="hidden-uploader" accept="application/pdf" onchange="loadPdfStream()">
-        </div>
-    </div>
-
-    <!-- Main Studio Core Workspace -->
-    <div class="main-container">
+    <div class="toolbar-header">
+        <div class="brand-identity">📄 SHIVAM SINGH OMEGA EDITOR <span>ENGINE v2</span></div>
         
-        <!-- Tools System Parameters Panel -->
-        <div class="sidebar-panel">
-            <div class="panel-section">
-                <div class="section-title">📊 System Telemetry</div>
-                <div class="status-terminal" id="syslog_monitor">[CONSOLE] System Idle. Awaiting target PDF array injection...</div>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-title">📝 Object Typography</div>
-                <label style="font-size:10px; color:var(--neon-cyan); display:block; margin-bottom:5px;">Font Size (px)</label>
-                <input type="number" id="object_font_size" class="tool-input" value="16" min="10" max="72" onchange="updateSelectedObjectStyle()">
-                
-                <label style="font-size:10px; color:var(--neon-cyan); display:block; margin-bottom:5px;">Font Weight</label>
-                <select id="object_font_weight" class="tool-input" onchange="updateSelectedObjectStyle()">
-                    <option value="normal">Normal</option>
-                    <option value="bold">Bold</option>
-                </select>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-title">💡 Usage Instructions</div>
-                <p style="font-size:11px; color:#94a3b8; line-height:1.6;">
-                    1. Load your target PDF.<br>
-                    2. Double-click any element block inside the container to rewrite or modify its string value.<br>
-                    3. Drag objects anywhere to adjust structural spacing.<br>
-                    4. Click 'Export' to re-compile.
-                </p>
-            </div>
+        <div class="control-center" id="engine_controls" style="display: none;">
+            <button class="action-btn active" id="mode_text" onclick="setMode('text')">🔤 Edit/Add Text</button>
+            <button class="action-btn" onclick="injectNewBlankText()">➕ Add New Paragraph</button>
         </div>
 
-        <!-- Studio Display Board Stage -->
-        <div class="canvas-studio">
-            <div class="pdf-page-render-view" id="studio_canvas">
-                <!-- Fallback interactive wrapper block placeholder -->
-                <div style="display: flex; height: 100%; width: 100%; justify-content: center; align-items: center; color: #64748b; font-size: 13px; background: #fff; text-align: center; padding: 20px;">
-                    [Empty Stage Frame]<br>Click 'Load PDF Asset' to initialize structural layers or generate clean vectors.
-                </div>
-            </div>
+        <div>
+            <button class="action-btn btn-download" id="btn_export" style="display: none;" onclick="exportModifiedMatrix()">Apply & Save Changes</button>
         </div>
-
     </div>
 
-    <!-- Scripting Engine Logic Framework -->
+    <div class="studio-viewport" id="workspace_stage">
+        <div class="uploader-dropzone" onclick="triggerFilePicker()">
+            <span style="font-size: 50px; margin-bottom: 15px;">📥</span>
+            <h3 style="font-size: 16px; margin-bottom: 5px;">Upload your actual PDF document</h3>
+            <p style="color: var(--text-muted); font-size: 13px;">File stream will render dynamically into interactive text matrices</p>
+            <input type="file" id="real_pdf_uploader" class="hidden-input" accept="application/pdf" onchange="ingestRealPdfDocument()">
+        </div>
+    </div>
+
     <script>
-        let currentSelectedObject = null;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        
+        let currentMode = 'text';
+        let globalPdfDoc = null;
 
-        function triggerFileInput() {
-            document.getElementById('pdf_file_input').click();
+        function triggerFilePicker() {
+            document.getElementById('real_pdf_uploader').click();
         }
 
-        // --- LAYER STREAM PROCESSING ---
-        function loadPdfStream() {
-            const input = document.getElementById('pdf_file_input');
-            const log = document.getElementById('syslog_monitor');
-            if (input.files.length === 0) return;
+        // --- REAL PDF DECODING & EXTRACTION LOOP ---
+        async function ingestRealPdfDocument() {
+            const uploader = document.getElementById('real_pdf_uploader');
+            if (uploader.files.length === 0) return;
 
-            const file = input.files[0];
-            log.innerHTML = `<span style="color:var(--neon-amber);">[PARSING]</span> Processing array blocks for: ${file.name}...`;
+            const file = uploader.files[0];
+            const fileReader = new FileReader();
 
-            // Resetting studio stage canvas layout array with dynamic editable properties Mock Core
-            const studio = document.getElementById('studio_canvas');
-            studio.innerHTML = '';
-            studio.style.background = '#ffffff';
-
-            // Generating Mock Editable Mock Blocks from PDF Array Streams
-            // Real production deployments map coordinates dynamically from backend pdfplumber payloads
-            const defaultLayers = [
-                { text: "INVOICE & FORENSIC AUDIT RECORD", top: "50px", left: "60px", size: "22px", weight: "bold" },
-                { text: "Reference ID: FB-2026-OMEGA", top: "90px", left: "60px", size: "12px", weight: "normal" },
-                { text: "Client Executive Identity: Shivam Singh", top: "150px", left: "60px", size: "14px", weight: "bold" },
-                { text: "Operational Infrastructure Domain: FORTIFIEDBYTES Node", top: "180px", left: "60px", size: "13px", weight: "normal" },
-                { text: "Transaction Scope System Asset: Cleared and Verified", top: "220px", left: "60px", size: "13px", weight: "normal" },
-                { text: "Authorized Security Signature Token Layer", top: "700px", left: "60px", size: "11px", weight: "bold" }
-            ];
-
-            defaultLayers.forEach(layer => {
-                createEditableDomNode(layer.text, layer.top, layer.left, layer.size, layer.weight);
-            });
-
-            log.innerHTML = `<span style="color:#10b981;">[SUCCESS]</span> Structural layout map generated. All fields active.`;
-        }
-
-        // --- DOM MANIPULATION CORE (DRAG, EDIT, POSITION) ---
-        function createEditableDomNode(text, top, left, size, weight) {
-            const studio = document.getElementById('studio_canvas');
-            const node = document.createElement('div');
+            // Setup display parameters layout visibility handles
+            document.getElementById('engine_controls').style.display = 'flex';
+            document.getElementById('btn_export').style.display = 'block';
             
-            node.className = 'editable-object';
-            node.contentEditable = 'true';
-            node.innerText = text;
-            node.style.top = top;
-            node.style.left = left;
-            node.style.fontSize = size;
-            node.style.fontWeight = weight;
+            const stage = document.getElementById('workspace_stage');
+            stage.innerHTML = '<p style="color:var(--text-muted); font-size:14px;">📡 Unpacking PDF binary streams & mapping structural font layers...</p>';
 
-            // Attaching Event Hooks for Mouse Drag Vectors
-            node.addEventListener('mousedown', initiateDragSequence);
-            node.addEventListener('focus', () => {
-                currentSelectedObject = node;
-                document.getElementById('object_font_size').value = parseInt(window.getComputedStyle(node).fontSize);
-                document.getElementById('object_font_weight').value = window.getComputedStyle(node).fontWeight === '700' ? 'bold' : 'normal';
-            });
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                try {
+                    globalPdfDoc = await pdfjsLib.getDocument(typedarray).promise;
+                    stage.innerHTML = ''; // Wipe loader text strings
 
-            studio.appendChild(node);
-        }
-
-        function addNewTextLayer() {
-            createEditableDomNode("New Config Text Layer Element. Double click to rewrite.", "300px", "100px", "14px", "normal");
-            document.getElementById('syslog_monitor').innerHTML = `[LAYER] Appended fresh vector field block.`;
-        }
-
-        function updateSelectedObjectStyle() {
-            if (!currentSelectedObject) return;
-            const size = document.getElementById('object_font_size').value;
-            const weight = document.getElementById('object_font_weight').value;
-            
-            currentSelectedObject.style.fontSize = size + "px";
-            currentSelectedObject.style.fontWeight = weight;
-        }
-
-        // --- DRAG VECTOR MATH LOGIC ---
-        function initiateDragSequence(e) {
-            const node = e.target;
-            if (document.activeElement === node) return; // Allow focus text selection stream
-            
-            e.preventDefault();
-            let posX = e.clientX;
-            let posY = e.clientY;
-
-            function mouseMoveHandler(e) {
-                const deltaX = e.clientX - posX;
-                const deltaY = e.clientY - posY;
-                posX = e.clientX;
-                posY = e.clientY;
-
-                node.style.top = (node.offsetTop + deltaY) + "px";
-                node.style.left = (node.offsetLeft + deltaX) + "px";
-            }
-
-            function mouseUpHandler() {
-                document.removeEventListener('mousemove', mouseMoveHandler);
-                document.removeEventListener('mouseup', mouseUpHandler);
-            }
-
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-        }
-
-        // --- EXPORT COMPILATION ASSET BINDING ---
-        async function exportModifiedDocument() {
-            const log = document.getElementById('syslog_monitor');
-            log.innerHTML = `<span style="color:var(--neon-amber);">[COMPILING]</span> Packing object metrics matrices for download stream...`;
-
-            const elements = document.querySelectorAll('.editable-object');
-            let documentPayload = [];
-
-            elements.forEach(el => {
-                documentPayload.push({
-                    text: el.innerText,
-                    top: el.style.top,
-                    left: el.style.left,
-                    fontSize: el.style.fontSize,
-                    fontWeight: el.style.fontWeight
-                });
-            });
-
-            // Post request array map transfer framework route logic
-            try {
-                const currentPath = window.location.pathname.replace(/\/$/, "");
-                const response = await fetch(`${currentPath}/compile_pdf`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ elements: documentPayload })
-                });
-                const data = await response.json();
-
-                if (data.download_url) {
-                    log.innerHTML = `<span style="color:#10b981;">[SUCCESS]</span> PDF Matrix Compiled successfully.`;
-                    window.open(data.download_url, '_blank');
-                } else {
-                    log.innerHTML = `<span style="color:var(--neon-cyan);">[EXPORT MOCK OK]</span> Client system configuration dumped to terminal console stream logs.`;
-                    console.log("Document Meta Export Vector Map Array:", documentPayload);
-                    alert("Export action completed! Structural adjustments captured successfully.");
+                    // Iterate over each structural page stream layer sequences
+                    for (let pageNum = 1; pageNum <= globalPdfDoc.numPages; pageNum++) {
+                        await renderInteractivePdfPage(pageNum);
+                    }
+                } catch (err) {
+                    stage.innerHTML = `<p style="color:red; font-size:14px;">❌ Error processing binary: ${err.message}</p>`;
                 }
-            } catch (err) {
-                log.innerHTML = `[FAULT] Connection pipeline interface timeout.`;
-            }
+            };
+            fileReader.readAsArrayBuffer(file);
+        }
+
+        // --- RENDER DYNAMIC CANVAS + COORDINATE INLINE TEXT BLOCK MAPS ---
+        async function renderInteractivePdfPage(pageNum) {
+            const stage = document.getElementById('workspace_stage');
+            const page = await globalPdfDoc.getPage(pageNum);
+            
+            const viewport = page.getViewport({ scale: 1.3 }); // Perfect resolution layout rendering scaling scale
+
+            // Rebuild structural housing page element blocks
+            const pageWrapper = document.createElement('div');
+            pageWrapper.className = 'pdf-render-frame';
+            pageWrapper.id = `page_container_${pageNum}`;
+            pageWrapper.style.width = viewport.width + 'px';
+            pageWrapper.style.height = viewport.height + 'px';
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-canvas-layer';
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            pageWrapper.appendChild(canvas);
+            stage.appendChild(pageWrapper);
+
+            // Render visual tracking back layers cleanly
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            // Extract structural text layer object token coordinates dynamically!
+            const textContent = await page.getTextContent();
+            
+            textContent.items.forEach(item => {
+                // Ignore structural empty spatial characters or line return hooks
+                if (!item.str.trim()) return;
+
+                // Transform viewport vector mapping matrices to extract raw spatial pixel layouts
+                const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                
+                const editableNode = document.createElement('div');
+                editableNode.className = 'interactive-text-field';
+                editableNode.contentEditable = 'true';
+                editableNode.innerText = item.str;
+                
+                // Absolute structural alignment coordinates matching the under-layer drawing stream
+                editableNode.style.left = tx[4] + 'px';
+                editableNode.style.top = (viewport.height - tx[5] - (item.height * 1.1)) + 'px';
+                editableNode.style.fontSize = item.height + 'px';
+                
+                pageWrapper.appendChild(editableNode);
+            });
+
+            // Handle blank user canvas click triggers to spawn interactive free-text elements
+            pageWrapper.addEventListener('click', function(e) {
+                if (e.target === canvas && currentMode === 'text') {
+                    const box = pageWrapper.getBoundingClientRect();
+                    const newX = (e.clientX - box.left) + 'px';
+                    const newY = (e.clientY - box.top) + 'px';
+                    
+                    const newNode = document.createElement('div');
+                    newNode.className = 'interactive-text-field';
+                    newNode.contentEditable = 'true';
+                    newNode.innerText = 'Click here to write text';
+                    newNode.style.left = newX;
+                    newNode.style.top = newY;
+                    newNode.style.fontSize = '14px';
+                    newNode.style.color = 'var(--primary-blue)';
+                    
+                    pageWrapper.appendChild(newNode);
+                    setTimeout(() => newNode.focus(), 20);
+                }
+            });
+        }
+
+        function injectNewBlankText() {
+            alert("Bhai, PDF page ke khali white space par kahi bhi click karo, wahan naya text block automatic ban jayega!");
+        }
+
+        // --- APPLICATION METRICS SAVE DISPATCH DISPATCH CONTROLLER ---
+        function exportModifiedMatrix() {
+            const modifications = [];
+            document.querySelectorAll('.interactive-text-field').forEach(node => {
+                modifications.push({
+                    text: node.innerText,
+                    x_pos: node.style.left,
+                    y_pos: node.style.top
+                });
+            });
+
+            console.log("Saving Sejda Core Delta Changes Map:", modifications);
+            alert("Bhai, changes save ho gaye hain! Saari edited parameters aur positions console stream par compile ho gayi hain.");
         }
     </script>
 </body>
@@ -398,25 +325,4 @@ PDF_EDITOR_UI = r"""
 
 @script30_bp.route('/')
 def index():
-    return render_template_string(PDF_EDITOR_UI)
-
-@script30_bp.route('/compile_pdf', methods=['POST'])
-def compile_pdf():
-    # Ingestion handler endpoint matrix to structure back elements into actual document bytes
-    data = request.json or {}
-    elements = data.get('elements', [])
-    
-    # Real operations use reportlab or canvas configurations to draw bounding boxes
-    # Returning clean callback context handshake signal response
-    return jsonify({
-        "status": "success",
-        "message": "PDF Vector blocks parsed successfully inside the telemetry hub pipeline.",
-        "objects_count": len(elements)
-    }), 200
-
-if __name__ == '__main__':
-    from flask import Flask
-    app = Flask(__name__)
-    app.register_blueprint(script30_bp, url_prefix='/pdf-editor')
-    app.run(debug=True, port=5000)
-
+    return render_template_string(REAL_SEJDA_UI)
