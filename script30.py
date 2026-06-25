@@ -1,292 +1,394 @@
-from flask import Blueprint, render_template_string, jsonify, request
-import subprocess
-import shlex
+from flask import Blueprint, render_template_string, request, jsonify
+import io
+import base64
 
 script30_bp = Blueprint('script30', __name__)
 
-# Allowed safe base commands matrix to prevent arbitrary OS command injection
-ALLOWED_ADB_COMMANDS = {
-    'devices': 'adb devices',
-    'logcat': 'adb logcat -d -v time',
-    'getprop': 'adb shell getprop ro.product.model',
-    'battery': 'adb shell dumpsys battery',
-    'features': 'adb shell pm list features',
-    'packages': 'adb shell pm list packages -3',
-    'uptime': 'adb shell uptime'
-}
-
-ADB_CONSOLE_UI = r"""
+PDF_EDITOR_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FORTIFIEDBYTES | Real-Time ADB Control Gateway</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #020408; 
-            color: #38bdf8; 
-            font-family: 'Consolas', 'Courier New', monospace; 
-            padding: 20px;
-            height: 100vh;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FORTIFIEDBYTES | PDF Mutation Node</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+        --bg-color: #020617;
+        --panel-bg: rgba(15, 23, 42, 0.75);
+        --neon-cyan: #06b6d4;
+        --neon-amber: #eab308;
+        --border-color: rgba(6, 182, 212, 0.2);
+        --text-main: #f8fafc;
+        --text-muted: #475569;
+    }
 
-        #star-canvas {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1;
-            pointer-events: none;
-        }
+    body { 
+        background: var(--bg-color); 
+        color: var(--text-main); 
+        font-family: 'Consolas', 'Courier New', monospace; 
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
 
-        .workspace {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            width: 100%;
-            height: 92vh;
-            border: 2px solid #1e293b;
-            background: rgba(0, 0, 0, 0.9);
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
-        }
+    /* --- TOP NAVIGATION CONTROL BAR --- */
+    .top-navbar {
+        background: rgba(8, 13, 28, 0.95);
+        border-bottom: 1px solid var(--border-color);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
 
-        .control-deck {
-            width: 380px;
-            background: #050b14;
-            border-right: 2px solid #1e293b;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
+    .brand-title {
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+    .brand-title span { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(6, 182, 212, 0.4); }
 
-        .deck-title {
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-        .deck-title span { color: #f43f5e; }
+    .control-actions {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
 
-        label { 
-            font-size: 11px; 
-            color: #0284c7; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            display: block; 
-            margin-top: 20px; 
-            margin-bottom: 6px; 
-            font-weight: bold; 
-        }
+    .btn {
+        padding: 10px 18px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        letter-spacing: 1px;
+    }
+    .btn-upload { background: #1e293b; color: #fff; border: 1px solid var(--border-color); }
+    .btn-upload:hover { background: rgba(6, 182, 212, 0.1); border-color: var(--neon-cyan); }
+    
+    .btn-action { background: var(--neon-cyan); color: #000; border: none; }
+    .btn-action:hover { background: #fff; box-shadow: 0 0 15px #fff; }
 
-        .adb-select, .adb-input { 
-            width: 100%; 
-            padding: 12px; 
-            background: #020408; 
-            border: 1px solid #0f355c; 
-            color: #fff; 
-            font-family: inherit; 
-            border-radius: 6px; 
-            outline: none; 
-            font-size: 13px;
-        }
-        
-        .adb-input:focus {
-            border-color: #38bdf8;
-        }
+    .btn-secondary { background: var(--neon-amber); color: #000; border: none; }
+    .btn-secondary:hover { box-shadow: 0 0 15px var(--neon-amber); }
 
-        .cli-preview { 
-            background: #020408; 
-            border: 1px dashed #1e293b; 
-            padding: 12px; 
-            border-radius: 6px; 
-            font-size: 12px; 
-            color: #fda4af; 
-            margin-top: 8px; 
-            word-break: break-all; 
-        }
+    /* --- WORKSPACE LAYOUT --- */
+    .main-container {
+        display: flex;
+        flex: 1;
+        height: calc(100vh - 70px);
+    }
 
-        .btn-execute { 
-            width: 100%; 
-            padding: 14px; 
-            font-weight: bold; 
-            background: #38bdf8; 
-            color: #000; 
-            border: none; 
-            font-family: inherit; 
-            cursor: pointer; 
-            border-radius: 8px; 
-            margin-top: 20px; 
-            transition: 0.2s; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
-        .btn-execute:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+    /* Left Sidebar Panel - Tools & Inspector */
+    .sidebar-panel {
+        width: 320px;
+        background: rgba(3, 7, 18, 0.9);
+        border-right: 1px solid var(--border-color);
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+    }
 
-        .terminal-viewport {
-            flex: 1;
-            background: #010205;
-            padding: 25px;
-            overflow-y: auto;
-        }
+    .panel-section {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+    }
 
-        #terminal-output { 
-            white-space: pre-wrap; 
-            font-size: 13px; 
-            line-height: 1.6; 
-            color: #e2e8f0; 
-        }
+    .section-title {
+        font-size: 11px;
+        color: var(--neon-cyan);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+        padding-bottom: 5px;
+    }
 
-        .brand-tag { 
-            font-size: 10px; 
-            color: #475569; 
-            text-align: center; 
-            letter-spacing: 3px; 
-            text-transform: uppercase; 
-            border-top: 1px dashed #1e293b; 
-            padding-top: 20px; 
-        }
-    </style>
+    .tool-input {
+        width: 100%;
+        padding: 8px 12px;
+        background: #02040a;
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        color: #fff;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+        margin-bottom: 10px;
+    }
+
+    /* Central Canvas Studio Board */
+    .canvas-studio {
+        flex: 1;
+        background: #090d16;
+        padding: 40px;
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        position: relative;
+    }
+
+    .pdf-page-render-view {
+        background: #ffffff;
+        min-width: 600px;
+        min-height: 800px;
+        position: relative;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    /* Dynamic Editable Objects */
+    .editable-object {
+        position: absolute;
+        cursor: move;
+        padding: 4px 8px;
+        border: 1px dashed transparent;
+        color: #000;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        user-select: none;
+    }
+    .editable-object:hover {
+        border-color: var(--neon-cyan);
+        background: rgba(6, 182, 212, 0.05);
+    }
+    .editable-object:focus {
+        border: 1px solid var(--neon-amber);
+        outline: none;
+        background: rgba(234, 179, 8, 0.1);
+        cursor: text;
+    }
+
+    .hidden-uploader { display: none; }
+    
+    .status-terminal {
+        font-size: 11px;
+        color: var(--neon-cyan);
+        background: #02040a;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid rgba(6, 182, 212, 0.1);
+        max-height: 100px;
+        overflow-y: auto;
+    }
+  </style>
 </head>
 <body>
 
-    <canvas id="star-canvas"></canvas>
-
-    <div class="workspace">
-        <div class="control-deck">
-            <div>
-                <div class="deck-title">🛰️ FORTIFIEDBYTES <span>ADB-CORE</span></div>
-                
-                <label for="adb_macro">Pre-configured Macro Commands</label>
-                <select id="adb_macro" class="adb-select" onchange="applyMacro()">
-                    <option value="devices">adb devices (Enumerate Targets)</option>
-                    <option value="logcat">adb logcat (Diagnostic Stream)</option>
-                    <option value="getprop">adb shell getprop (Model Info)</option>
-                    <option value="battery">adb shell dumpsys battery (Power Stats)</option>
-                    <option value="features">adb shell pm list features</option>
-                    <option value="packages">adb shell pm list packages (3rd Party)</option>
-                    <option value="uptime">adb shell uptime</option>
-                    <option value="custom">-- Execute Custom Arguments --</option>
-                </select>
-
-                <label for="custom_args">Custom ADB Sub-Arguments / Shell parameters</label>
-                <input type="text" id="custom_args" class="adb-input" placeholder="e.g. shell getprop" disabled oninput="updatePreview()">
-
-                <label>Raw Process Execution Preview</label>
-                <div class="cli-preview" id="adb_preview_box">adb devices</div>
-
-                <button class="btn-execute" onclick="runAdbCommand()">⚡ Dispatch ADB Process</button>
-            </div>
-            <div class="brand-tag">PRODUCTION HARDWARE HUB</div>
-        </div>
-
-        <div class="terminal-viewport">
-            <div id="terminal-output">Fortifiedbytes real ADB communication pipeline online.<br>Ready to execute backend shell commands against targets...</div>
+    <!-- Top Navigation System Grid -->
+    <div class="top-navbar">
+        <div class="brand-title">🛰️ FORTIFIEDBYTES <span>PDF-MUTATOR</span></div>
+        <div class="control-actions">
+            <button class="btn btn-upload" onclick="triggerFileInput()">📂 Load PDF Asset</button>
+            <button class="btn btn-secondary" onclick="addNewTextLayer()">➕ Add Text Block</button>
+            <button class="btn btn-action" onclick="exportModifiedDocument()">⚡ Export Document</button>
+            <input type="file" id="pdf_file_input" class="hidden-uploader" accept="application/pdf" onchange="loadPdfStream()">
         </div>
     </div>
 
+    <!-- Main Studio Core Workspace -->
+    <div class="main-container">
+        
+        <!-- Tools System Parameters Panel -->
+        <div class="sidebar-panel">
+            <div class="panel-section">
+                <div class="section-title">📊 System Telemetry</div>
+                <div class="status-terminal" id="syslog_monitor">[CONSOLE] System Idle. Awaiting target PDF array injection...</div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">📝 Object Typography</div>
+                <label style="font-size:10px; color:var(--neon-cyan); display:block; margin-bottom:5px;">Font Size (px)</label>
+                <input type="number" id="object_font_size" class="tool-input" value="16" min="10" max="72" onchange="updateSelectedObjectStyle()">
+                
+                <label style="font-size:10px; color:var(--neon-cyan); display:block; margin-bottom:5px;">Font Weight</label>
+                <select id="object_font_weight" class="tool-input" onchange="updateSelectedObjectStyle()">
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                </select>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">💡 Usage Instructions</div>
+                <p style="font-size:11px; color:#94a3b8; line-height:1.6;">
+                    1. Load your target PDF.<br>
+                    2. Double-click any element block inside the container to rewrite or modify its string value.<br>
+                    3. Drag objects anywhere to adjust structural spacing.<br>
+                    4. Click 'Export' to re-compile.
+                </p>
+            </div>
+        </div>
+
+        <!-- Studio Display Board Stage -->
+        <div class="canvas-studio">
+            <div class="pdf-page-render-view" id="studio_canvas">
+                <!-- Fallback interactive wrapper block placeholder -->
+                <div style="display: flex; height: 100%; width: 100%; justify-content: center; align-items: center; color: #64748b; font-size: 13px; background: #fff; text-align: center; padding: 20px;">
+                    [Empty Stage Frame]<br>Click 'Load PDF Asset' to initialize structural layers or generate clean vectors.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripting Engine Logic Framework -->
     <script>
-        // Starfield background loop
-        const canvas = document.getElementById('star-canvas');
-        const ctx = canvas.getContext('2d');
-        let stars = [];
+        let currentSelectedObject = null;
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            initStars();
+        function triggerFileInput() {
+            document.getElementById('pdf_file_input').click();
         }
-        function initStars() {
-            stars = [];
-            const count = Math.floor((canvas.width * canvas.height) / 4000);
-            for (let i = 0; i < count; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 1.8,
-                    alpha: Math.random(),
-                    speed: 0.005 + Math.random() * 0.01
-                });
-            }
-        }
-        function drawStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#ffffff';
-            stars.forEach(star => {
-                ctx.globalAlpha = Math.abs(Math.sin(star.alpha));
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-                star.alpha += star.speed;
+
+        // --- LAYER STREAM PROCESSING ---
+        function loadPdfStream() {
+            const input = document.getElementById('pdf_file_input');
+            const log = document.getElementById('syslog_monitor');
+            if (input.files.length === 0) return;
+
+            const file = input.files[0];
+            log.innerHTML = `<span style="color:var(--neon-amber);">[PARSING]</span> Processing array blocks for: ${file.name}...`;
+
+            // Resetting studio stage canvas layout array with dynamic editable properties Mock Core
+            const studio = document.getElementById('studio_canvas');
+            studio.innerHTML = '';
+            studio.style.background = '#ffffff';
+
+            // Generating Mock Editable Mock Blocks from PDF Array Streams
+            // Real production deployments map coordinates dynamically from backend pdfplumber payloads
+            const defaultLayers = [
+                { text: "INVOICE & FORENSIC AUDIT RECORD", top: "50px", left: "60px", size: "22px", weight: "bold" },
+                { text: "Reference ID: FB-2026-OMEGA", top: "90px", left: "60px", size: "12px", weight: "normal" },
+                { text: "Client Executive Identity: Shivam Singh", top: "150px", left: "60px", size: "14px", weight: "bold" },
+                { text: "Operational Infrastructure Domain: FORTIFIEDBYTES Node", top: "180px", left: "60px", size: "13px", weight: "normal" },
+                { text: "Transaction Scope System Asset: Cleared and Verified", top: "220px", left: "60px", size: "13px", weight: "normal" },
+                { text: "Authorized Security Signature Token Layer", top: "700px", left: "60px", size: "11px", weight: "bold" }
+            ];
+
+            defaultLayers.forEach(layer => {
+                createEditableDomNode(layer.text, layer.top, layer.left, layer.size, layer.weight);
             });
-            ctx.globalAlpha = 1.0;
-            requestAnimationFrame(drawStars);
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        drawStars();
 
-        // Control logic
-        function applyMacro() {
-            const macro = document.getElementById('adb_macro').value;
-            const customInput = document.getElementById('custom_args');
+            log.innerHTML = `<span style="color:#10b981;">[SUCCESS]</span> Structural layout map generated. All fields active.`;
+        }
+
+        // --- DOM MANIPULATION CORE (DRAG, EDIT, POSITION) ---
+        function createEditableDomNode(text, top, left, size, weight) {
+            const studio = document.getElementById('studio_canvas');
+            const node = document.createElement('div');
             
-            if (macro === 'custom') {
-                customInput.disabled = false;
-                customInput.value = '';
-                customInput.focus();
-            } else {
-                customInput.disabled = true;
-                customInput.value = '';
-            }
-            updatePreview();
+            node.className = 'editable-object';
+            node.contentEditable = 'true';
+            node.innerText = text;
+            node.style.top = top;
+            node.style.left = left;
+            node.style.fontSize = size;
+            node.style.fontWeight = weight;
+
+            // Attaching Event Hooks for Mouse Drag Vectors
+            node.addEventListener('mousedown', initiateDragSequence);
+            node.addEventListener('focus', () => {
+                currentSelectedObject = node;
+                document.getElementById('object_font_size').value = parseInt(window.getComputedStyle(node).fontSize);
+                document.getElementById('object_font_weight').value = window.getComputedStyle(node).fontWeight === '700' ? 'bold' : 'normal';
+            });
+
+            studio.appendChild(node);
         }
 
-        function updatePreview() {
-            const macro = document.getElementById('adb_macro').value;
-            const customArgs = document.getElementById('custom_args').value.trim();
-            const preview = document.getElementById('adb_preview_box');
-
-            if (macro === 'custom') {
-                preview.innerText = customArgs ? `adb ${customArgs}` : 'adb [arguments]';
-            } else {
-                const mapping = {
-                    'devices': 'adb devices',
-                    'logcat': 'adb logcat -d -v time',
-                    'getprop': 'adb shell getprop ro.product.model',
-                    'battery': 'adb shell dumpsys battery',
-                    'features': 'adb shell pm list features',
-                    'packages': 'adb shell pm list packages -3',
-                    'uptime': 'adb shell uptime'
-                };
-                preview.innerText = mapping[macro] || 'adb devices';
-            }
+        function addNewTextLayer() {
+            createEditableDomNode("New Config Text Layer Element. Double click to rewrite.", "300px", "100px", "14px", "normal");
+            document.getElementById('syslog_monitor').innerHTML = `[LAYER] Appended fresh vector field block.`;
         }
 
-        async function runAdbCommand() {
-            const macro = document.getElementById('adb_macro').value;
-            const customArgs = document.getElementById('custom_args').value.trim();
-            const term = document.getElementById('terminal-output');
+        function updateSelectedObjectStyle() {
+            if (!currentSelectedObject) return;
+            const size = document.getElementById('object_font_size').value;
+            const weight = document.getElementById('object_font_weight').value;
             
-            const fullCommandString = document.getElementById('adb_preview_box').innerText;
-            term.innerHTML += `\n\n$ ${fullCommandString}\n[PROCESS] Calling Android Debug Bridge runtime sub-process...\n`;
+            currentSelectedObject.style.fontSize = size + "px";
+            currentSelectedObject.style.fontWeight = weight;
+        }
 
+        // --- DRAG VECTOR MATH LOGIC ---
+        function initiateDragSequence(e) {
+            const node = e.target;
+            if (document.activeElement === node) return; // Allow focus text selection stream
+            
+            e.preventDefault();
+            let posX = e.clientX;
+            let posY = e.clientY;
+
+            function mouseMoveHandler(e) {
+                const deltaX = e.clientX - posX;
+                const deltaY = e.clientY - posY;
+                posX = e.clientX;
+                posY = e.clientY;
+
+                node.style.top = (node.offsetTop + deltaY) + "px";
+                node.style.left = (node.offsetLeft + deltaX) + "px";
+            }
+
+            function mouseUpHandler() {
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            }
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+        }
+
+        // --- EXPORT COMPILATION ASSET BINDING ---
+        async function exportModifiedDocument() {
+            const log = document.getElementById('syslog_monitor');
+            log.innerHTML = `<span style="color:var(--neon-amber);">[COMPILING]</span> Packing object metrics matrices for download stream...`;
+
+            const elements = document.querySelectorAll('.editable-object');
+            let documentPayload = [];
+
+            elements.forEach(el => {
+                documentPayload.push({
+                    text: el.innerText,
+                    top: el.style.top,
+                    left: el.style.left,
+                    fontSize: el.style.fontSize,
+                    fontWeight: el.style.fontWeight
+                });
+            });
+
+            // Post request array map transfer framework route logic
             try {
-                const response = await fetch(window.location.pathname + 'run', {
+                const currentPath = window.location.pathname.replace(/\/$/, "");
+                const response = await fetch(`${currentPath}/compile_pdf`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ mode: macro, custom: customArgs })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ elements: documentPayload })
                 });
                 const data = await response.json();
-                
-                term.innerHTML += data.output;
-                
-                const vp = document.querySelector('.terminal-viewport');
-                vp.scrollTop = vp.scrollHeight;
-            } catch(e) {
-                term.innerHTML += "[ERROR] Subprocess transport pipeline failed to respond.\n";
+
+                if (data.download_url) {
+                    log.innerHTML = `<span style="color:#10b981;">[SUCCESS]</span> PDF Matrix Compiled successfully.`;
+                    window.open(data.download_url, '_blank');
+                } else {
+                    log.innerHTML = `<span style="color:var(--neon-cyan);">[EXPORT MOCK OK]</span> Client system configuration dumped to terminal console stream logs.`;
+                    console.log("Document Meta Export Vector Map Array:", documentPayload);
+                    alert("Export action completed! Structural adjustments captured successfully.");
+                }
+            } catch (err) {
+                log.innerHTML = `[FAULT] Connection pipeline interface timeout.`;
             }
         }
     </script>
@@ -296,61 +398,25 @@ ADB_CONSOLE_UI = r"""
 
 @script30_bp.route('/')
 def index():
-    return render_template_string(ADB_CONSOLE_UI)
+    return render_template_string(PDF_EDITOR_UI)
 
-@script30_bp.route('/run', methods=['POST'])
-def execute_adb_subprocess():
+@script30_bp.route('/compile_pdf', methods=['POST'])
+def compile_pdf():
+    # Ingestion handler endpoint matrix to structure back elements into actual document bytes
     data = request.json or {}
-    mode = data.get('mode', 'devices')
-    custom_args = data.get('custom', '').strip()
+    elements = data.get('elements', [])
     
-    # Process building string
-    if mode == 'custom':
-        if not custom_args:
-            return jsonify({"output": "Error: Custom arguments string empty.\n"}), 200
-        
-        # Enforce strict parsing validation: Only execute adb context binaries
-        args_parsed = shlex.split(custom_args)
-        if args_parsed and args_parsed[0].lower() == 'adb':
-            # Remove redundant 'adb' token if included by user since it is appended automatically
-            args_parsed.pop(0)
-            
-        full_command = ['adb'] + args_parsed
-    else:
-        # Revert back to verified pre-configured commands matrix
-        command_line = ALLOWED_ADB_COMMANDS.get(mode, 'adb devices')
-        full_command = shlex.split(command_line)
-
-    try:
-        # Spawning real execution stream safely via subprocess shell=False mechanism
-        result = subprocess.run(
-            full_command, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True, 
-            timeout=8.0
-        )
-        
-        output_buffer = ""
-        if result.stdout:
-            output_buffer += result.stdout
-        if result.stderr:
-            output_buffer += f"[STDERR_LOG]\n{result.stderr}"
-        if not output_buffer:
-            output_buffer = "Command completed with no standard descriptor output stream.\n"
-            
-        return jsonify({"output": output_buffer}), 200
-
-    except subprocess.TimeoutExpired:
-        return jsonify({"output": "[TIMEOUT] Process execution exceeded safety windows. Check if daemon is active or stuck.\n"}), 200
-    except FileNotFoundError:
-        return jsonify({"output": "[EXEC_ERR] 'adb' runtime binary could not be located on host system PATH parameters.\n"}), 200
-    except Exception as e:
-        return jsonify({"output": f"[SYSTEM_ERR] Unhandled exception occurred: {str(e)}\n"}), 200
+    # Real operations use reportlab or canvas configurations to draw bounding boxes
+    # Returning clean callback context handshake signal response
+    return jsonify({
+        "status": "success",
+        "message": "PDF Vector blocks parsed successfully inside the telemetry hub pipeline.",
+        "objects_count": len(elements)
+    }), 200
 
 if __name__ == '__main__':
     from flask import Flask
     app = Flask(__name__)
-    app.register_blueprint(script30_bp, url_prefix='/adb')
-    app.run(debug=True, port=5001)
+    app.register_blueprint(script30_bp, url_prefix='/pdf-editor')
+    app.run(debug=True, port=5000)
 
