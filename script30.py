@@ -9,7 +9,10 @@ REAL_SEJDA_UI = r"""
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Real-Time PDF Matrix Editor</title>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf_viewer.min.css">
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -100,45 +103,56 @@ REAL_SEJDA_UI = r"""
         overflow-y: auto;
     }
 
-    /* --- LIVING REAL-TIME PDF PAGE CONTAINER --- */
+    /* --- REAL PDF PAGE CONTAINER --- */
     .pdf-render-frame {
         position: relative;
         background: #ffffff;
         box-shadow: 0 10px 30px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02);
         border: 1px solid var(--border-line);
-        margin-bottom: 25px;
+        margin-bottom: 35px;
         border-radius: 4px;
     }
 
-    /* Transparent canvas matching vector sizing layers */
+    /* Canvas alignment matching rendering viewports */
     .pdf-canvas-layer {
         display: block;
         z-index: 1;
     }
 
-    /* --- LIVE INJECTED HIGH-PURITY EDITABLE WRAPPERS --- */
+    /* --- HIGH INTERACTIVE SEJDA-STYLE TEXT CONTAINER LAYER --- */
+    .custom-text-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100; /* Strict Foreground Priority Override */
+        line-height: 1.0;
+    }
+
+    /* Actual Injected Text Elements Style Structure */
     .interactive-text-field {
         position: absolute;
-        z-index: 10;
         border: 1px dashed transparent;
-        padding: 1px 3px;
+        padding: 1px 2px;
         outline: none;
         cursor: text;
         font-family: sans-serif;
         color: #000;
-        white-space: pre;
+        white-space: nowrap;
         background: transparent;
         transform-origin: top left;
+        z-index: 200;
     }
     .interactive-text-field:hover {
         border-color: var(--primary-blue);
-        background: rgba(59, 130, 246, 0.03);
+        background: rgba(59, 130, 246, 0.05);
     }
     .interactive-text-field:focus {
         border: 1px solid var(--primary-blue);
         background: #ffffff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        border-radius: 3px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 2px;
     }
 
     /* --- RECON STREAM INITIAL UPLOADER BOX --- */
@@ -166,11 +180,10 @@ REAL_SEJDA_UI = r"""
 <body>
 
     <div class="toolbar-header">
-        <div class="brand-identity">📄 SHIVAM SINGH OMEGA EDITOR <span>ENGINE v2</span></div>
+        <div class="brand-identity">📄 SHIVAM SINGH OMEGA EDITOR <span>ENGINE v2.5</span></div>
         
         <div class="control-center" id="engine_controls" style="display: none;">
-            <button class="action-btn active" id="mode_text" onclick="setMode('text')">🔤 Edit/Add Text</button>
-            <button class="action-btn" onclick="injectNewBlankText()">➕ Add New Paragraph</button>
+            <button class="action-btn active" id="mode_text">🔤 Edit/Add Text Tool Active</button>
         </div>
 
         <div>
@@ -190,7 +203,6 @@ REAL_SEJDA_UI = r"""
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         
-        let currentMode = 'text';
         let globalPdfDoc = null;
 
         function triggerFilePicker() {
@@ -229,12 +241,13 @@ REAL_SEJDA_UI = r"""
             fileReader.readAsArrayBuffer(file);
         }
 
-        // --- RENDER DYNAMIC CANVAS + COORDINATE INLINE TEXT BLOCK MAPS ---
+        // --- RENDER DYNAMIC CANVAS + HIGH-ACCURACY TEXT COUPLING ---
         async function renderInteractivePdfPage(pageNum) {
             const stage = document.getElementById('workspace_stage');
             const page = await globalPdfDoc.getPage(pageNum);
             
-            const viewport = page.getViewport({ scale: 1.3 }); // Perfect resolution layout rendering scaling scale
+            // Perfect scale multiplier mapping matching high resolution viewports
+            const viewport = page.getViewport({ scale: 1.4 }); 
 
             // Rebuild structural housing page element blocks
             const pageWrapper = document.createElement('div');
@@ -249,7 +262,14 @@ REAL_SEJDA_UI = r"""
             canvas.width = viewport.width;
             canvas.height = viewport.height;
 
+            // Appending Canvas View Block
             pageWrapper.appendChild(canvas);
+            
+            // Create a high-priority Isolated Custom Text Overlay Layer 
+            const textLayer = document.createElement('div');
+            textLayer.className = 'custom-text-layer';
+            pageWrapper.appendChild(textLayer);
+            
             stage.appendChild(pageWrapper);
 
             // Render visual tracking back layers cleanly
@@ -259,7 +279,6 @@ REAL_SEJDA_UI = r"""
             const textContent = await page.getTextContent();
             
             textContent.items.forEach(item => {
-                // Ignore structural empty spatial characters or line return hooks
                 if (!item.str.trim()) return;
 
                 // Transform viewport vector mapping matrices to extract raw spatial pixel layouts
@@ -270,41 +289,49 @@ REAL_SEJDA_UI = r"""
                 editableNode.contentEditable = 'true';
                 editableNode.innerText = item.str;
                 
-                // Absolute structural alignment coordinates matching the under-layer drawing stream
+                // Absolute positioning calculation matrix fix
                 editableNode.style.left = tx[4] + 'px';
-                editableNode.style.top = (viewport.height - tx[5] - (item.height * 1.1)) + 'px';
+                editableNode.style.top = (viewport.height - tx[5] - (item.height * 1.15)) + 'px';
                 editableNode.style.fontSize = item.height + 'px';
                 
-                pageWrapper.appendChild(editableNode);
+                // Set explicit element padding layout size
+                if(item.width) {
+                    editableNode.style.width = (item.width * 1.42) + 'px';
+                }
+
+                // Stop native propagation leak so editing doesn't trigger canvas addition below it
+                editableNode.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+
+                textLayer.appendChild(editableNode);
             });
 
-            // Handle blank user canvas click triggers to spawn interactive free-text elements
-            pageWrapper.addEventListener('click', function(e) {
-                if (e.target === canvas && currentMode === 'text') {
-                    const box = pageWrapper.getBoundingClientRect();
+            // Handle blank user overlay click triggers to spawn interactive free-text elements
+            textLayer.addEventListener('click', function(e) {
+                if (e.target === textLayer) {
+                    const box = textLayer.getBoundingClientRect();
                     const newX = (e.clientX - box.left) + 'px';
                     const newY = (e.clientY - box.top) + 'px';
                     
                     const newNode = document.createElement('div');
                     newNode.className = 'interactive-text-field';
                     newNode.contentEditable = 'true';
-                    newNode.innerText = 'Click here to write text';
+                    newNode.innerText = 'New Paragraph Block';
                     newNode.style.left = newX;
                     newNode.style.top = newY;
                     newNode.style.fontSize = '14px';
                     newNode.style.color = 'var(--primary-blue)';
                     
-                    pageWrapper.appendChild(newNode);
+                    newNode.addEventListener('click', function(ev) { ev.stopPropagation(); });
+                    
+                    textLayer.appendChild(newNode);
                     setTimeout(() => newNode.focus(), 20);
                 }
             });
         }
 
-        function injectNewBlankText() {
-            alert("Bhai, PDF page ke khali white space par kahi bhi click karo, wahan naya text block automatic ban jayega!");
-        }
-
-        // --- APPLICATION METRICS SAVE DISPATCH DISPATCH CONTROLLER ---
+        // --- APPLICATION METRICS SAVE DISPATCH CONTROLLER ---
         function exportModifiedMatrix() {
             const modifications = [];
             document.querySelectorAll('.interactive-text-field').forEach(node => {
