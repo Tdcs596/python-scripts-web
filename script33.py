@@ -1,15 +1,17 @@
 from flask import Blueprint, render_template_string, request, jsonify
+import urllib.request
 import urllib.parse
+import re
 
 script33_bp = Blueprint('script33', __name__)
 
-AUDIT_ENGINE_UI = r"""
+ADVANCED_AUDIT_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ORBEDGEMEDIA AUDIT ENGINE v2.0</title>
+  <title>ORBEDGEMEDIA AUDIT ENGINE v2.5</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -19,6 +21,7 @@ AUDIT_ENGINE_UI = r"""
         --neon-cyan: #06b6d4;
         --neon-green: #10b981;
         --neon-red: #ef4444;
+        --neon-amber: #eab308;
         --border-color: rgba(6, 182, 212, 0.15);
         --text-bright: #f3f4f6;
         --text-gray: #9ca3af;
@@ -33,7 +36,6 @@ AUDIT_ENGINE_UI = r"""
         padding: 20px;
     }
 
-    /* --- TOP HEADER CONTAINER --- */
     .header-panel {
         background: var(--panel-bg);
         border: 1px solid var(--border-color);
@@ -42,26 +44,11 @@ AUDIT_ENGINE_UI = r"""
         margin-bottom: 20px;
     }
 
-    .brand-title {
-        font-size: 22px;
-        font-weight: bold;
-        letter-spacing: 2px;
-        margin-bottom: 5px;
-    }
+    .brand-title { font-size: 22px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
     .brand-title span { color: var(--neon-cyan); }
-    
-    .brand-sub {
-        font-size: 12px;
-        color: var(--text-gray);
-        margin-bottom: 20px;
-    }
+    .brand-sub { font-size: 12px; color: var(--text-gray); margin-bottom: 20px; }
 
-    /* --- INPUT GRID FRAME --- */
-    .input-row {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
+    .input-row { display: flex; gap: 15px; flex-wrap: wrap; }
 
     .url-input {
         flex: 1;
@@ -92,16 +79,14 @@ AUDIT_ENGINE_UI = r"""
     }
     .btn-audit:hover { background: #1d4ed8; box-shadow: 0 0 15px rgba(37, 99, 235, 0.4); }
 
-    /* --- RESPONSIVE SPLIT STUDIO GRID --- */
+    /* --- RESPONSIVE WORKSPACE LAYOUT --- */
     .studio-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 20px;
     }
 
-    @media (max-width: 968px) {
-        .studio-layout { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1024px) { .studio-layout { grid-template-columns: 1fr; } }
 
     .panel {
         background: var(--panel-bg);
@@ -123,33 +108,17 @@ AUDIT_ENGINE_UI = r"""
         padding-bottom: 8px;
     }
 
-    /* --- MATRIX TABLE DESIGN --- */
     .table-container { overflow-x: auto; }
     
     .matrix-table {
         width: 100%;
         border-collapse: collapse;
         font-size: 12px;
-        text-align: left;
     }
-    .matrix-table th {
-        color: var(--text-gray);
-        padding: 10px;
-        border-bottom: 1px solid var(--border-color);
-        font-weight: normal;
-    }
-    .matrix-table td {
-        padding: 12px 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.03);
-    }
+    .matrix-table th { color: var(--text-gray); padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-weight: normal; }
+    .matrix-table td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 
-    /* --- TABBED TERMINAL COMPONENT --- */
-    .tabs-header {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
+    .tabs-header { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .tab-btn {
         background: transparent;
         border: none;
@@ -159,13 +128,8 @@ AUDIT_ENGINE_UI = r"""
         font-size: 11px;
         text-transform: uppercase;
         cursor: pointer;
-        border-bottom: 2px solid transparent;
     }
-    .tab-btn.active {
-        color: #fff;
-        border-bottom-color: var(--neon-cyan);
-        font-weight: bold;
-    }
+    .tab-btn.active { color: #fff; border-bottom: 2px solid var(--neon-cyan); font-weight: bold; }
 
     .terminal-screen {
         background: var(--terminal-bg);
@@ -173,19 +137,17 @@ AUDIT_ENGINE_UI = r"""
         border-radius: 6px;
         padding: 15px;
         flex: 1;
-        min-height: 320px;
-        max-height: 500px;
+        min-height: 350px;
+        max-height: 550px;
         overflow-y: auto;
         font-size: 12px;
         line-height: 1.6;
         color: #34d399;
     }
 
-    /* Status Badges */
-    .badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; }
-    .badge-secure { background: rgba(16, 185, 129, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+    .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; text-transform: uppercase; display: inline-block; }
+    .badge-detected { background: rgba(16, 185, 129, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-missing { background: rgba(239, 68, 68, 0.15); color: var(--neon-red); border: 1px solid var(--neon-red); }
-    .badge-detected { background: rgba(6, 182, 212, 0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); }
 
     .status-footer {
         margin-top: 20px;
@@ -201,35 +163,29 @@ AUDIT_ENGINE_UI = r"""
 <body>
 
     <div class="header-panel">
-        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v2.0</span></div>
-        <div class="brand-sub">360° Website Tech Stack Auditor, Core SEO Analyzer & Automated Sales Closer</div>
+        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v2.5 (ACCURATE LIVE)</span></div>
+        <div class="brand-sub">Real-Time Technical SEO Stack Extraction & Lead Generation Tracker</div>
         
         <div class="input-row">
-            <input type="text" id="target_url" class="url-input" placeholder="Enter target website domain name (e.g., idealdocs.in)...">
-            <button class="btn-audit" onclick="triggerDeepAuditPipeline()">Run Intense 360° Audit</button>
+            <input type="text" id="target_url" class="url-input" placeholder="Enter target website URL (e.g., https://example.com)...">
+            <button class="btn-audit" onclick="triggerDeepLiveAudit()">Run Intelligent 360° Audit</button>
         </div>
     </div>
 
     <div class="studio-layout">
         
         <div class="panel">
-            <div class="panel-header">📊 Core Audit Summary Matrix</div>
+            <div class="panel-header">🎯 Deep Signal Detection Matrix</div>
             <div class="table-container">
                 <table class="matrix-table">
                     <thead>
                         <tr>
-                            <th>Domain</th>
-                            <th>Tech/CMS</th>
-                            <th>SSL Security</th>
-                            <th>FB Pixel</th>
-                            <th>Google Analytics</th>
-                            <th>Load Speed</th>
+                            <th>Parameter Tracker</th>
+                            <th>Live Verification Status</th>
                         </tr>
                     </thead>
                     <tbody id="matrix_output_rows">
-                        <tr>
-                            <td colspan="6" style="color: var(--text-gray); text-align: center; padding: 40px;">[System Idle] Input a live target workspace above to map telemetry arrays...</td>
-                        </tr>
+                        <tr><td colspan="2" style="color: var(--text-gray); text-align: center; padding: 40px;">[System Idle] Run target scan parameter tracking loops...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -237,68 +193,67 @@ AUDIT_ENGINE_UI = r"""
 
         <div class="panel">
             <div class="tabs-header">
-                <button class="tab-btn active" id="tab_report" onclick="switchDisplayTab('report')">📝 Technical Audit Report</button>
-                <button class="tab-btn" id="tab_pitch" onclick="switchDisplayTab('pitch')">💡 AI Conversion Pitch</button>
+                <button class="tab-btn active" id="tab_report" onclick="switchTab('report')">📝 Diagnostic Live Logs</button>
+                <button class="tab-btn" id="tab_pitch" onclick="switchTab('pitch')">💡 Conversion Sales Hook</button>
             </div>
-            
             <div class="terminal-screen" id="terminal_console_stream">
-                [SYSTEM LOGS] Awaiting tracking stream signal vectors initialization...
+                [SYSTEM READY] Feed source URL payload stream to initialize vector extraction...
             </div>
         </div>
 
     </div>
 
     <div class="status-footer" id="footer_log">
-        Engine Core Logs: System operational. Pipeline state maps idle.
+        Engine Operational Core Status: Connected.
     </div>
 
     <script>
-        let cachedReportText = "";
-        let cachedPitchText = "";
+        let cachedReport = "";
+        let cachedPitch = "";
 
-        async function triggerDeepAuditPipeline() {
+        async function triggerDeepLiveAudit() {
             const inputField = document.getElementById('target_url');
-            const target = inputField.value.trim();
-            if(!target) { alert("Bhai, pehle ek valid domain URL daalo!"); return; }
+            let target = inputField.value.trim();
+            if(!target) { alert("Bhai, valid website link ya domain daalo!"); return; }
 
             const footer = document.getElementById('footer_log');
             const consoleStream = document.getElementById('terminal_console_stream');
             
-            footer.innerText = `🔄 Deep 360° Architectural Scan Initialized for: ${target}...`;
-            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[INJECTING] Executing data deconstruction modules across server ports...</span>`;
+            footer.innerText = `📡 Connecting & fetching real-time data from source server stream...`;
+            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[FETCHING] Reading server headers and parsing source HTML layout code...</span>`;
 
             try {
-                const response = await fetch(`${window.location.pathname.replace(/\/$/, "")}/run_audit?url=${encodeURIComponent(target)}`);
+                const response = await fetch(`${window.location.pathname.replace(/\/$/, "")}/run_live_audit?url=${encodeURIComponent(target)}`);
                 const data = await response.json();
 
-                // 1. Rendering Left Summary Matrix Table Row Layout
+                if (data.status === "error") {
+                    consoleStream.innerHTML = `<span style="color:var(--neon-red);">[CRITICAL ERR] ${data.message}</span>`;
+                    footer.innerText = `❌ Scan tracking sequence faulted.`;
+                    return;
+                }
+
                 const tableBody = document.getElementById('matrix_output_rows');
                 tableBody.innerHTML = `
-                    <tr>
-                        <td style="color: #fff; font-weight: bold;">${data.domain}</td>
-                        <td>${data.tech_cms}</td>
-                        <td><span class="badge badge-secure">🔒 ${data.ssl_status}</span></td>
-                        <td><span class="badge ${data.fb_pixel === 'MISSING' ? 'badge-missing' : 'badge-detected'}">${data.fb_pixel}</span></td>
-                        <td><span class="badge badge-detected">📊 ${data.analytics}</span></td>
-                        <td style="color: var(--neon-cyan);">${data.load_speed}</td>
-                    </tr>
+                    <tr><td>Target Domain Tracking</td><td style="font-weight:bold; color:#fff;">${data.domain}</td></tr>
+                    <tr><td>Google Analytics (GA4/Universal)</td><td><span class="badge ${data.google_analytics ? 'badge-detected' : 'badge-missing'}">${data.google_analytics ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Google Search Console Token</td><td><span class="badge ${data.google_search_console ? 'badge-detected' : 'badge-missing'}">${data.google_search_console ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Google Tag Manager (GTM)</td><td><span class="badge ${data.google_tag_manager ? 'badge-detected' : 'badge-missing'}">${data.google_tag_manager ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Schema Markup Structures (JSON-LD)</td><td><span class="badge ${data.schema_markup ? 'badge-detected' : 'badge-missing'}">${data.schema_markup ? 'DETECTED' : 'MISSING'}</span></td></tr>
                 `;
 
-                // Cache textual response matrices for tabs navigation switching toggle
-                cachedReportText = data.technical_report;
-                cachedPitchText = data.ai_pitch;
+                cachedReport = data.technical_report;
+                cachedPitch = data.ai_pitch;
 
-                // Force layout update back to active report tab view element
-                switchDisplayTab('report');
-                footer.innerText = `✅ Deep 360° Architectural Scan Completed on all pipelines for: ${data.domain}`;
+                switchTab('report');
+                footer.innerText = `✅ Accurate technical scan sequence completed for: ${data.domain}`;
 
             } catch(err) {
-                consoleStream.innerHTML = `<span style="color:var(--neon-red);">[CRITICAL FAULT] Interface transmission pipeline error.</span>`;
-                footer.innerText = `❌ Audit execution cycle halted due to connection error.`;
+                consoleStream.innerHTML = `<span style="color:var(--neon-red);">[FAULT] Connection interface pipeline timeout.</span>`;
+                footer.innerText = `❌ Error establishing handshakes loop.`;
             }
         }
 
-        function switchDisplayTab(tabName) {
+        function switchTab(name) {
             const btnReport = document.getElementById('tab_report');
             const btnPitch = document.getElementById('tab_pitch');
             const consoleStream = document.getElementById('terminal_console_stream');
@@ -306,14 +261,14 @@ AUDIT_ENGINE_UI = r"""
             btnReport.classList.remove('active');
             btnPitch.classList.remove('active');
 
-            if(tabName === 'report') {
+            if(name === 'report') {
                 btnReport.classList.add('active');
-                consoleStream.style.color = '#34d399'; // Classic matrix green color palette
-                consoleStream.innerHTML = cachedReportText ? cachedReportText.replace(/\n/g, '<br>') : '[Empty Core] No logs found.';
+                consoleStream.style.color = '#34d399';
+                consoleStream.innerHTML = cachedReport ? cachedReport.replace(/\n/g, '<br>') : '[Empty Log Arrays]';
             } else {
                 btnPitch.classList.add('active');
-                consoleStream.style.color = '#eab308'; // Conversion gold alert color palette
-                consoleStream.innerHTML = cachedPitchText ? cachedPitchText.replace(/\n/g, '<br>') : '[Empty Core] No pitch matrix calculated.';
+                consoleStream.style.color = '#eab308';
+                consoleStream.innerHTML = cachedPitch ? cachedPitch.replace(/\n/g, '<br>') : '[Empty Conversion Scripts]';
             }
         }
     </script>
@@ -323,64 +278,89 @@ AUDIT_ENGINE_UI = r"""
 
 @script33_bp.route('/')
 def index():
-    return render_template_string(AUDIT_ENGINE_UI)
+    return render_template_string(ADVANCED_AUDIT_UI)
 
-@script33_bp.route('/run_audit')
-def run_audit():
-    raw_url = request.args.get('url', 'unknown.com')
-    
-    # Cleaning the incoming domain string value
-    parsed_url = urllib.parse.urlparse(raw_url)
-    domain = parsed_url.netloc if parsed_url.netloc else parsed_url.path
-    if domain.startswith("www."):
-        domain = domain[4:]
+@script33_bp.route('/run_live_audit')
+def run_live_audit():
+    raw_url = request.args.get('url', '').strip()
+    if not raw_url:
+        return jsonify({"status": "error", "message": "Domain source parameter mismatch."})
 
-    # Generating the live algorithmic deconstruction report values
-    # Perfect simulation mirroring exactly what you shared in your blueprint!
-    technical_report = f"""======================================================================
-🛰️ DEEP AUDIT BLUEPRINT FOR: {domain.upper()}
+    if not raw_url.startswith(('http://', 'https://')):
+        target_url = 'https://' + raw_url
+    else:
+        target_url = raw_url
+
+    parsed_domain = urllib.parse.urlparse(target_url).netloc
+
+    try:
+        # Request stream setup simulating high identity web browsers footprint
+        req = urllib.request.Request(
+            target_url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=8) as response:
+            html_content = response.read().decode('utf-8', errors='ignore')
+        
+        # --- HIGH ACCURACY REGEX TRACER ENGINE PATTERNS ---
+        has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js', html_content, re.IGNORECASE))
+        has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gmt\.js', html_content, re.IGNORECASE))
+        has_gsc = bool(re.search(r'google-site-verification|google\d+.*?\.html', html_content, re.IGNORECASE))
+        has_schema = bool(re.search(r'application/ld\+json|itemscope|itemtype="http://schema\.org', html_content, re.IGNORECASE))
+
+        # --- REAL-TIME DETAILED REPORT COMPILATION ---
+        technical_report = f"""======================================================================
+🛰️ ACCURATE LIVE RECON REPORT FOR: {parsed_domain.upper()}
 ======================================================================
 
-🗲 Core Infrastructure Stack:
-  • Engine Architecture / CMS : WordPress
-  • Server Connection Security: 🔒 SECURE (SSL Active)
-  • Initial Node Loading Speed: 1.83s
-
-🎯 Marketing Tracking Matrix:
-  • Facebook Pixel Integration: ❌ MISSING
-  • Google Analytics Network : 📊 DETECTED
-
-🔍 Critical On-Page SEO Nodes:
-  • Meta Title Content      : Best Document Scanning & Digitization Services | Ideal Doc System
-  • Meta Description Snippet : Ideal Doc System - digitize, organize & simplify your documents. We offer secure scanning, OCR, printing, binding, data entry & on-site services for businesses of all sizes.
-
-🌐 Brand Digital Footprints (Socials Linked):
-  • Connected Channels      : Facebook, Instagram, LinkedIn, Twitter/X
+🔍 Live Code Injection Stack Diagnostics:
+  • Google Analytics Token  : {"✅ ACTIVE / DETECTED" if has_ga else "❌ MISSING"}
+  • Google Search Console   : {"✅ ACTIVE / DETECTED" if has_gsc else "❌ MISSING"}
+  • Google Tag Manager      : {"✅ ACTIVE / DETECTED" if has_gtm else "❌ MISSING"}
+  • Structured Schema Data  : {"✅ ACTIVE / DETECTED" if has_schema else "❌ MISSING"}
 
 ----------------------------------------------------------------------
-Status: Data Stream Loaded. Switch to 'AI Conversion Pitch' Tab.
+[STATUS CODE]: 200 OK | Payload Map Extraction Complete.
 ----------------------------------------------------------------------"""
 
-    ai_pitch = f"""======================================================================
-💡 AUTOMATED CONVERSION SALES PITCH FOR: {domain.upper()}
+        # --- SMART SALES CLOSER AUTOMATED HOOK ---
+        missing_services = []
+        if not has_ga: missing_services.append("Google Analytics (Traffic Loss)")
+        if not has_gsc: missing_services.append("Search Console (Indexing/Rank Drop)")
+        if not has_gtm: missing_services.append("Tag Manager (Conversion Leak)")
+        if not has_schema: missing_services.append("Structured Schemas (No Rich Snippets)")
+
+        if missing_services:
+            leaks_text = "\n".join([f"  ⚠️ {idx+1}. {srv}" for idx, srv in enumerate(missing_services)])
+            pitch_script = f"""Hey! We just completed an engineering scan on '{parsed_domain}' and noticed you are missing key tracking layers: \n{', '.join(missing_services)}.\n\nWithout these elements active, you are flying blind regarding SEO indexing and traffic tracking parameters. We can deploy these fixes today!"""
+        else:
+            leaks_text = "  ✨ PERFECT STACK: All target script assets are loaded and tracked correctly on the server node."
+            pitch_script = f"Great work! '{parsed_domain}' has a highly optimized deployment architecture structure. We can scale your conversions via performance landing page funnels."
+
+        ai_pitch = f"""======================================================================
+💡 AUTOMATED VALUE-DRIVEN SALES HOOK
 ======================================================================
 
-🚨 CRITICAL REVENUE LEAKS IDENTIFIED:
-  1. MISSING FACEBOOK PIXEL: This website is losing money every single day! Visitors are browsing their document scanning services, but they cannot retarget them on Instagram or Facebook.
-  2. METRIC LOAD SPEED GAP: 1.83 seconds is decent, but optimizing WordPress database tables can lower this below 1.2s to boost conversions by up to 14%.
+🚨 INFRASTRUCTURE DEFICITS DETECTED:
+{leaks_text}
 
-🔥 HIGH-CONVERTING CLOSER PITCH SCRIPT:
-  "Hey, I noticed your site '{domain}' ranks well and looks great for document scanning, but you have a severe leak. You have Google Analytics running, but your Facebook Pixel is completely broken or missing. 
+🔥 CONVERSION HOOK COPY:
+"{pitch_script}" """
 
-  This means you are burning ad budget or losing warm organic leads without running smart remarketing ads. We can patch this leak, increase your site loading score, and scale your digital conversions within 48 hours. Let's lock in a call!" """
+        return jsonify({
+            "status": "success",
+            "domain": parsed_domain,
+            "google_analytics": has_ga,
+            "google_search_console": has_gsc,
+            "google_tag_manager": has_gtm,
+            "schema_markup": has_schema,
+            "technical_report": technical_report,
+            "ai_pitch": ai_pitch
+        })
 
-    return jsonify({
-        "domain": domain,
-        "tech_cms": "WordPress",
-        "ssl_status": "SECURE",
-        "fb_pixel": "MISSING",
-        "analytics": "DETECTED",
-        "load_speed": "1.83s",
-        "technical_report": technical_report,
-        "ai_pitch": ai_pitch
-    })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Could not access {parsed_domain}. Ensure domain is up or check blocking layers. Details: {str(e)}"
+        })
+
