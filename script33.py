@@ -7,13 +7,13 @@ import json
 
 script33_bp = Blueprint('script33', __name__)
 
-ULTIMATE_AUDIT_UI_V4 = r"""
+ULTIMATE_AUDIT_UI_V5 = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ORBEDGEMEDIA AUDIT ENGINE v4.0</title>
+  <title>ORBEDGEMEDIA AUDIT ENGINE v5.0</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -139,8 +139,8 @@ ULTIMATE_AUDIT_UI_V4 = r"""
         border-radius: 6px;
         padding: 15px;
         flex: 1;
-        min-height: 420px;
-        max-height: 650px;
+        min-height: 450px;
+        max-height: 700px;
         overflow-y: auto;
         font-size: 12px;
         line-height: 1.6;
@@ -150,6 +150,7 @@ ULTIMATE_AUDIT_UI_V4 = r"""
     .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; text-transform: uppercase; display: inline-block; }
     .badge-detected { background: rgba(16, 185, 129, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-missing { background: rgba(239, 68, 68, 0.15); color: var(--neon-red); border: 1px solid var(--neon-red); }
+    .badge-warning { background: rgba(234, 179, 8, 0.15); color: var(--neon-amber); border: 1px solid var(--neon-amber); }
 
     .status-footer {
         margin-top: 20px;
@@ -165,8 +166,8 @@ ULTIMATE_AUDIT_UI_V4 = r"""
 <body>
 
     <div class="header-panel">
-        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v4.0 (COMPLETE SEO MASTER)</span></div>
-        <div class="brand-sub">Real-Time Core Tracking Codes, PageSpeed, Schema Validation, Robots.txt & Sitemap Live Core System</div>
+        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v5.0 (ENTERPRISE MASTER)</span></div>
+        <div class="brand-sub">Real-Time Core Codes, PageSpeed, Advanced XML Indexing, Local & International SEO Multi-Vector Stream</div>
         
         <div class="input-row">
             <input type="text" id="target_url" class="url-input" placeholder="Enter target website URL (e.g., https://example.com)...">
@@ -177,7 +178,7 @@ ULTIMATE_AUDIT_UI_V4 = r"""
     <div class="studio-layout">
         
         <div class="panel">
-            <div class="panel-header">🎯 Comprehensive Signal Detection Matrix</div>
+            <div class="panel-header">🎯 Live Multi-Vector Signal Matrix</div>
             <div class="table-container">
                 <table class="matrix-table">
                     <thead>
@@ -221,8 +222,8 @@ ULTIMATE_AUDIT_UI_V4 = r"""
             const footer = document.getElementById('footer_log');
             const consoleStream = document.getElementById('terminal_console_stream');
             
-            footer.innerText = `📡 Connecting to target node. Deep mapping HTML tags, Robots, Sitemaps, and Schema architectures...`;
-            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[INITIALIZING] Running deep algorithmic scans & crawling code streams...</span>`;
+            footer.innerText = `📡 Deep Scanning: Fetching HTML headers, XML file mappings, Local & International SEO setups...`;
+            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[INITIALIZING] Deep core algorithms deploying over source channels...</span>`;
 
             try {
                 const response = await fetch(`${window.location.pathname.replace(/\/$/, "")}/run_live_audit?url=${encodeURIComponent(target)}`);
@@ -237,12 +238,14 @@ ULTIMATE_AUDIT_UI_V4 = r"""
                 const tableBody = document.getElementById('matrix_output_rows');
                 tableBody.innerHTML = `
                     <tr><td>Target Domain Mapping</td><td style="font-weight:bold; color:#fff;">${data.domain}</td></tr>
-                    <tr><td>Google Analytics (GA4/Gtag)</td><td><span class="badge ${data.google_analytics ? 'badge-detected' : 'badge-missing'}">${data.google_analytics ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Google Analytics (GA4)</td><td><span class="badge ${data.google_analytics ? 'badge-detected' : 'badge-missing'}">${data.google_analytics ? 'DETECTED' : 'MISSING'}</span></td></tr>
                     <tr><td>Google Search Console (GSC)</td><td><span class="badge ${data.google_search_console ? 'badge-detected' : 'badge-missing'}">${data.google_search_console ? 'DETECTED' : 'MISSING'}</span></td></tr>
                     <tr><td>Google Tag Manager (GTM)</td><td><span class="badge ${data.google_tag_manager ? 'badge-detected' : 'badge-missing'}">${data.google_tag_manager ? 'DETECTED' : 'MISSING'}</span></td></tr>
                     <tr><td>Schema Markup Verification</td><td><span class="badge ${data.schema_markup ? 'badge-detected' : 'badge-missing'}">${data.schema_markup ? 'DETECTED' : 'MISSING'}</span></td></tr>
-                    <tr><td>Robots.txt File Presence</td><td><span class="badge ${data.has_robots ? 'badge-detected' : 'badge-missing'}">${data.has_robots ? 'DETECTED' : 'MISSING'}</span></td></tr>
-                    <tr><td>XML Sitemap Discovery</td><td><span class="badge ${data.has_sitemap ? 'badge-detected' : 'badge-missing'}">${data.has_sitemap ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Robots.txt Presence</td><td><span class="badge ${data.has_robots ? 'badge-detected' : 'badge-missing'}">${data.has_robots ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>XML Sitemaps Count</td><td><span class="badge ${data.xml_count > 0 ? 'badge-detected' : 'badge-missing'}">${data.xml_count} XML FILES FOUND</span></td></tr>
+                    <tr><td>International SEO (Hreflang/Lang)</td><td><span class="badge ${data.intl_seo ? 'badge-detected' : 'badge-missing'}">${data.intl_seo ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Local SEO Optimization Matrix</td><td><span class="badge ${data.local_seo ? 'badge-detected' : 'badge-warning'}">${data.local_seo ? 'FOUND' : 'UNOPTIMIZED'}</span></td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Server Response (TTFB)</td><td style="color: var(--neon-green);">${data.ttfb}</td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Page Load Speed Latency</td><td style="color: var(--neon-cyan);">${data.page_load_speed}</td></tr>
                 `;
@@ -251,7 +254,7 @@ ULTIMATE_AUDIT_UI_V4 = r"""
                 cachedPitch = data.ai_pitch;
 
                 switchTab('report');
-                footer.innerText = `✅ Comprehensive 360° master technical audit completed for: ${data.domain}`;
+                footer.innerText = `✅ 100% Accurate Enterprise live analysis cycle completed for: ${data.domain}`;
 
             } catch(err) {
                 consoleStream.innerHTML = `<span style="color:var(--neon-red);">[FAULT] Connection interface pipeline timeout.</span>`;
@@ -284,7 +287,7 @@ ULTIMATE_AUDIT_UI_V4 = r"""
 
 @script33_bp.route('/')
 def index():
-    return render_template_string(ULTIMATE_AUDIT_UI_V4)
+    return render_template_string(ULTIMATE_AUDIT_UI_V5)
 
 @script33_bp.route('/run_live_audit')
 def run_live_audit():
@@ -304,7 +307,7 @@ def run_live_audit():
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         
-        # --- 1. CORE HTML SCAN & PAGESPEED METRICS ---
+        # --- 1. PAGESPEED & HTML ACQUISITION ---
         start_time = time.time()
         req_html = urllib.request.Request(clean_base_url, headers=headers)
         with urllib.request.urlopen(req_html, timeout=8) as response:
@@ -315,124 +318,155 @@ def run_live_audit():
         ttfb = f"{round(ttfb_duration, 3)}s"
         page_load_speed = f"{round(total_duration, 2)}s"
 
-        # Core Detection Regex Mappings
+        # Core Technical Trackers Regex Matching
         has_gsc = bool(re.search(r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', html_content, re.IGNORECASE))
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
         
-        # --- SCHEMA MARKUP DEEP DETECTION ---
+        # --- SCHEMA MARKUP ANALYSIS ---
         schema_matches = re.findall(r'<script\s+type=["\']application/ld\+json["\']>(.*?)</script>', html_content, re.DOTALL | re.IGNORECASE)
         has_schema = len(schema_matches) > 0
-        
         schema_summary = "❌ NO JSON-LD SCHEMA DETECTED"
-        schema_status_pitch = "Missing schemas completely. Google will struggle to understand structure."
+        schema_types_found = []
+
         if has_schema:
             try:
-                # Clean up and try parsing the first schema found to evaluate functionality
-                clean_json = schema_matches[0].strip()
-                parsed_json = json.loads(clean_json)
-                schema_type = parsed_json.get('@type', 'Detected')
-                schema_summary = f"✅ ACTIVE (Type: {schema_type}) - Working properly."
-                schema_status_pitch = f"Detected Type: '{schema_type}'. Structured metadata layer configuration is solid."
+                for match in schema_matches:
+                    clean_json = match.strip()
+                    parsed_json = json.loads(clean_json)
+                    if isinstance(parsed_json, dict):
+                        stype = parsed_json.get('@type')
+                        if stype: schema_types_found.append(stype)
+                    elif isinstance(parsed_json, list):
+                        for item in parsed_json:
+                            stype = item.get('@type')
+                            if stype: schema_types_found.append(stype)
+                
+                if schema_types_found:
+                    schema_summary = f"✅ ACTIVE (Detected Types: {', '.join(set(schema_types_found))}) - Working perfectly."
+                else:
+                    schema_summary = "✅ ACTIVE (Custom Complex Structured Blocks Localized)"
             except Exception:
-                schema_summary = "⚠️ DETECTED BUT CONTAINS STRUCTURAL ERROR (Invalid JSON Mapping)"
-                schema_status_pitch = "Schema script injection has code formatting errors. Fix immediately!"
+                schema_summary = "⚠️ DETECTED BUT CONTAINS STRUCTURAL ERROR (Invalid JSON Formatting)"
 
-        # --- 2. LIVE ROBOTS.TXT CHECKER NODE ---
+        # --- 2. INTERNATIONAL SEO DETECTOR ---
+        has_hreflang = bool(re.search(r'rel=["\']alternate["\']\s+hreflang=', html_content, re.IGNORECASE))
+        has_lang_attr = bool(re.search(r'<html\s+[^>]*?lang=', html_content, re.IGNORECASE))
+        intl_seo = has_hreflang or has_lang_attr
+        intl_summary = f"{"✅ ACTIVE" if intl_seo else "❌ MISSING"} (Hreflang Tags: {"FOUND" if has_hreflang else "NOT FOUND"}, Lang Attribute: {"FOUND" if has_lang_attr else "NOT FOUND"})"
+
+        # --- 3. LOCAL SEO DETECTOR ---
+        has_local_schema = any(t in ['LocalBusiness', 'Organization', 'PostalAddress'] for t in schema_types_found)
+        has_geo_tags = bool(re.search(r'geo\.position|ICBM|geo\.region', html_content, re.IGNORECASE))
+        has_contact_footprint = bool(re.search(r'tel:|phone|\+\d{1,4}\s?\d{10}', html_content, re.IGNORECASE))
+        local_seo = has_local_schema or has_geo_tags or has_contact_footprint
+        local_summary = f"{"✅ OPTIMIZED" if local_seo else "❌ UNOPTIMIZED"} (Local Schema: {"YES" if has_local_schema else "NO"}, Location Vectors: {"YES" if has_geo_tags else "NO"})"
+
+        # --- 4. ROBOTS.TXT CHECKER ---
         robots_url = f"{clean_base_url}/robots.txt"
         has_robots = False
         robots_content = "❌ Robots.txt file not found on server root path layer."
         try:
             req_robots = urllib.request.Request(robots_url, headers=headers)
-            with urllib.request.urlopen(req_robots, timeout=5) as resp_robots:
+            with urllib.request.urlopen(req_robots, timeout=4) as resp_robots:
                 if resp_robots.status == 200:
                     has_robots = True
                     robots_content = resp_robots.read().decode('utf-8', errors='ignore').strip()
         except Exception:
             pass
 
-        # --- 3. DYNAMIC XML SITEMAP SCANNER ENGINE ---
+        # --- 5. ADVANCED XML SITEMAPS DEEP ENGINE ---
         sitemap_url = f"{clean_base_url}/sitemap.xml"
-        has_sitemap = False
-        sitemap_content = "❌ Core sitemap file structure missing or restricted."
+        xml_files_discovered = []
+        
         try:
             req_site = urllib.request.Request(sitemap_url, headers=headers)
-            with urllib.request.urlopen(req_site, timeout=5) as resp_site:
+            with urllib.request.urlopen(req_site, timeout=4) as resp_site:
                 if resp_site.status == 200:
-                    has_sitemap = True
                     raw_sitemap = resp_site.read().decode('utf-8', errors='ignore').strip()
-                    # Just fetch initial 350 chars cleanly so terminal block layout doesn't break
-                    sitemap_content = (raw_sitemap[:350] + "\n... [Truncated Stream Link Data Content]") if len(raw_sitemap) > 350 else raw_sitemap
+                    # Trace sub sitemaps listed in indices
+                    found_links = re.findall(r'<loc>(https?://[^\s<>"]+?\.xml)</loc>', raw_sitemap, re.IGNORECASE)
+                    if found_links:
+                        xml_files_discovered = found_links
+                    else:
+                        xml_files_discovered.append(sitemap_url)
         except Exception:
             pass
 
-        # Fallback lookups inside robots data layer if direct url was restricted
-        if not has_sitemap and has_robots:
-            sitemap_find = re.findall(r'sitemap:\s*(^\s]+)', robots_content, re.IGNORECASE)
-            if sitemap_find:
-                has_sitemap = True
-                sitemap_content = f"✅ Verified via Robots Link Parameter Rule: {sitemap_find[0]}"
+        # Cross check sitemap variables inside Robots.txt rules mapping
+        if has_robots:
+            robots_sitemaps = re.findall(r'sitemap:\s*(https?://[^\s<>"]+)', robots_content, re.IGNORECASE)
+            for sm in robots_sitemaps:
+                if sm not in xml_files_discovered:
+                    xml_files_discovered.append(sm)
 
-        # Evaluate performance markers
-        seo_robots_status = "✅ PERFECT RULES SETUP" if has_robots and "Disallow:" in robots_content else "⚠️ LIVE BUT MISSING EXPLICIT DISALLOW INDEX RULES"
-        if not has_robots: seo_robots_status = "❌ CRITICAL DEFICIT (Search bots can index administrative loop systems)"
+        xml_count = len(xml_files_discovered)
+        sitemap_summary = f"❌ SITEMAP INFRASTRUCTURE ERROR"
+        sitemap_terminal_log = "No live indexing XML sitemaps parsed out."
+        
+        if xml_count > 0:
+            sitemap_summary = f"✅ ACTIVE ({xml_count} Sitemaps Mapped)"
+            sitemap_terminal_log = "\n".join([f"  🔗 [{i+1}] {link}" for i, link in enumerate(xml_files_discovered)])
 
-        seo_sitemap_status = "✅ CORE INTEGRATION ENGAGED" if has_sitemap else "❌ SEVERE SEO CRITICAL ERROR (Google indexation pipeline delayed)"
-
-        # --- COMPILE 100% ACCURATE TECHNICAL REPORT LOG PANEL ---
+        # --- COMPILE ENTERPRISE TECHNICAL LIVE LOGS ---
         technical_report = f"""======================================================================
-🛰️ ACCURATE DEEP RECON TECHNICAL REPORT FOR: {parsed_domain.upper()}
+🛰️ DEEP MASTER TECHNICAL AUDIT REPORT FOR: {parsed_domain.upper()}
 ======================================================================
 
-⚙️ Tracking & Indexing Verification Footprints:
-  • Google Analytics Status : {"✅ ACTIVE / DETECTED" if has_ga else "❌ MISSING LAYER"}
-  • Google Search Console   : {"✅ ACTIVE / DETECTED" if has_gsc else "❌ MISSING LAYER"}
-  • Google Tag Manager      : {"✅ ACTIVE / DETECTED" if has_gtm else "❌ MISSING LAYER"}
+⚙️ Tracking & Search Engine Integrations:
+  • Google Analytics Vector : {"✅ RUNNING / DETECTED" if has_ga else "❌ MISSING COMPONENT"}
+  • Google Search Console   : {"✅ RUNNING / DETECTED" if has_gsc else "❌ MISSING COMPONENT"}
+  • Google Tag Manager (GTM): {"✅ RUNNING / DETECTED" if has_gtm else "❌ MISSING COMPONENT"}
 
-📁 Core SEO Infrastructure Architecture Mapping:
-  • Structured Schema Data  : {schema_summary}
-  • Robots.txt Deployment    : {seo_robots_status}
-  • XML Sitemap Execution   : {seo_sitemap_status}
+📂 Indexation & Structural Architecture:
+  • Schema Data Alignment   : {schema_summary}
+  • Robots.txt Deployment    : {"✅ IN PLACE" if has_robots else "❌ MISSING FILE"}
+  • XML Sitemap Configuration: {sitemap_summary}
 
-⚡ PageSpeed Processing Telemetry Metrics:
+🌍 International & Local SEO Optimization Alignment:
+  • International Targeting : {intl_summary}
+  • Local Visibility Matrix  : {local_summary}
+
+⚡ PageSpeed Telemetry Processing Logs:
   • Time to First Byte (TTFB): {ttfb}
-  • Complete HTML Load Time : {page_load_speed}
+  • Full Pipeline Load Speed : {page_load_speed}
 
 ----------------------------------------------------------------------
-🤖 RAW ROBOTS.TXT CONTENT EXTRACTED:
+📁 SITEMAP REGISTRY FILE LIST DISCOVERED ({xml_count} files):
+----------------------------------------------------------------------
+{sitemap_terminal_log}
+
+----------------------------------------------------------------------
+🤖 RAW ROBOTS.TXT CONTENT MAP:
 ----------------------------------------------------------------------
 {robots_content}
-
-----------------------------------------------------------------------
-🗺️ LIVE SITEMAP FILE CORE ARCHITECTURE TRACE:
-----------------------------------------------------------------------
-{sitemap_content}
 
 ======================================================================"""
 
         # --- AUTOMATED INTEGRATED SALES PITCH CLOSER HOOK ---
         deficits = []
-        if not has_ga: deficits.append("Google Analytics Asset Mapping")
-        if not has_gsc: deficits.append("Google Search Console Search Indexing Node")
-        if not has_robots: deficits.append("Robots.txt Crawling Protection System")
-        if not has_sitemap: deficits.append("XML Sitemap Core Structure Layout")
-        if "CONTAINS STRUCTURAL ERROR" in schema_summary: deficits.append("Schema Layout Syntax Refactoring")
+        if not has_ga: deficits.append("Google Analytics Tracking Layers")
+        if not has_gsc: deficits.append("Google Search Console Framework")
+        if xml_count == 0: deficits.append("XML Sitemaps Deep Alignment File Setup")
+        if not intl_seo: deficits.append("International Audience Targeting Nodes (Hreflang)")
+        if not local_seo: deficits.append("Local SEO Structured Presence (Google Business)")
+        if "CONTAINS STRUCTURAL ERROR" in schema_summary: deficits.append("Schema Markup Structural Patch")
 
         if deficits:
             leaks_log = "\n".join([f"  ⚠️ {i+1}. {item}" for i, item in enumerate(deficits)])
-            pitch_hook = f"""Hey! We audited your technical architecture at '{parsed_domain}' and found critical structural deficiencies: \n{', '.join(deficits)}.\n\nYour Robots/Sitemap tracking nodes are unoptimized or restricted, causing index loops drops across Google nodes. Let's patch these parameters within 24 hours!"""
+            pitch_hook = f"""Hey! We audited your asset at '{parsed_domain}' and localized critical optimization leaks: \n{', '.join(deficits)}.\n\nYour site's International/Local SEO configuration or complex XML sub-sitemaps framework is currently lacking or broken. Let's fix this code block to skyrocket your search indexing scaling instantly!"""
         else:
-            leaks_log = "  ✨ ALL SYSTEM CHANNELS OPERATIONAL: System code tracking components are fully locked."
-            pitch_hook = f"Brilliant alignment! '{parsed_domain}' architecture elements successfully passed validation hooks. Ready for premium traffic conversion models execution!"
+            leaks_log = "  ✨ PERFECT MATRIX: All digital visibility trackers passed server check constraints loops."
+            pitch_hook = f"Incredible execution structure! '{parsed_domain}' has zero structural deficits. We are ready to launch scaling performance campaign arrays!"
 
         ai_pitch = f"""======================================================================
-💡 VALUE-DRIVEN CONVERSION SALES PIPELINE
+💡 VALUE-DRIVEN BUSINESS ACQUISITION CLOSER
 ======================================================================
 
-🚨 DETECTED WEB ARCHITECTURE REVENUE LOSS MARKERS:
+🚨 CONVERSION AND STRUCTURAL DEFICITS LOGGED:
 {leaks_log}
 
-🔥 DYNAMIC CONVERSION SCRIPTS VALUE CLOSER:
+🔥 PREMIUM CLOSER CONVERSION PITCH TEXT:
 "{pitch_hook}" """
 
         return jsonify({
@@ -443,7 +477,9 @@ def run_live_audit():
             "google_tag_manager": has_gtm,
             "schema_markup": has_schema,
             "has_robots": has_robots,
-            "has_sitemap": has_sitemap,
+            "xml_count": xml_count,
+            "intl_seo": intl_seo,
+            "local_seo": local_seo,
             "ttfb": ttfb,
             "page_load_speed": page_load_speed,
             "technical_report": technical_report,
@@ -453,5 +489,5 @@ def run_live_audit():
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": f"Handshake failed with target url node location. Details: {str(e)}"
+            "message": f"Connection pipeline halted while tracking target url domain node. Details: {str(e)}"
         })
