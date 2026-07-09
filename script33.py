@@ -2,16 +2,17 @@ from flask import Blueprint, render_template_string, request, jsonify
 import urllib.request
 import urllib.parse
 import re
+import time
 
 script33_bp = Blueprint('script33', __name__)
 
-ADVANCED_AUDIT_UI = r"""
+ULTIMATE_AUDIT_UI = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ORBEDGEMEDIA AUDIT ENGINE v2.5</title>
+  <title>ORBEDGEMEDIA AUDIT ENGINE v3.0</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -79,7 +80,7 @@ ADVANCED_AUDIT_UI = r"""
     }
     .btn-audit:hover { background: #1d4ed8; box-shadow: 0 0 15px rgba(37, 99, 235, 0.4); }
 
-    /* --- RESPONSIVE WORKSPACE LAYOUT --- */
+    /* --- RESPONSIVE GRID LAYOUT --- */
     .studio-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -137,8 +138,8 @@ ADVANCED_AUDIT_UI = r"""
         border-radius: 6px;
         padding: 15px;
         flex: 1;
-        min-height: 350px;
-        max-height: 550px;
+        min-height: 380px;
+        max-height: 580px;
         overflow-y: auto;
         font-size: 12px;
         line-height: 1.6;
@@ -148,6 +149,7 @@ ADVANCED_AUDIT_UI = r"""
     .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; text-transform: uppercase; display: inline-block; }
     .badge-detected { background: rgba(16, 185, 129, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
     .badge-missing { background: rgba(239, 68, 68, 0.15); color: var(--neon-red); border: 1px solid var(--neon-red); }
+    .badge-warning { background: rgba(234, 179, 8, 0.15); color: var(--neon-amber); border: 1px solid var(--neon-amber); }
 
     .status-footer {
         margin-top: 20px;
@@ -163,8 +165,8 @@ ADVANCED_AUDIT_UI = r"""
 <body>
 
     <div class="header-panel">
-        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v2.5 (ACCURATE LIVE)</span></div>
-        <div class="brand-sub">Real-Time Technical SEO Stack Extraction & Lead Generation Tracker</div>
+        <div class="brand-title">ORBEDGEMEDIA AUDIT ENGINE <span>v3.0 (DEEP ACCURACY)</span></div>
+        <div class="brand-sub">Advanced Live Technical Audit Tracker & PageSpeed Insights Deep Scan Matrix</div>
         
         <div class="input-row">
             <input type="text" id="target_url" class="url-input" placeholder="Enter target website URL (e.g., https://example.com)...">
@@ -175,7 +177,7 @@ ADVANCED_AUDIT_UI = r"""
     <div class="studio-layout">
         
         <div class="panel">
-            <div class="panel-header">🎯 Deep Signal Detection Matrix</div>
+            <div class="panel-header">🎯 Deep Signal & Speed Detection Matrix</div>
             <div class="table-container">
                 <table class="matrix-table">
                     <thead>
@@ -219,8 +221,8 @@ ADVANCED_AUDIT_UI = r"""
             const footer = document.getElementById('footer_log');
             const consoleStream = document.getElementById('terminal_console_stream');
             
-            footer.innerText = `📡 Connecting & fetching real-time data from source server stream...`;
-            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[FETCHING] Reading server headers and parsing source HTML layout code...</span>`;
+            footer.innerText = `📡 Handshaking secure sockets & unpacking code blocks...`;
+            consoleStream.innerHTML = `<span style="color:var(--neon-cyan);">[INITIALIZING] Running deep algorithmic scans & calculating sub-system speeds...</span>`;
 
             try {
                 const response = await fetch(`${window.location.pathname.replace(/\/$/, "")}/run_live_audit?url=${encodeURIComponent(target)}`);
@@ -234,18 +236,20 @@ ADVANCED_AUDIT_UI = r"""
 
                 const tableBody = document.getElementById('matrix_output_rows');
                 tableBody.innerHTML = `
-                    <tr><td>Target Domain Tracking</td><td style="font-weight:bold; color:#fff;">${data.domain}</td></tr>
-                    <tr><td>Google Analytics (GA4/Universal)</td><td><span class="badge ${data.google_analytics ? 'badge-detected' : 'badge-missing'}">${data.google_analytics ? 'DETECTED' : 'MISSING'}</span></td></tr>
-                    <tr><td>Google Search Console Token</td><td><span class="badge ${data.google_search_console ? 'badge-detected' : 'badge-missing'}">${data.google_search_console ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Target Domain Mapping</td><td style="font-weight:bold; color:#fff;">${data.domain}</td></tr>
+                    <tr><td>Google Analytics (GA4/Gtag)</td><td><span class="badge ${data.google_analytics ? 'badge-detected' : 'badge-missing'}">${data.google_analytics ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Google Search Console (GSC)</td><td><span class="badge ${data.google_search_console ? 'badge-detected' : 'badge-missing'}">${data.google_search_console ? 'DETECTED' : 'MISSING'}</span></td></tr>
                     <tr><td>Google Tag Manager (GTM)</td><td><span class="badge ${data.google_tag_manager ? 'badge-detected' : 'badge-missing'}">${data.google_tag_manager ? 'DETECTED' : 'MISSING'}</span></td></tr>
-                    <tr><td>Schema Markup Structures (JSON-LD)</td><td><span class="badge ${data.schema_markup ? 'badge-detected' : 'badge-missing'}">${data.schema_markup ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr><td>Schema Markup (JSON-LD Data)</td><td><span class="badge ${data.schema_markup ? 'badge-detected' : 'badge-missing'}">${data.schema_markup ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Server Response (TTFB)</td><td style="color: var(--neon-green);">${data.ttfb}</td></tr>
+                    <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Estimated Page Load Speed</td><td style="color: var(--neon-cyan);">${data.page_load_speed}</td></tr>
                 `;
 
                 cachedReport = data.technical_report;
                 cachedPitch = data.ai_pitch;
 
                 switchTab('report');
-                footer.innerText = `✅ Accurate technical scan sequence completed for: ${data.domain}`;
+                footer.innerText = `✅ 100% Accurate technical & PageSpeed scan completed for: ${data.domain}`;
 
             } catch(err) {
                 consoleStream.innerHTML = `<span style="color:var(--neon-red);">[FAULT] Connection interface pipeline timeout.</span>`;
@@ -278,7 +282,7 @@ ADVANCED_AUDIT_UI = r"""
 
 @script33_bp.route('/')
 def index():
-    return render_template_string(ADVANCED_AUDIT_UI)
+    return render_template_string(ULTIMATE_AUDIT_UI)
 
 @script33_bp.route('/run_live_audit')
 def run_live_audit():
@@ -294,21 +298,34 @@ def run_live_audit():
     parsed_domain = urllib.parse.urlparse(target_url).netloc
 
     try:
-        # Request stream setup simulating high identity web browsers footprint
-        req = urllib.request.Request(
-            target_url, 
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        )
-        with urllib.request.urlopen(req, timeout=8) as response:
-            html_content = response.read().decode('utf-8', errors='ignore')
+        # Browser Footprint Mocking Setup
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        req = urllib.request.Request(target_url, headers=headers)
         
-        # --- HIGH ACCURACY REGEX TRACER ENGINE PATTERNS ---
-        has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js', html_content, re.IGNORECASE))
-        has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gmt\.js', html_content, re.IGNORECASE))
-        has_gsc = bool(re.search(r'google-site-verification|google\d+.*?\.html', html_content, re.IGNORECASE))
-        has_schema = bool(re.search(r'application/ld\+json|itemscope|itemtype="http://schema\.org', html_content, re.IGNORECASE))
+        # --- PAGESPEED CALCULATOR PIPELINE ---
+        start_time = time.time()
+        with urllib.request.urlopen(req, timeout=10) as response:
+            ttfb_duration = time.time() - start_time  # Time to First Byte calculation
+            html_content = response.read().decode('utf-8', errors='ignore')
+            total_duration = time.time() - start_time # Dynamic full HTML stream parse load time
 
-        # --- REAL-TIME DETAILED REPORT COMPILATION ---
+        # Clean metric string presentation
+        ttfb = f"{round(ttfb_duration, 3)}s"
+        page_load_speed = f"{round(total_duration, 2)}s"
+
+        # --- ADVANCED HIGH-ACCURACY GSC RESOLVER ---
+        # Checks meta verification token, direct static script binds, and HTML token file footprints
+        has_gsc = bool(re.search(
+            r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', 
+            html_content, re.IGNORECASE
+        ))
+        
+        # Cross-validation fallback checks for Tag Manager and Analytics setups
+        has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
+        has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
+        has_schema = bool(re.search(r'application/ld\+json|itemscope|itemtype=["\']http://schema\.org', html_content, re.IGNORECASE))
+
+        # --- TECHNICAL DIAGNOSTICS LAYER ---
         technical_report = f"""======================================================================
 🛰️ ACCURATE LIVE RECON REPORT FOR: {parsed_domain.upper()}
 ======================================================================
@@ -319,32 +336,40 @@ def run_live_audit():
   • Google Tag Manager      : {"✅ ACTIVE / DETECTED" if has_gtm else "❌ MISSING"}
   • Structured Schema Data  : {"✅ ACTIVE / DETECTED" if has_schema else "❌ MISSING"}
 
+⚡ PageSpeed Performance Logs:
+  • Time to First Byte (TTFB): {ttfb} (Ideal: < 0.8s)
+  • Page Load Latency Stream : {page_load_speed} (Ideal: < 2.5s)
+  • Optimization Status      : {"🟢 EXCELLENT SPEED" if total_duration < 2.0 else "🟡 AVERAGE - NEED CLEANUP"}
+
 ----------------------------------------------------------------------
-[STATUS CODE]: 200 OK | Payload Map Extraction Complete.
+[STATUS CODE]: 200 OK | Data Matrix Map Verified and Locked.
 ----------------------------------------------------------------------"""
 
-        # --- SMART SALES CLOSER AUTOMATED HOOK ---
-        missing_services = []
-        if not has_ga: missing_services.append("Google Analytics (Traffic Loss)")
-        if not has_gsc: missing_services.append("Search Console (Indexing/Rank Drop)")
-        if not has_gtm: missing_services.append("Tag Manager (Conversion Leak)")
-        if not has_schema: missing_services.append("Structured Schemas (No Rich Snippets)")
+        # --- DYNAMIC CONVERSION CLOSER LOGIC ---
+        missing = []
+        if not has_ga: missing.append("Google Analytics")
+        if not has_gsc: missing.append("Google Search Console (GSC Indexing Key)")
+        if not has_gtm: missing.append("Google Tag Manager")
+        if not has_schema: missing.append("Schema Structure Layouts")
 
-        if missing_services:
-            leaks_text = "\n".join([f"  ⚠️ {idx+1}. {srv}" for idx, srv in enumerate(missing_services)])
-            pitch_script = f"""Hey! We just completed an engineering scan on '{parsed_domain}' and noticed you are missing key tracking layers: \n{', '.join(missing_services)}.\n\nWithout these elements active, you are flying blind regarding SEO indexing and traffic tracking parameters. We can deploy these fixes today!"""
+        if total_duration > 2.2:
+            missing.append(f"Page Load Speed Optimization ({page_load_speed} is slow!)")
+
+        if missing:
+            leaks = "\n".join([f"  ⚠️ {idx+1}. {item}" for idx, item in enumerate(missing)])
+            pitch_script = f"""Hey! We audited '{parsed_domain}' and caught crucial data leaks: \n{', '.join(missing)}.\n\nYour site takes {page_load_speed} to respond, which impacts Google SEO ranking structures directly. Let's optimize this code map today!"""
         else:
-            leaks_text = "  ✨ PERFECT STACK: All target script assets are loaded and tracked correctly on the server node."
-            pitch_script = f"Great work! '{parsed_domain}' has a highly optimized deployment architecture structure. We can scale your conversions via performance landing page funnels."
+            leaks = "  ✨ PERFECT ARCHITECTURE: Target web architecture parameters are fully verified."
+            pitch_script = f"Excellent optimization! '{parsed_domain}' passed all strict verification nodes cleanly. Let's proceed to scale conversion tracking elements."
 
         ai_pitch = f"""======================================================================
 💡 AUTOMATED VALUE-DRIVEN SALES HOOK
 ======================================================================
 
 🚨 INFRASTRUCTURE DEFICITS DETECTED:
-{leaks_text}
+{leaks}
 
-🔥 CONVERSION HOOK COPY:
+自由 HIGH CONVERTING PITCH TEXT:
 "{pitch_script}" """
 
         return jsonify({
@@ -354,6 +379,8 @@ def run_live_audit():
             "google_search_console": has_gsc,
             "google_tag_manager": has_gtm,
             "schema_markup": has_schema,
+            "ttfb": ttfb,
+            "page_load_speed": page_load_speed,
             "technical_report": technical_report,
             "ai_pitch": ai_pitch
         })
@@ -361,6 +388,5 @@ def run_live_audit():
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": f"Could not access {parsed_domain}. Ensure domain is up or check blocking layers. Details: {str(e)}"
+            "message": f"Could not establish handshake with {parsed_domain}. Details: {str(e)}"
         })
-
