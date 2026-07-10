@@ -327,7 +327,7 @@ def run_live_audit():
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         
-        # --- 1. RAW RESOURCE HARVESTING & SPEEDS ---
+        # --- 1. RESOURCE HARVESTING & INITIAL LATENCIES ---
         start_time = time.time()
         req_html = urllib.request.Request(clean_base_url, headers=headers)
         
@@ -362,7 +362,7 @@ def run_live_audit():
             
         page_load_speed = f"{round(total_duration, 2)}s{speed_status}"
 
-        # Analytical Identifiers
+        # Analytics Mappings
         has_gsc = bool(re.search(r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', html_content, re.IGNORECASE))
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
@@ -371,7 +371,7 @@ def run_live_audit():
         if not has_ga: performance_score -= 3
         if not has_gtm: performance_score -= 3
 
-        # Schema Markup Evaluator
+        # Schema Evaluator
         schema_matches = re.findall(r'<script\s+type=["\']application/ld\+json["\']>(.*?)</script>', html_content, re.DOTALL | re.IGNORECASE)
         has_schema = len(schema_matches) > 0
         schema_types_found = []
@@ -386,7 +386,7 @@ def run_live_audit():
             except Exception: pass
         else: performance_score -= 5
 
-        # International & Local SEO Verification Elements
+        # SEO Mapping Indicators
         has_hreflang = bool(re.search(r'rel=["\']alternate["\']\s+hreflang=', html_content, re.IGNORECASE))
         has_lang_attr = bool(re.search(r'<html\s+[^>]*?lang=', html_content, re.IGNORECASE))
         intl_seo = has_hreflang or has_lang_attr
@@ -395,13 +395,13 @@ def run_live_audit():
         has_contact_footprint = bool(re.search(r'tel:|phone|\+\d{1,4}\s?\d{10}', html_content, re.IGNORECASE))
         local_seo = has_local_schema or has_contact_footprint
 
-        # Local Maps & GMB Setup Rules
+        # Maps Verification Flags
         has_gmb = bool(re.search(r'google\.com/maps/place|business\.google\.com|g\.page|maps\.google\.com.*?cid=\d+', html_content, re.IGNORECASE)) or has_local_schema
         if not has_gmb: performance_score -= 5
         has_my_maps = bool(re.search(r'google\.com/maps/d/embed|google\.com/maps/d/viewer', html_content, re.IGNORECASE))
         if not has_my_maps: performance_score -= 5
 
-        # Backlinks Map System Calculations
+        # Backlinks Calculation Mapping
         found_ext_links = re.findall(r'href=["\'](https?://([^\s<>"\']+?))["\']', html_content, re.IGNORECASE)
         external_domains = []
         for l, d in found_ext_links:
@@ -415,13 +415,11 @@ def run_live_audit():
         
         if external_domains:
             top_sources = external_domains[:8]
-            backlinks_sources = ", ".join(top_sources[:3]) + ("..." if len(external_domains) > 3 else "")
             sources_report_list = "\n".join([f"  🔗 Inbound Node Origin Source Mapping [{idx+1}]: https://{dom}" for idx, dom in enumerate(top_sources)])
         else:
-            backlinks_sources = "Internal Routing Anchors Maintained"
             sources_report_list = "  ⚠️ Empty Set: No external referral authority targets linked."
 
-        # Social Profiles Mapping Extraction
+        # Social Channels Matrix Extraction
         social_patterns = {
             "Facebook": r'facebook\.com/[A-Za-z0-9\._\-]+', "Instagram": r'instagram\.com/[A-Za-z0-9\._\-]+',
             "Twitter/X": r'(twitter\.com|x\.com)/[A-Za-z0-9\._\-]+', "LinkedIn": r'linkedin\.com/(company|in)/[A-Za-z0-9\._\-]+',
@@ -439,7 +437,7 @@ def run_live_audit():
         social_count = len(detected_socials)
         social_platforms = ", ".join(detected_socials) if detected_socials else "None Linked"
 
-        # Local Listing Maps Directory Elements
+        # Citation Frameworks Mapping
         directory_patterns = {
             "Yelp": r'yelp\.com/biz/[A-Za-z0-9\._\-]+', "YellowPages": r'yellowpages\.com/[A-Za-z0-9\._\-]+',
             "TripAdvisor": r'tripadvisor\.com/[A-Za-z0-9\._\-]+', "Foursquare": r'foursquare\.com/[A-Za-z0-9\._\-]+',
@@ -456,35 +454,45 @@ def run_live_audit():
                 directory_report_logs.append(f"  ⚠️ Mapped Footprint Absent: {dir_name} directory endpoint missing backlink")
         directory_count = len(detected_directories)
 
-        # UI/UX Responsive Layout Arrays Checking
+        # UX/UI Engine Assets Checking
         has_manifest = bool(re.search(r'rel=["\']manifest["\']\s+href=', html_content, re.IGNORECASE)) or "manifest.json" in html_content
         mobile_friendly = bool(re.search(r'<meta\s+[^>]*?name=["\']viewport["\'][^>]*?content=["\'][^>]*?width=device-width', html_content, re.IGNORECASE))
         responsive = bool(re.search(r'@media\s*\(', html_content, re.IGNORECASE)) or mobile_friendly
         if not has_manifest: performance_score -= 3
         if not mobile_friendly: performance_score -= 5
 
-        # Security Layers Checks
+        # Integrity Validation Filters
         has_mixed_content = is_https and (("src=\"http://" in html_content) or ("href=\"http://" in html_content))
         malware_detected = bool(re.search(r'eval\(gzinflate\(base64_decode|unescape\([\'"]%75%31[\'"]\)', html_content, re.IGNORECASE))
         if not is_https: performance_score -= 10
         if malware_detected: performance_score -= 20
 
-        # --- 10. NEW COMPETITOR AUDIT SIMULATION GENERATOR ENGINE ---
+        # --- 2. RE-ENGINEERED COMPETITOR AUDIT ENGINE (FIXED LOOP SCOPING) ---
         meta_keywords_match = re.search(r'<meta\s+name=["\']keywords["\']\s+content=["\'](.*?)["\']', html_content, re.IGNORECASE)
-        extracted_raw_tags = meta_keywords_match.group(1).split(',') if meta_keywords_match else []
+        extracted_raw_tags = []
+        if meta_keywords_match:
+            extracted_raw_tags = [t.strip() for t in meta_keywords_match.group(1).split(',') if t.strip()]
+        
         if len(extracted_raw_tags) < 2:
             title_text = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE)
             clean_title = title_text.group(1) if title_text else parsed_domain
             extracted_raw_tags = [w.strip() for w in clean_title.split() if len(w) > 4][:5]
         
-        comp_keywords_list = [f"{kw.lower()} strategy review", f"best {kw.lower()} service", f"local {kw.lower()} pricing", f"top alternative to {parsed_domain}"] if extracted_raw_tags else ["organic search growth keywords", "localized market transactional terms", "brand awareness queries", "high traffic volume keywords"]
+        comp_keywords_list = []
+        if extracted_raw_tags:
+            for item_tag in extracted_raw_tags:
+                comp_keywords_list.append(f"{item_tag.lower()} strategy review")
+                comp_keywords_list.append(f"best {item_tag.lower()} service")
+            comp_keywords_list = comp_keywords_list[:6]
+        else:
+            comp_keywords_list = ["organic search growth keywords", "localized market transactional terms", "brand awareness queries", "high traffic volume keywords"]
+            
         comp_keywords_count = len(comp_keywords_list)
-
         comp_top_pages = [f"https://{parsed_domain}/services", f"https://{parsed_domain}/about", f"https://{parsed_domain}/pricing", f"https://{parsed_domain}/blog/industry-trends"]
         comp_pages_count = len(comp_top_pages)
         comp_strategy = "AGGRESSIVE CONTENT PUSH" if internal_links > 20 else "CONSERVATIVE FOOTPRINT"
 
-        # Crawl Protocols Mapped Assets
+        # Server Directives
         robots_url = f"{clean_base_url}/robots.txt"
         has_robots, robots_content = False, "The robots.txt layout was not found on the root server level."
         try:
@@ -511,7 +519,7 @@ def run_live_audit():
 
         if performance_score < 20: performance_score = 20
 
-        # --- SECTIONAL SYSTEM MASTER REPORT DATA OUTPUT GENERATOR ---
+        # --- SECTIONAL MASTER REPORT DATA LOGS ---
         technical_report = f"""======================================================================
 🛰️ SYSTEM REPORT VECTOR ENGINE (COMPREHENSIVE SEGMENTATION ARCHITECTURE)
 ======================================================================
@@ -569,7 +577,7 @@ def run_live_audit():
 
 ======================================================================"""
 
-        # --- VALUE DRIVEN CONVERSION PITCH MAKER + PERFORMANCE PIE CHART SYSTEM ---
+        # --- VALUE DRIVEN CONVERSION PITCH MAKER ---
         deficits = []
         if not is_https: deficits.append("Critical Server Security (SSL)")
         if not mobile_friendly: deficits.append("Mobile UX Viewport Scalability Rules")
@@ -622,7 +630,7 @@ def run_live_audit():
             "schema_markup": has_schema, "has_robots": has_robots, "xml_count": xml_count,
             "intl_seo": intl_seo, "local_seo": local_seo, "has_gmb": has_gmb,
             "has_my_maps": has_my_maps, "backlinks_count": backlinks_count,
-            "backlinks_sources": backlinks_sources, "social_count": social_count,
+            "backlinks_sources": parsed_domain, "social_count": social_count,
             "social_platforms": social_platforms, "directory_count": directory_count,
             "has_manifest": has_manifest, "mobile_friendly": mobile_friendly,
             "responsive": responsive, "is_https": is_https, "has_mixed_content": has_mixed_content,
