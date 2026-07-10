@@ -177,7 +177,6 @@ ULTIMATE_AUDIT_UI_V7 = r"""
 
     <div class="studio-layout">
         
-        <!-- Left Summary Matrix -->
         <div class="panel">
             <div class="panel-header">🎯 Live Multi-Vector Signal Matrix</div>
             <div class="table-container">
@@ -195,7 +194,6 @@ ULTIMATE_AUDIT_UI_V7 = r"""
             </div>
         </div>
 
-        <!-- Right Terminal View Blocks -->
         <div class="panel">
             <div class="tabs-header">
                 <button class="tab-btn active" id="tab_report" onclick="switchTab('report')">📝 Technical & Explanatory Logs</button>
@@ -252,6 +250,9 @@ ULTIMATE_AUDIT_UI_V7 = r"""
                     <tr style="background: rgba(6, 182, 212, 0.03);"><td>Google My Business (GMB)</td><td><span class="badge ${data.has_gmb ? 'badge-detected' : 'badge-missing'}">${data.has_gmb ? 'FOUND / VERIFIED' : 'NOT FOUND'}</span></td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.03);"><td>Google My Maps (GMM) Embed</td><td><span class="badge ${data.has_my_maps ? 'badge-detected' : 'badge-warning'}">${data.has_my_maps ? 'CUSTOM INTEG' : 'STANDARD MAP OR MISSING'}</span></td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.03);"><td>Live Estimated Backlinks</td><td><span class="badge badge-detected">${data.backlinks_count} INBOUND NODES</span><div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Sources: ${data.backlinks_sources}</div></td></tr>
+
+                    <tr style="background: rgba(37, 99, 235, 0.03);"><td>Social Profiles Detected</td><td><span class="badge ${data.social_count > 0 ? 'badge-detected' : 'badge-missing'}">${data.social_count} PROFILES FOUND</span><div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Platforms: ${data.social_platforms}</div></td></tr>
+                    <tr style="background: rgba(37, 99, 235, 0.03);"><td>Directory Listings Schema</td><td><span class="badge ${data.directory_count > 0 ? 'badge-detected' : 'badge-warning'}">${data.directory_count} CITATIONS CONNECTED</span></td></tr>
 
                     <tr style="background: rgba(16, 185, 129, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Server Response (TTFB)</td><td style="color: var(--neon-green);">${data.ttfb}</td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Page Load Speed Latency</td><td style="color: var(--neon-cyan);">${data.page_load_speed}</td></tr>
@@ -324,7 +325,7 @@ def run_live_audit():
 
         ttfb = f"{round(ttfb_duration, 3)}s"
         
-        # Performance scoring initialization
+        # Performance scoring system mapping
         performance_score = 100
         if total_duration < 1.5:
             speed_status = " [GOOD / FAST]"
@@ -333,18 +334,18 @@ def run_live_audit():
             performance_score -= 15
         else:
             speed_status = " [POOR / SLOW]"
-            performance_score -= 35
+            performance_score -= 30
             
         page_load_speed = f"{round(total_duration, 2)}s{speed_status}"
 
-        # Baseline Signal Trackers & Deductions for visual layout performance
+        # Baseline Signal Trackers
         has_gsc = bool(re.search(r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', html_content, re.IGNORECASE))
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
         
-        if not has_gsc: performance_score -= 10
-        if not has_ga: performance_score -= 10
-        if not has_gtm: performance_score -= 10
+        if not has_gsc: performance_score -= 5
+        if not has_ga: performance_score -= 5
+        if not has_gtm: performance_score -= 5
 
         # Schema Markup Extractions
         schema_matches = re.findall(r'<script\s+type=["\']application/ld\+json["\']>(.*?)</script>', html_content, re.DOTALL | re.IGNORECASE)
@@ -380,7 +381,7 @@ def run_live_audit():
 
         # --- 2. GOOGLE MY BUSINESS (GMB) PROFILE CHECKER ---
         has_gmb = bool(re.search(r'google\.com/maps/place|business\.google\.com|g\.page|maps\.google\.com.*?cid=\d+', html_content, re.IGNORECASE)) or has_local_schema
-        if not has_gmb: performance_score -= 15
+        if not has_gmb: performance_score -= 10
         gmb_explanation = "This website has a proper Google Business Profile setup configuration linking geographic values seamlessly." if has_gmb else "CRITICAL DEFICIT: This website is completely missing its direct Google Business Profile connection hooks."
 
         # --- 3. GOOGLE MY MAPS (GMM) VECTOR SCANNER ---
@@ -405,16 +406,63 @@ def run_live_audit():
         backlinks_count = (external_links * 7) + (internal_links * 2) + 12 if internal_links > 0 else 0
         
         if external_domains:
-            top_sources = external_domains[:6]
-            backlinks_sources = ", ".join(top_sources) + ("..." if len(external_domains) > 6 else "")
-            sources_report_list = "\n".join([f"  🔗 Origin Link Source [{idx+1}]: https://{dom}" for idx, dom in enumerate(top_sources)])
+            top_sources = external_domains[:8]
+            backlinks_sources = ", ".join(top_sources[:3]) + ("..." if len(external_domains) > 3 else "")
+            sources_report_list = "\n".join([f"  🔗 Link Origin Target Node [{idx+1}]: https://{dom}" for idx, dom in enumerate(top_sources)])
         else:
             backlinks_sources = "Internal Resource Anchors Only"
-            sources_report_list = "  ⚠️ No high authority external reference domain footprints identified on the primary landing path."
+            sources_report_list = "  ⚠️ No external authority reference domains discovered on home directory paths."
             
         backlink_explanation = f"Analysis identified an estimated {backlinks_count} active referral paths routing link-juice back to this root host tracking hub."
 
-        # --- 5. ROBOTS & SITEMAPS CRADLE WITH FULL EXPLANATIONS ---
+        # --- 5. NEW: SOCIAL MEDIA SIGNAL TRACKER ---
+        social_patterns = {
+            "Facebook": r'facebook\.com/[A-Za-z0-9\._\-]+',
+            "Instagram": r'instagram\.com/[A-Za-z0-9\._\-]+',
+            "Twitter/X": r'(twitter\.com|x\.com)/[A-Za-z0-9\._\-]+',
+            "LinkedIn": r'linkedin\.com/(company|in)/[A-Za-z0-9\._\-]+',
+            "YouTube": r'youtube\.com/(c|channel|user|@)[A-Za-z0-9\._\-]+',
+            "Pinterest": r'pinterest\.com/[A-Za-z0-9\._\-]+'
+        }
+        
+        detected_socials = []
+        social_report_logs = []
+        for platform, pattern in social_patterns.items():
+            match = re.search(pattern, html_content, re.IGNORECASE)
+            if match:
+                detected_socials.append(platform)
+                social_report_logs.append(f"  📱 {platform} Profile Target : Verified Connected -> Link: https://{match.group(0)}")
+            else:
+                social_report_logs.append(f"  ❌ {platform} Profile Target : NOT FOUND")
+                
+        social_count = len(detected_socials)
+        social_platforms = ", ".join(detected_socials) if detected_socials else "None Detected"
+        if social_count == 0: performance_score -= 10
+
+        # --- 6. NEW: LOCAL DIRECTORY CITATION & LISTING MATRIX ---
+        directory_patterns = {
+            "Yelp": r'yelp\.com/biz/[A-Za-z0-9\._\-]+',
+            "YellowPages": r'yellowpages\.com/[A-Za-z0-9\._\-]+',
+            "TripAdvisor": r'tripadvisor\.com/[A-Za-z0-9\._\-]+',
+            "Foursquare": r'foursquare\.com/[A-Za-z0-9\._\-]+',
+            "Justdial": r'justdial\.com/[A-Za-z0-9\._\-]+',
+            "Yext": r'yext\.com'
+        }
+        
+        detected_directories = []
+        directory_report_logs = []
+        for dir_name, pattern in directory_patterns.items():
+            match = re.search(pattern, html_content, re.IGNORECASE)
+            if match:
+                detected_directories.append(dir_name)
+                directory_report_logs.append(f"  🏢 {dir_name} Citation Link : CONNECTED -> https://{match.group(0)}")
+            else:
+                directory_report_logs.append(f"  ⚠️ {dir_name} Citation Link : No explicit footer backlink footprint mapped")
+                
+        directory_count = len(detected_directories)
+        if directory_count == 0: performance_score -= 5
+
+        # --- 7. ROBOTS & SITEMAPS CRADLE WITH FULL EXPLANATIONS ---
         robots_url = f"{clean_base_url}/robots.txt"
         has_robots = False
         robots_content = "The robots.txt layout was not found on the root server level."
@@ -457,8 +505,8 @@ def run_live_audit():
 
         sitemap_terminal_log = "\n".join([f"  📊 Found XML Map Link [{i+1}]: {link}" for i, link in enumerate(xml_files_discovered)]) if xml_files_discovered else "  [No visible reference URLs mapped]"
 
-        # Force valid boundaries for metrics gauge chart visual simulation
-        if performance_score < 30: performance_score = 35
+        # Boundary check for chart output display safety
+        if performance_score < 25: performance_score = 25
 
         # --- COMPILE COMPREHENSIVE RECON REPORT MASTER PANEL ---
         technical_report = f"""======================================================================
@@ -487,13 +535,23 @@ def run_live_audit():
   • Strategic Geo-Targeting Analysis:
     {my_maps_explanation}
 
-[5] FULL DETECTED BACKLINKS SOURCE REGISTRY DISCOVERY:
+[5] DETECTED BACKLINKS SOURCE REGISTRY DISCOVERY:
 ----------------------------------------------------------------------
   • Inbound Linking Nodes Calculated: {backlink_explanation}
   • Discovered Reference Mappings & Domains:
 {sources_report_list}
 
-[6] ROBOTS CRAWL DIRECTIVES MANAGEMENT LOGS:
+[6] SOCIAL MEDIA INTEGRATION FOOTPRINTS:
+----------------------------------------------------------------------
+  • Active Platform Configuration Breakdown:
+{"\n".join(social_report_logs)}
+
+[7] LOCAL BUSINESS DIRECTORY LISTINGS & CITATIONS:
+----------------------------------------------------------------------
+  • Profile Footprint Identification Mappings:
+{"\n".join(directory_report_logs)}
+
+[8] ROBOTS CRAWL DIRECTIVES MANAGEMENT LOGS:
 ----------------------------------------------------------------------
   • Accessibility Verdict: {robots_explanation}
   • File Raw View Output:
@@ -501,7 +559,7 @@ def run_live_audit():
   {robots_content}
   -------------------------------------------------------------
 
-[7] XML SITE MAP STRUCTURAL MAPPING DATA:
+[9] XML SITE MAP STRUCTURAL MAPPING DATA:
 ----------------------------------------------------------------------
   • Index Coverage Analysis: {sitemap_explanation}
   • Target Destination Links Extracted:
@@ -511,19 +569,20 @@ def run_live_audit():
 
         # --- VALUE DRIVEN CONVERSION PITCH MAKER + PERFORMANCE PIE CHART SYSTEM ---
         deficits = []
-        if not has_ga: deficits.append("Google Analytics Tracking Setup")
-        if not has_gmb: deficits.append("Google Business Local GMB Connection")
-        if not has_my_maps: deficits.append("Custom Google My Maps Citation Layer Grid Embed")
-        if backlinks_count < 30: deficits.append("High Authority Referral Linking Cluster Configuration")
+        if not has_ga: deficits.append("Google Analytics Tracking Hub Setup")
+        if not has_gmb: deficits.append("Google Business Local GMB Connection Profile")
+        if not has_my_maps: deficits.append("Custom Google My Maps Dynamic Layers Embedding")
+        if social_count < 3: deficits.append("Active Multi-Channel Social Optimization Strategy")
+        if directory_count < 2: deficits.append("High Authority Local Directories Listing Matrix")
+        if backlinks_count < 30: deficits.append("High Performance Inbound Referral Backlinks Architecture")
 
         if deficits:
             leaks_log = "\n".join([f"  ⚠️ DEFICIT [{i+1}]: {item}" for i, item in enumerate(deficits)])
-            pitch_hook = f"Hey! We mapped your live production node at '{parsed_domain}' and verified crucial optimization drops: {', '.join(deficits)}. Your local map mapping structures or dynamic link maps are missing, costing you high conversion leads. Let's overhaul this framework within 24 hours!"
+            pitch_hook = f"Hey! We mapped your live production node at '{parsed_domain}' and verified crucial optimization drops: {', '.join(deficits)}. Your social syndication vectors, maps routing layers, or brand visibility indexes are unoptimized, costing you business leads. Let's overhaul this framework within 24 hours!"
         else:
-            leaks_log = "  ✨ PERFECT SYSTEM METRICS: The host platform configuration alignment satisfies optimal configuration standards."
-            pitch_hook = f"Outstanding setup alignment! '{parsed_domain}' layout structure passes advanced schema validations, map layers mapping, and inbound links tracking securely."
+            leaks_log = "  ✨ PERFECT SYSTEM METRICS: The host platform configurations completely satisfy premium optimization parameters."
+            pitch_hook = f"Outstanding setup alignment! '{parsed_domain}' architecture successfully satisfies comprehensive schema guidelines, authority linking arrays, and local omnipresence layers."
 
-        # CSS Simulated Pie/Donut Chart layout block calculation
         pie_chart_color = "#ef4444" if performance_score < 60 else ("#eab308" if performance_score < 80 else "#10b981")
         
         ai_pitch = f"""======================================================================
@@ -571,6 +630,9 @@ def run_live_audit():
             "has_my_maps": has_my_maps,
             "backlinks_count": backlinks_count,
             "backlinks_sources": backlinks_sources,
+            "social_count": social_count,
+            "social_platforms": social_platforms,
+            "directory_count": directory_count,
             "ttfb": ttfb,
             "page_load_speed": page_load_speed,
             "technical_report": technical_report,
