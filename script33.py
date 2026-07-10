@@ -177,6 +177,7 @@ ULTIMATE_AUDIT_UI_V7 = r"""
 
     <div class="studio-layout">
         
+        <!-- Left Summary Matrix -->
         <div class="panel">
             <div class="panel-header">🎯 Live Multi-Vector Signal Matrix</div>
             <div class="table-container">
@@ -194,6 +195,7 @@ ULTIMATE_AUDIT_UI_V7 = r"""
             </div>
         </div>
 
+        <!-- Right Terminal View Blocks -->
         <div class="panel">
             <div class="tabs-header">
                 <button class="tab-btn active" id="tab_report" onclick="switchTab('report')">📝 Technical & Explanatory Logs</button>
@@ -322,21 +324,28 @@ def run_live_audit():
 
         ttfb = f"{round(ttfb_duration, 3)}s"
         
-        # Dynamic Speed Performance Status Mapping
+        # Performance scoring initialization
+        performance_score = 100
         if total_duration < 1.5:
             speed_status = " [GOOD / FAST]"
         elif total_duration < 3.0:
             speed_status = " [AVERAGE]"
+            performance_score -= 15
         else:
             speed_status = " [POOR / SLOW]"
+            performance_score -= 35
             
         page_load_speed = f"{round(total_duration, 2)}s{speed_status}"
 
-        # Baseline Signal Trackers
+        # Baseline Signal Trackers & Deductions for visual layout performance
         has_gsc = bool(re.search(r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', html_content, re.IGNORECASE))
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
         
+        if not has_gsc: performance_score -= 10
+        if not has_ga: performance_score -= 10
+        if not has_gtm: performance_score -= 10
+
         # Schema Markup Extractions
         schema_matches = re.findall(r'<script\s+type=["\']application/ld\+json["\']>(.*?)</script>', html_content, re.DOTALL | re.IGNORECASE)
         has_schema = len(schema_matches) > 0
@@ -355,6 +364,8 @@ def run_live_audit():
                             if stype: schema_types_found.append(stype)
             except Exception:
                 pass
+        else:
+            performance_score -= 10
 
         # International & Local SEO Blocks
         has_hreflang = bool(re.search(r'rel=["\']alternate["\']\s+hreflang=', html_content, re.IGNORECASE))
@@ -369,14 +380,16 @@ def run_live_audit():
 
         # --- 2. GOOGLE MY BUSINESS (GMB) PROFILE CHECKER ---
         has_gmb = bool(re.search(r'google\.com/maps/place|business\.google\.com|g\.page|maps\.google\.com.*?cid=\d+', html_content, re.IGNORECASE)) or has_local_schema
-        gmb_explanation = "✅ GMB Setup Token Identified! Website maps signals share clean local routing loops to Google local maps packs." if has_gmb else "❌ CRITICAL DEFICIT: No explicit Google Business Profile (GMB) redirection layout anchor found inside source HTML nodes."
+        if not has_gmb: performance_score -= 15
+        gmb_explanation = "This website has a proper Google Business Profile setup configuration linking geographic values seamlessly." if has_gmb else "CRITICAL DEFICIT: This website is completely missing its direct Google Business Profile connection hooks."
 
         # --- 3. GOOGLE MY MAPS (GMM) VECTOR SCANNER ---
         has_my_maps = bool(re.search(r'google\.com/maps/d/embed|google\.com/maps/d/viewer', html_content, re.IGNORECASE))
+        if not has_my_maps: performance_score -= 10
         if has_my_maps:
-            my_maps_explanation = "✅ CUSTOM GOOGLE MY MAPS DETECTED! Website uses an advanced interactive custom map layer layout (/maps/d/). This injects hyper-targeted geographical citations directly into local crawling index arrays."
+            my_maps_explanation = "ADVANCED INTEGRATION FOUND: Your platform uses a highly customized Google My Maps custom layer layer grid which embeds high-density targeted maps location structures into search loops."
         else:
-            my_maps_explanation = "⚠️ STANDARD OR MISSING MY MAPS: Site either has no map or uses a plain standard Google Map iframe. It misses out on custom geofenced schema vectors created via Google My Maps platform."
+            my_maps_explanation = "STANDARD OR MISSING MAP ARCHITECTURE: The site only runs a basic generic static layout maps element. It completely drops advanced geo-fencing advantages."
 
         # --- 4. ACCURATE LIVE BACKLINKS ESTIMATOR & SOURCE EXTRACTION ---
         found_ext_links = re.findall(r'href=["\'](https?://([^\s<>"\']+?))["\']', html_content, re.IGNORECASE)
@@ -391,20 +404,21 @@ def run_live_audit():
         
         backlinks_count = (external_links * 7) + (internal_links * 2) + 12 if internal_links > 0 else 0
         
-        # Format the mapping source display output
         if external_domains:
-            top_sources = external_domains[:4]
-            backlinks_sources = ", ".join(top_sources) + ("..." if len(external_domains) > 4 else "")
+            top_sources = external_domains[:6]
+            backlinks_sources = ", ".join(top_sources) + ("..." if len(external_domains) > 6 else "")
+            sources_report_list = "\n".join([f"  🔗 Origin Link Source [{idx+1}]: https://{dom}" for idx, dom in enumerate(top_sources)])
         else:
             backlinks_sources = "Internal Resource Anchors Only"
+            sources_report_list = "  ⚠️ No high authority external reference domain footprints identified on the primary landing path."
             
-        backlink_explanation = f"📊 Live Trace Results: Mapped an estimated total of **{backlinks_count} active incoming referral backlinks nodes** processing domain index values.\n🌐 Detected Origin Mappings: {backlinks_sources}"
+        backlink_explanation = f"Analysis identified an estimated {backlinks_count} active referral paths routing link-juice back to this root host tracking hub."
 
         # --- 5. ROBOTS & SITEMAPS CRADLE WITH FULL EXPLANATIONS ---
         robots_url = f"{clean_base_url}/robots.txt"
         has_robots = False
-        robots_content = "❌ Robots.txt file not found on server root path layer."
-        robots_explanation = "⚠️ Crawl protection parameters completely exposed. Administrative layers can be openly tracked by crawler instances."
+        robots_content = "The robots.txt layout was not found on the root server level."
+        robots_explanation = "Crawl rules are entirely open or standard, exposing default directory layers to search engine bots."
         
         try:
             req_robots = urllib.request.Request(robots_url, headers=headers)
@@ -413,7 +427,7 @@ def run_live_audit():
                     has_robots = True
                     robots_content = resp_robots.read().decode('utf-8', errors='ignore').strip()
                     disallows_count = len(re.findall(r'^Disallow:', robots_content, re.MULTILINE | re.IGNORECASE))
-                    robots_explanation = f"✅ Active layout containing {disallows_count} implicit Disallow tracking rules constraint matrices."
+                    robots_explanation = f"Your site contains a healthy operational robots.txt configuration enforcing {disallows_count} custom access constraint directives."
         except Exception:
             pass
 
@@ -436,89 +450,111 @@ def run_live_audit():
             pass
 
         xml_count = len(xml_files_discovered)
-        sitemap_explanation = "❌ Indexing delay alert: No operational sitemaps active."
+        sitemap_explanation = "Indexing speed could be compromised because no explicit working XML index manifests were identified."
         if xml_count > 0:
             if estimated_pages_count == 0: estimated_pages_count = xml_count * 15
-            sitemap_explanation = f"✅ Operating {xml_count} structural XML files containing roughly **{estimated_pages_count} submission pages**."
+            sitemap_explanation = f"The core infrastructure successfully exposes {xml_count} layout maps tracking roughly {estimated_pages_count} submission endpoints."
 
-        sitemap_terminal_log = "\n".join([f"  🔗 [{i+1}] {link}" for i, link in enumerate(xml_files_discovered)]) if xml_files_discovered else "  [None]"
+        sitemap_terminal_log = "\n".join([f"  📊 Found XML Map Link [{i+1}]: {link}" for i, link in enumerate(xml_files_discovered)]) if xml_files_discovered else "  [No visible reference URLs mapped]"
+
+        # Force valid boundaries for metrics gauge chart visual simulation
+        if performance_score < 30: performance_score = 35
 
         # --- COMPILE COMPREHENSIVE RECON REPORT MASTER PANEL ---
         technical_report = f"""======================================================================
-🛰️ ACCURATE MASTER RECON AUDIT REPORT FOR: {parsed_domain.upper()}
+🛰️ FULL SYSTEM RECONNAISSANCE AUDIT SUMMARY REPORT FOR: {parsed_domain.upper()}
 ======================================================================
 
-⚙️ Core Tracking & Search Engine Handshakes:
-  • Google Analytics Target : {"✅ INSTALLED" if has_ga else "❌ MISSING NODE"}
-  • Google Search Console   : {"✅ INSTALLED" if has_gsc else "❌ MISSING NODE"}
-  • Google Tag Manager (GTM): {"✅ INSTALLED" if has_gtm else "❌ MISSING NODE"}
-  • Schema Data Arrays      : {"✅ VALIDATED" if has_schema else "❌ NO JSON-LD MAPPED"}
+[1] CORE SEARCH ENGINE HANDSHAKE TRACKING ARCHITECTURE:
+----------------------------------------------------------------------
+  • Google Analytics Tool Set : {"✅ FULLY INSTALLED AND TRACKING PASSIVE TRAFFIC" if has_ga else "❌ COMPLETELY MISSING FROM PAGE LOGS"}
+  • Google Search Console Hub : {"✅ PROPER SITE VERIFICATION ATTRIBUTE LOCATED" if has_gsc else "❌ SITE DEVOID OF PROPER VERIFICATION TOKENS"}
+  • Google Tag Manager Unit   : {"✅ CONTAINER LOADS SECURELY IN SOURCE ARRAYS" if has_gtm else "❌ RUNNING RAW WITHOUT A MANAGED CENTRAL WRAPPER"}
+  • JSON-LD Structured Schema : {"✅ EXTRACTED RICH STRUCTURED METADATA SCHEMAS" if has_schema else "❌ NO HIGH VALUE STRUCTURED SCHEMAS RECOVERED"}
 
-🌍 Omnipresent SEO Target Alignment:
-  • International Target    : {intl_summary}
-  • Local Visibility Target : {local_summary}
+[2] PERFORMANCE TIMING ANALYSIS:
+----------------------------------------------------------------------
+  • Server Init Handshake (TTFB): {ttfb} (Time it takes to initialize raw responses)
+  • Page Asset Resource Speed  : {page_load_speed} (Total time required for data streams)
 
-⚡ PageSpeed Processing Core Vectors:
-  • Time to First Byte (TTFB): {ttfb}
-  • Total Resource Load Latency: {page_load_speed}
+[3] GOOGLE MY BUSINESS (GMB) LOCAL PROFILE TRACKING:
+----------------------------------------------------------------------
+  • Status Verification Analysis:
+    {gmb_explanation}
 
+[4] CUSTOM GOOGLE MY MAPS (GMM) LAYER INTEGRATION:
 ----------------------------------------------------------------------
-🏢 GOOGLE MY BUSINESS (GMB) & LOCAL VISIBILITY STATUS:
-----------------------------------------------------------------------
-💡 EXPLANATION LOG:
-{gmb_explanation}
+  • Strategic Geo-Targeting Analysis:
+    {my_maps_explanation}
 
+[5] FULL DETECTED BACKLINKS SOURCE REGISTRY DISCOVERY:
 ----------------------------------------------------------------------
-🗺️ GOOGLE MY MAPS (GMM) CUSTOM MAP LAYER ENGINE:
-----------------------------------------------------------------------
-💡 EXPLANATION LOG:
-{my_maps_explanation}
+  • Inbound Linking Nodes Calculated: {backlink_explanation}
+  • Discovered Reference Mappings & Domains:
+{sources_report_list}
 
+[6] ROBOTS CRAWL DIRECTIVES MANAGEMENT LOGS:
 ----------------------------------------------------------------------
-🔗 LIVE ESTIMATED DOMAIN BACKLINKS RECON VERIFICATION:
-----------------------------------------------------------------------
-💡 LINK METRICS EXPLANATION:
-{backlink_explanation}
+  • Accessibility Verdict: {robots_explanation}
+  • File Raw View Output:
+  -------------------------------------------------------------
+  {robots_content}
+  -------------------------------------------------------------
 
+[7] XML SITE MAP STRUCTURAL MAPPING DATA:
 ----------------------------------------------------------------------
-🤖 ROBOTS.TXT CRAWL RULES SUMMARY EXPLANATION:
-----------------------------------------------------------------------
-💡 EXPLANATION: {robots_explanation}
-📄 CONTENT MAP:
-{robots_content}
-
-----------------------------------------------------------------------
-🗺️ XML SITEMAPS REGISTRY ARCHITECTURE EXPLANATION:
-----------------------------------------------------------------------
-💡 EXPLANATION: {sitemap_explanation}
-📊 DISCOVERED XML LINKS:
+  • Index Coverage Analysis: {sitemap_explanation}
+  • Target Destination Links Extracted:
 {sitemap_terminal_log}
 
 ======================================================================"""
 
-        # --- VALUE DRIVEN CONVERSION PITCH MAKER ---
+        # --- VALUE DRIVEN CONVERSION PITCH MAKER + PERFORMANCE PIE CHART SYSTEM ---
         deficits = []
-        if not has_ga: deficits.append("Google Analytics Tracker")
-        if not has_gmb: deficits.append("Google My Business Core Connect")
-        if not has_my_maps: deficits.append("Google My Maps Citation Layer Embed")
-        if backlinks_count < 30: deficits.append("High Authority Inbound Backlinks Architecture")
+        if not has_ga: deficits.append("Google Analytics Tracking Setup")
+        if not has_gmb: deficits.append("Google Business Local GMB Connection")
+        if not has_my_maps: deficits.append("Custom Google My Maps Citation Layer Grid Embed")
+        if backlinks_count < 30: deficits.append("High Authority Referral Linking Cluster Configuration")
 
         if deficits:
-            leaks_log = "\n".join([f"  ⚠️ {i+1}. {item}" for i, item in enumerate(deficits)])
+            leaks_log = "\n".join([f"  ⚠️ DEFICIT [{i+1}]: {item}" for i, item in enumerate(deficits)])
             pitch_hook = f"Hey! We mapped your live production node at '{parsed_domain}' and verified crucial optimization drops: {', '.join(deficits)}. Your local map mapping structures or dynamic link maps are missing, costing you high conversion leads. Let's overhaul this framework within 24 hours!"
         else:
-            leaks_log = "  ✨ ALL CLEAR: Local visibility vectors, backlink matrix structures and tracking systems are performing at peak configurations."
+            leaks_log = "  ✨ PERFECT SYSTEM METRICS: The host platform configuration alignment satisfies optimal configuration standards."
             pitch_hook = f"Outstanding setup alignment! '{parsed_domain}' layout structure passes advanced schema validations, map layers mapping, and inbound links tracking securely."
 
+        # CSS Simulated Pie/Donut Chart layout block calculation
+        pie_chart_color = "#ef4444" if performance_score < 60 else ("#eab308" if performance_score < 80 else "#10b981")
+        
         ai_pitch = f"""======================================================================
-💡 PREMIUM CONVERSION SALES PIPELINE CLOSER
+💡 PREMIUM HIGH CONVERSION SALES CONVERSION HOOK PIPELINE
 ======================================================================
 
-🚨 CRITICAL STRUCTURAL ARCHITECTURE DEFICITS LOGGED:
+🚨 CRITICAL SYSTEM HOLES IDENTIFIED ON YOUR PLATFORM FRAMEWORK:
 {leaks_log}
 
-🔥 CUSTOMER CONVERSION ACTION SCRIPT TEXT:
-"{pitch_hook}" """
+🔥 CUSTOMER OUTREACH SALES ACTION CONVERSION TEXT:
+----------------------------------------------------------------------
+"{pitch_hook}"
+----------------------------------------------------------------------
+
+----------------------------------------------------------------------
+📈 SYSTEM PERFORMANCE AUDIT OVERALL GRADE (VISUAL MATRIX)
+----------------------------------------------------------------------
+<div style="margin: 20px 0; background: #02040a; border: 1px solid rgba(6,182,212,0.15); padding: 25px; border-radius: 8px; text-align: center; font-family: monospace;">
+    <div style="font-size: 14px; color: var(--neon-cyan); font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Overall Architecture Health Index Score</div>
+    <div style="display: inline-block; width: 140px; height: 140px; border-radius: 50%; background: conic-gradient({pie_chart_color} 0% {performance_score}%, #1e293b {performance_score}% 100%); padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        <div style="background: #0b1329; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #fff; box-shadow: inset 0 0 10px rgba(0,0,0,0.6);">
+            {performance_score}%
+        </div>
+    </div>
+    <div style="margin-top: 15px; font-size: 11px; color: var(--text-gray); line-height: 1.5;">
+        <span style="color: #10b981; font-weight: bold;">■ Optimization Present</span> | <span style="color: #ef4444; font-weight: bold;">■ System Deficits / Core Holes</span>
+        <br><br>
+        <span style="color: #f3f4f6;">Performance Matrix Breakdown calculation logic incorporates Response Speeds, active Analytical validation vectors, Rich Metadata tags, and localized SEO Visibility maps setups.</span>
+    </div>
+</div>
+======================================================================"""
 
         return jsonify({
             "status": "success",
