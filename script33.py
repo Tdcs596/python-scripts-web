@@ -254,6 +254,15 @@ ULTIMATE_AUDIT_UI_V7 = r"""
                     <tr style="background: rgba(37, 99, 235, 0.03);"><td>Social Profiles Detected</td><td><span class="badge ${data.social_count > 0 ? 'badge-detected' : 'badge-missing'}">${data.social_count} PROFILES FOUND</span><div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Platforms: ${data.social_platforms}</div></td></tr>
                     <tr style="background: rgba(37, 99, 235, 0.03);"><td>Directory Listings Schema</td><td><span class="badge ${data.directory_count > 0 ? 'badge-detected' : 'badge-warning'}">${data.directory_count} CITATIONS CONNECTED</span></td></tr>
 
+                    <tr style="background: rgba(234, 179, 8, 0.03);"><td>Manifest.json App File</td><td><span class="badge ${data.has_manifest ? 'badge-detected' : 'badge-missing'}">${data.has_manifest ? 'DETECTED' : 'MISSING'}</span></td></tr>
+                    <tr style="background: rgba(234, 179, 8, 0.03);"><td>Mobile Friendly Framework</td><td><span class="badge ${data.mobile_friendly ? 'badge-detected' : 'badge-warning'}">${data.mobile_friendly ? 'OPTIMIZED' : 'CHECK VIEWPORT'}</span></td></tr>
+                    <tr style="background: rgba(234, 179, 8, 0.03);"><td>Responsive Media Elements</td><td><span class="badge ${data.responsive ? 'badge-detected' : 'badge-warning'}">${data.responsive ? 'PASSED' : 'NON-RESPONSIVE ARRAYS'}</span></td></tr>
+
+                    <tr style="background: rgba(239, 68, 68, 0.03);"><td>HTTPS Security Shield</td><td><span class="badge ${data.is_https ? 'badge-detected' : 'badge-missing'}">${data.is_https ? 'SECURE (HTTPS)' : 'INSECURE (HTTP)'}</span></td></tr>
+                    <tr style="background: rgba(239, 68, 68, 0.03);"><td>Mixed Content Elements</td><td><span class="badge ${data.has_mixed_content ? 'badge-missing' : 'badge-detected'}">${data.has_mixed_content ? 'RISK DETECTED' : 'CLEAN LAYER'}</span></td></tr>
+                    <tr style="background: rgba(239, 68, 68, 0.03);"><td>Security Enforcement Headers</td><td><span class="badge ${data.security_headers_count > 1 ? 'badge-detected' : 'badge-warning'}">${data.security_headers_count}/3 ACTIVATED</span></td></tr>
+                    <tr style="background: rgba(239, 68, 68, 0.03);"><td>Malware Threat Clearance</td><td><span class="badge ${data.malware_detected ? 'badge-missing' : 'badge-detected'}">${data.malware_detected ? 'THREAT FOUND' : 'CLEAN & SAFE'}</span></td></tr>
+
                     <tr style="background: rgba(16, 185, 129, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Server Response (TTFB)</td><td style="color: var(--neon-green);">${data.ttfb}</td></tr>
                     <tr style="background: rgba(6, 182, 212, 0.05); font-weight: bold;"><td style="color: var(--neon-cyan);">Page Load Speed Latency</td><td style="color: var(--neon-cyan);">${data.page_load_speed}</td></tr>
                 `;
@@ -318,10 +327,30 @@ def run_live_audit():
         # --- 1. CORE HTML PASSTHROUGH & TIMINGS ---
         start_time = time.time()
         req_html = urllib.request.Request(clean_base_url, headers=headers)
+        
+        # Dynamic connection parsing headers extractor
+        is_https = parsed_url.scheme.lower() == "https"
+        security_headers_count = 0
+        has_x_frame = False
+        has_csp = False
+        has_hsts = False
+
         with urllib.request.urlopen(req_html, timeout=8) as response:
             ttfb_duration = time.time() - start_time
             html_content = response.read().decode('utf-8', errors='ignore')
             total_duration = time.time() - start_time
+            
+            # Read security headers from real-time dynamic response
+            resp_headers = response.info()
+            if 'X-Frame-Options' in resp_headers:
+                has_x_frame = True
+                security_headers_count += 1
+            if 'Content-Security-Policy' in resp_headers:
+                has_csp = True
+                security_headers_count += 1
+            if 'Strict-Transport-Security' in resp_headers:
+                has_hsts = True
+                security_headers_count += 1
 
         ttfb = f"{round(ttfb_duration, 3)}s"
         
@@ -331,10 +360,10 @@ def run_live_audit():
             speed_status = " [GOOD / FAST]"
         elif total_duration < 3.0:
             speed_status = " [AVERAGE]"
-            performance_score -= 15
+            performance_score -= 10
         else:
             speed_status = " [POOR / SLOW]"
-            performance_score -= 30
+            performance_score -= 25
             
         page_load_speed = f"{round(total_duration, 2)}s{speed_status}"
 
@@ -343,9 +372,9 @@ def run_live_audit():
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
         
-        if not has_gsc: performance_score -= 5
-        if not has_ga: performance_score -= 5
-        if not has_gtm: performance_score -= 5
+        if not has_gsc: performance_score -= 4
+        if not has_ga: performance_score -= 4
+        if not has_gtm: performance_score -= 4
 
         # Schema Markup Extractions
         schema_matches = re.findall(r'<script\s+type=["\']application/ld\+json["\']>(.*?)</script>', html_content, re.DOTALL | re.IGNORECASE)
@@ -366,7 +395,7 @@ def run_live_audit():
             except Exception:
                 pass
         else:
-            performance_score -= 10
+            performance_score -= 8
 
         # International & Local SEO Blocks
         has_hreflang = bool(re.search(r'rel=["\']alternate["\']\s+hreflang=', html_content, re.IGNORECASE))
@@ -381,14 +410,14 @@ def run_live_audit():
 
         # --- 2. GOOGLE MY BUSINESS (GMB) PROFILE CHECKER ---
         has_gmb = bool(re.search(r'google\.com/maps/place|business\.google\.com|g\.page|maps\.google\.com.*?cid=\d+', html_content, re.IGNORECASE)) or has_local_schema
-        if not has_gmb: performance_score -= 10
+        if not has_gmb: performance_score -= 8
         gmb_explanation = "This website has a proper Google Business Profile setup configuration linking geographic values seamlessly." if has_gmb else "CRITICAL DEFICIT: This website is completely missing its direct Google Business Profile connection hooks."
 
         # --- 3. GOOGLE MY MAPS (GMM) VECTOR SCANNER ---
         has_my_maps = bool(re.search(r'google\.com/maps/d/embed|google\.com/maps/d/viewer', html_content, re.IGNORECASE))
-        if not has_my_maps: performance_score -= 10
+        if not has_my_maps: performance_score -= 8
         if has_my_maps:
-            my_maps_explanation = "ADVANCED INTEGRATION FOUND: Your platform uses a highly customized Google My Maps custom layer layer grid which embeds high-density targeted maps location structures into search loops."
+            my_maps_explanation = "ADVANCED INTEGRATION FOUND: Your platform uses a highly customized Google My Maps custom layer grid which embeds high-density targeted maps location structures into search loops."
         else:
             my_maps_explanation = "STANDARD OR MISSING MAP ARCHITECTURE: The site only runs a basic generic static layout maps element. It completely drops advanced geo-fencing advantages."
 
@@ -415,7 +444,7 @@ def run_live_audit():
             
         backlink_explanation = f"Analysis identified an estimated {backlinks_count} active referral paths routing link-juice back to this root host tracking hub."
 
-        # --- 5. NEW: SOCIAL MEDIA SIGNAL TRACKER ---
+        # --- 5. SOCIAL MEDIA SIGNAL TRACKER ---
         social_patterns = {
             "Facebook": r'facebook\.com/[A-Za-z0-9\._\-]+',
             "Instagram": r'instagram\.com/[A-Za-z0-9\._\-]+',
@@ -437,16 +466,15 @@ def run_live_audit():
                 
         social_count = len(detected_socials)
         social_platforms = ", ".join(detected_socials) if detected_socials else "None Detected"
-        if social_count == 0: performance_score -= 10
+        if social_count == 0: performance_score -= 5
 
-        # --- 6. NEW: LOCAL DIRECTORY CITATION & LISTING MATRIX ---
+        # --- 6. LOCAL DIRECTORY CITATION & LISTING MATRIX ---
         directory_patterns = {
             "Yelp": r'yelp\.com/biz/[A-Za-z0-9\._\-]+',
             "YellowPages": r'yellowpages\.com/[A-Za-z0-9\._\-]+',
             "TripAdvisor": r'tripadvisor\.com/[A-Za-z0-9\._\-]+',
             "Foursquare": r'foursquare\.com/[A-Za-z0-9\._\-]+',
-            "Justdial": r'justdial\.com/[A-Za-z0-9\._\-]+',
-            "Yext": r'yext\.com'
+            "Justdial": r'justdial\.com/[A-Za-z0-9\._\-]+'
         }
         
         detected_directories = []
@@ -460,9 +488,28 @@ def run_live_audit():
                 directory_report_logs.append(f"  ⚠️ {dir_name} Citation Link : No explicit footer backlink footprint mapped")
                 
         directory_count = len(detected_directories)
-        if directory_count == 0: performance_score -= 5
+        if directory_count == 0: performance_score -= 4
 
-        # --- 7. ROBOTS & SITEMAPS CRADLE WITH FULL EXPLANATIONS ---
+        # --- 7. NEW: MANIFEST.JSON, MOBILE FRIENDLY & RESPONSIVENESS AUDIT ---
+        has_manifest = bool(re.search(r'rel=["\']manifest["\']\s+href=', html_content, re.IGNORECASE)) or "manifest.json" in html_content
+        mobile_friendly = bool(re.search(r'<meta\s+[^>]*?name=["\']viewport["\'][^>]*?content=["\'][^>]*?width=device-width', html_content, re.IGNORECASE))
+        responsive = bool(re.search(r'@media\s*\(', html_content, re.IGNORECASE)) or mobile_friendly
+        
+        if not has_manifest: performance_score -= 5
+        if not mobile_friendly: performance_score -= 10
+        if not responsive: performance_score -= 10
+
+        # --- 8. NEW: EXTRA SECURITY AUDIT PARAMETERS ---
+        has_mixed_content = is_https and (("src=\"http://" in html_content) or ("href=\"http://" in html_content))
+        # Basic static pattern matching scanning malware redirection layouts or eval injections
+        malware_detected = bool(re.search(r'eval\(gzinflate\(base64_decode|unescape\([\'"]%75%31[\'"]\)|<iframe[^>]*?src=["\']http://[A-Za-z0-9\-]+\.[a-z]{2,4}/[a-z\?\.=0-9]*["\']\s+width=["\']0["\']\s+height=["\']0["\']', html_content, re.IGNORECASE))
+        
+        if not is_https: performance_score -= 15
+        if has_mixed_content: performance_score -= 5
+        if security_headers_count == 0: performance_score -= 5
+        if malware_detected: performance_score -= 30
+
+        # --- 9. ROBOTS & SITEMAPS CRADLE WITH FULL EXPLANATIONS ---
         robots_url = f"{clean_base_url}/robots.txt"
         has_robots = False
         robots_content = "The robots.txt layout was not found on the root server level."
@@ -505,8 +552,8 @@ def run_live_audit():
 
         sitemap_terminal_log = "\n".join([f"  📊 Found XML Map Link [{i+1}]: {link}" for i, link in enumerate(xml_files_discovered)]) if xml_files_discovered else "  [No visible reference URLs mapped]"
 
-        # Boundary check for chart output display safety
-        if performance_score < 25: performance_score = 25
+        # Boundary safety check for visual gauge layout constraints
+        if performance_score < 20: performance_score = 20
 
         # --- COMPILE COMPREHENSIVE RECON REPORT MASTER PANEL ---
         technical_report = f"""======================================================================
@@ -525,33 +572,46 @@ def run_live_audit():
   • Server Init Handshake (TTFB): {ttfb} (Time it takes to initialize raw responses)
   • Page Asset Resource Speed  : {page_load_speed} (Total time required for data streams)
 
-[3] GOOGLE MY BUSINESS (GMB) LOCAL PROFILE TRACKING:
+[3] UX/UI APP ARCHITECTURE & MOBILE COMPATIBILITY:
+----------------------------------------------------------------------
+  • Progressive App Manifest  : {"✅ manifest.json LINK LOCATED - APP SCALABLE" if has_manifest else "❌ NO CONFIGURABLE MANIFEST.JSON APP FILE SPECIFIED"}
+  • Mobile Friendly Viewport  : {"✅ MOBILE ATTRIBUTES SET - NO SCALING CROPPING DISCREPANCIES" if mobile_friendly else "❌ META VIEWPORT MISSING - VISUAL BREAKS DETECTED ON PHONES"}
+  • Responsive Media Layout   : {"✅ FLUID CSS LAYOUT MATRIX DETECTED" if responsive else "❌ HARDCODED PIXEL BOUNDARIES FOUND - FIXED LAYOUT ERROR"}
+
+[4] ADVANCED CRITICAL SECURITY CORE AUDIT VECTORS:
+----------------------------------------------------------------------
+  • HTTPS Encryption Shield   : {"✅ SSL HANDSHAKE ACTIVE & CERTIFIED ENCRYPTED" if is_https else "❌ SECURITY EXPOSURE: RUNNING ON INSECURE UNENCRYPTED PROTOCAL"}
+  • Mixed Content Asset Risks : {"⚠️ ALERT: ENCRYPTED CORE CONTAINS INSECURE ASSET PATHS (HTTP)" if has_mixed_content else "✅ INTEGRITY PASS: NO UNSECURED ELEMENTS MIXED WITHIN THE STRUCTURE"}
+  • HTTP Enforcement Headers  : {"✅ ROBUST" if security_headers_count == 3 else "⚠️ PARTIAL"} [Verified Headers Found: Frame-Options: {"YES" if has_x_frame else "NO"}, CSP: {"YES" if has_csp else "NO"}, HSTS: {"YES" if has_hsts else "NO"}]
+  • Malware Malicious Injection: {"🚨 CRITICAL: UNEXPECTED INJECTION SOURCE CODE STRINGS SEEN" if malware_detected else "✅ SYSTEM SECURE: NO EXPLICIT MALWARE HOOKS DETECTED"}
+
+[5] GOOGLE MY BUSINESS (GMB) LOCAL PROFILE TRACKING:
 ----------------------------------------------------------------------
   • Status Verification Analysis:
     {gmb_explanation}
 
-[4] CUSTOM GOOGLE MY MAPS (GMM) LAYER INTEGRATION:
+[6] CUSTOM GOOGLE MY MAPS (GMM) LAYER INTEGRATION:
 ----------------------------------------------------------------------
   • Strategic Geo-Targeting Analysis:
     {my_maps_explanation}
 
-[5] DETECTED BACKLINKS SOURCE REGISTRY DISCOVERY:
+[7] DETECTED BACKLINKS SOURCE REGISTRY DISCOVERY:
 ----------------------------------------------------------------------
   • Inbound Linking Nodes Calculated: {backlink_explanation}
   • Discovered Reference Mappings & Domains:
 {sources_report_list}
 
-[6] SOCIAL MEDIA INTEGRATION FOOTPRINTS:
+[8] SOCIAL MEDIA INTEGRATION FOOTPRINTS:
 ----------------------------------------------------------------------
   • Active Platform Configuration Breakdown:
 {"\n".join(social_report_logs)}
 
-[7] LOCAL BUSINESS DIRECTORY LISTINGS & CITATIONS:
+[9] LOCAL BUSINESS DIRECTORY LISTINGS & CITATIONS:
 ----------------------------------------------------------------------
   • Profile Footprint Identification Mappings:
 {"\n".join(directory_report_logs)}
 
-[8] ROBOTS CRAWL DIRECTIVES MANAGEMENT LOGS:
+[10] ROBOTS CRAWL DIRECTIVES MANAGEMENT LOGS:
 ----------------------------------------------------------------------
   • Accessibility Verdict: {robots_explanation}
   • File Raw View Output:
@@ -559,7 +619,7 @@ def run_live_audit():
   {robots_content}
   -------------------------------------------------------------
 
-[9] XML SITE MAP STRUCTURAL MAPPING DATA:
+[11] XML SITE MAP STRUCTURAL MAPPING DATA:
 ----------------------------------------------------------------------
   • Index Coverage Analysis: {sitemap_explanation}
   • Target Destination Links Extracted:
@@ -569,19 +629,20 @@ def run_live_audit():
 
         # --- VALUE DRIVEN CONVERSION PITCH MAKER + PERFORMANCE PIE CHART SYSTEM ---
         deficits = []
-        if not has_ga: deficits.append("Google Analytics Tracking Hub Setup")
+        if not is_https: deficits.append("SSL/HTTPS Security Protocol Activation")
+        if has_mixed_content: deficits.append("Mixed Content Security Element Fixes")
+        if security_headers_count < 2: deficits.append("Server Level Security Headers Enforcement")
+        if not mobile_friendly: deficits.append("Mobile Friendly Viewport Scalability Repair")
+        if not has_manifest: deficits.append("PWA Progressive App Manifest Configuration")
         if not has_gmb: deficits.append("Google Business Local GMB Connection Profile")
-        if not has_my_maps: deficits.append("Custom Google My Maps Dynamic Layers Embedding")
-        if social_count < 3: deficits.append("Active Multi-Channel Social Optimization Strategy")
-        if directory_count < 2: deficits.append("High Authority Local Directories Listing Matrix")
-        if backlinks_count < 30: deficits.append("High Performance Inbound Referral Backlinks Architecture")
+        if not has_my_maps: deficits.append("Custom Google My Maps Citation Layer Integration")
 
         if deficits:
             leaks_log = "\n".join([f"  ⚠️ DEFICIT [{i+1}]: {item}" for i, item in enumerate(deficits)])
-            pitch_hook = f"Hey! We mapped your live production node at '{parsed_domain}' and verified crucial optimization drops: {', '.join(deficits)}. Your social syndication vectors, maps routing layers, or brand visibility indexes are unoptimized, costing you business leads. Let's overhaul this framework within 24 hours!"
+            pitch_hook = f"Hey! We mapped your live production node at '{parsed_domain}' and verified crucial safety and formatting errors: {', '.join(deficits[:3])}. Missing critical mobile friendly attributes and core security elements leaves your site open to crawl dropped rankings. Let's overhaul this system within 24 hours!"
         else:
-            leaks_log = "  ✨ PERFECT SYSTEM METRICS: The host platform configurations completely satisfy premium optimization parameters."
-            pitch_hook = f"Outstanding setup alignment! '{parsed_domain}' architecture successfully satisfies comprehensive schema guidelines, authority linking arrays, and local omnipresence layers."
+            leaks_log = "  ✨ PERFECT SYSTEM METRICS: The host platform configurations completely satisfy premium performance, security and rendering optimization standards."
+            pitch_hook = f"Outstanding setup alignment! '{parsed_domain}' architecture successfully satisfies comprehensive schema guidelines, security protocols, mobile layouts and local omnipresence layers."
 
         pie_chart_color = "#ef4444" if performance_score < 60 else ("#eab308" if performance_score < 80 else "#10b981")
         
@@ -610,7 +671,7 @@ def run_live_audit():
     <div style="margin-top: 15px; font-size: 11px; color: var(--text-gray); line-height: 1.5;">
         <span style="color: #10b981; font-weight: bold;">■ Optimization Present</span> | <span style="color: #ef4444; font-weight: bold;">■ System Deficits / Core Holes</span>
         <br><br>
-        <span style="color: #f3f4f6;">Performance Matrix Breakdown calculation logic incorporates Response Speeds, active Analytical validation vectors, Rich Metadata tags, and localized SEO Visibility maps setups.</span>
+        <span style="color: #f3f4f6;">Performance Matrix Breakdown calculation logic incorporates Core Security (HTTPS/Headers), Mobile Compatibility, Response Speeds, active Analytical validation vectors, and localized SEO setups.</span>
     </div>
 </div>
 ======================================================================"""
@@ -633,6 +694,13 @@ def run_live_audit():
             "social_count": social_count,
             "social_platforms": social_platforms,
             "directory_count": directory_count,
+            "has_manifest": has_manifest,
+            "mobile_friendly": mobile_friendly,
+            "responsive": responsive,
+            "is_https": is_https,
+            "has_mixed_content": has_mixed_content,
+            "security_headers_count": security_headers_count,
+            "malware_detected": malware_detected,
             "ttfb": ttfb,
             "page_load_speed": page_load_speed,
             "technical_report": technical_report,
@@ -644,4 +712,3 @@ def run_live_audit():
             "status": "error",
             "message": f"Connection pipeline timeout while processing verification constraints loop. Details: {str(e)}"
         })
-
