@@ -4,16 +4,19 @@ import time
 import random
 import csv
 from io import StringIO
-from flask import Blueprint, render_template_string, request, jsonify, session, redirect, url_for
+from flask import Flask, Blueprint, render_template_string, request, jsonify, session, redirect, url_for
 
 # =========================================================================
-# FACTORY CORE: EXPORT BLUEPRINT FOR MAIN DASHBOARD WRAPPER
+# INITIALIZE FLASK CORE & BLUEPRINT
 # =========================================================================
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
 script34_bp = Blueprint('script34', __name__)
 
 DATA_FILE = 'crm_data.json'
 AUTH_USER = 'admin'
-AUTH_PASS = '@#5hsuusu78@#/@&hsb' 
+AUTH_PASS = '5hsuusu78@#/@&hsb' 
 
 # =========================================================================
 # DATABASE CORE (NO-SQL JSON SCHEMATICS ENGINE)
@@ -21,7 +24,10 @@ AUTH_PASS = '@#5hsuusu78@#/@&hsb'
 def init_db():
     if not os.path.exists(DATA_FILE):
         initial_structure = {
-            'leads': [],
+            'leads': [
+                {"id": 1, "name": "Rahul Sharma", "email": "rahul@example.com", "phone": "+919876543210", "company": "Sharma Tech", "status": "New", "value": 45000, "date": "2026-07-10"},
+                {"id": 2, "name": "Amit Verma", "email": "amit@example.com", "phone": "+918765432109", "company": "Verma Digital", "status": "Contacted", "value": 120000, "date": "2026-07-11"}
+            ],
             'customers': [],
             'tasks': [],
             'automation_queue': []
@@ -45,7 +51,7 @@ def is_authenticated():
     return session.get('crm_logged_in') is True
 
 # =========================================================================
-# FLASK ROUTING GATEWAYS (FIXED REDIRECT ROUTING)
+# FLASK ROUTING GATEWAYS
 # =========================================================================
 @script34_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -81,8 +87,6 @@ def get_dashboard_stats():
     total_value = sum(float(l.get('value', 0)) for l in leads)
     leads_count = len(leads)
     avg_value = total_value / leads_count if leads_count > 0 else 0
-
-    # Advanced Dynamic Telemetry Engine Calculators
     total_revenue = sum(float(c.get('revenue', 0)) for c in customers)
     high_value_leads_count = len([l for l in leads if float(l.get('value', 0)) >= 100000])
     
@@ -233,6 +237,35 @@ def clear_automation_queue():
     db_write(db)
     return jsonify({'success': True})
 
+@script34_bp.route('/api/process_lead_automation', methods=['POST'])
+def process_lead_automation():
+    if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
+    db = db_read()
+    selected_ids = request.form.getlist('lead_ids[]')
+    message_template = request.form.get('message', '')
+    
+    if not selected_ids:
+        return jsonify({'success': False, 'message': 'Koi leads select nahi kiye gaye.'})
+        
+    imported_count = 0
+    for lead in db.get('leads', []):
+        if str(lead['id']) in selected_ids:
+            # Dynamically injection of lead name into [Name] placeholder
+            custom_message = message_template.replace('[Name]', lead['name'])
+            
+            db['automation_queue'].append({
+                'id': f"{int(time.time())}_{random.randint(100, 999)}",
+                'phone': lead['phone'],
+                'name': lead['name'],
+                'email': lead['email'],
+                'message': custom_message,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M')
+            })
+            imported_count += 1
+            
+    db_write(db)
+    return jsonify({'success': True, 'message': f'Successfully deployed {imported_count} leads to broadcast engine.'})
+
 @script34_bp.route('/api/upload_automation_sheet', methods=['POST'])
 def upload_automation_sheet():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
@@ -246,7 +279,6 @@ def upload_automation_sheet():
     if file and file.filename.endswith('.csv'):
         stream = StringIO(file.stream.read().decode("UTF-8"), newline=None)
         csv_input = csv.reader(stream)
-        
         db = db_read()
         imported_count = 0
         
@@ -272,8 +304,10 @@ def upload_automation_sheet():
         
     return jsonify({'success': False, 'message': 'Invalid file layout format.'})
 
+app.register_blueprint(script34_bp, url_for_security='/')
+
 # =========================================================================
-# FULL INTERFACE SPECIFICATION TEMPLATE LAYOUT (RELATIVE ROUTING FIXED)
+# SYSTEM UI TEMPLATE SCHEMATICS
 # =========================================================================
 HTML_LAYOUT = """
 <!DOCTYPE html>
@@ -317,18 +351,17 @@ HTML_LAYOUT = """
     <div class="min-h-screen flex items-center justify-center bg-gray-950 px-4">
         <div class="w-full max-w-md bg-gray-900 border border-gray-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
             <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none"></div>
             
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xl shadow-indigo-500/30 mb-4">
-                    <i class="fa-solid fa-chart-line text-2xl text-white animate-pulse"></i>
+                    <i class="fa-solid fa-chart-line text-2xl text-white"></i>
                 </div>
                 <h1 class="text-2xl font-extrabold text-white tracking-tight">OrbitEdge Media</h1>
                 <p class="text-gray-400 text-sm mt-1">Management Portal Enterprise v4.0</p>
             </div>
 
             {% if login_error %}
-                <div class="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm p-3 rounded-xl mb-5 flex items-center gap-2">
+                <div class="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm p-3 rounded-xl mb-5">
                     <i class="fa-solid fa-circle-exclamation text-rose-500"></i> {{ login_error }}
                 </div>
             {% endif %}
@@ -336,21 +369,14 @@ HTML_LAYOUT = """
             <form action="" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Username</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500"><i class="fa-solid fa-user text-sm"></i></span>
-                        <input type="text" name="username" required placeholder="admin" class="w-full bg-gray-950/50 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200">
-                    </div>
+                    <input type="text" name="username" required placeholder="admin" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Password</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500"><i class="fa-solid fa-lock text-sm"></i></span>
-                        <input type="password" name="password" required placeholder="••••••••" class="w-full bg-gray-950/50 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200">
-                    </div>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500">
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-600/20 transition duration-200 cursor-pointer mt-2 tracking-wide text-sm">Login Engine</button>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition duration-200 cursor-pointer mt-2">Login Engine</button>
             </form>
-            <div class="mt-6 text-center border-t border-gray-800/60 pt-4"><p class="text-xs text-gray-600 tracking-wide">Pure Flask Secured Stack • SQL-Free Architecture</p></div>
         </div>
     </div>
 {% else %}
@@ -359,99 +385,78 @@ HTML_LAYOUT = """
         <!-- SIDEBAR -->
         <aside class="w-full md:w-64 bg-gray-950 text-white flex flex-col border-r border-gray-900">
             <div class="p-6 border-b border-gray-900 flex items-center gap-3">
-                <div class="p-2.5 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl shadow-md"><i class="fa-solid fa-bolt text-lg text-white"></i></div>
+                <div class="p-2.5 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl"><i class="fa-solid fa-bolt text-lg text-white"></i></div>
                 <div>
                     <h2 class="font-bold text-base tracking-wide leading-none text-white">OrbitEdge</h2>
-                    <span class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 block">Media Agency CRM</span>
+                    <span class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 block">Media CRM</span>
                 </div>
             </div>
             <nav class="flex-1 p-4 space-y-1.5">
-                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-gauge w-5 text-center"></i> Dashboard</button>
-                <button onclick="switchTab('leads')" id="btn-leads" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-bullseye w-5 text-center"></i> Pipeline & Leads</button>
-                <button onclick="switchTab('customers')" id="btn-customers" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-users w-5 text-center"></i> Active Customers</button>
-                <button onclick="switchTab('automation')" id="btn-automation" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-paper-plane w-5 text-center"></i> Bulk Automation</button>
-                <button onclick="switchTab('tasks')" id="btn-tasks" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-list-check w-5 text-center"></i> Tasks & Follow-ups</button>
-                <button onclick="switchTab('reports')" id="btn-reports" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white transition duration-150 cursor-pointer"><i class="fa-solid fa-chart-pie w-5 text-center"></i> Advanced Reports</button>
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-gauge w-5 text-center"></i> Dashboard</button>
+                <button onclick="switchTab('leads')" id="btn-leads" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-bullseye w-5 text-center"></i> Pipeline & Leads</button>
+                <button onclick="switchTab('customers')" id="btn-customers" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-users w-5 text-center"></i> Active Customers</button>
+                <button onclick="switchTab('automation')" id="btn-automation" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-paper-plane w-5 text-center"></i> Bulk Automation</button>
+                <button onclick="switchTab('tasks')" id="btn-tasks" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-list-check w-5 text-center"></i> Tasks Matrix</button>
+                <button onclick="switchTab('reports')" id="btn-reports" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-900 hover:text-white cursor-pointer"><i class="fa-solid fa-chart-pie w-5 text-center"></i> Advanced Reports</button>
             </nav>
             <div class="p-4 border-t border-gray-900 space-y-2">
-                <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-900 text-xs font-semibold cursor-pointer text-gray-300 hover:text-white hover:bg-gray-850 transition">
-                    <span>Appearance Mode</span><i id="theme-icon" class="fa-solid fa-moon"></i>
+                <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-900 text-xs font-semibold cursor-pointer text-gray-300">
+                    <span>Appearance</span><i id="theme-icon" class="fa-solid fa-moon"></i>
                 </button>
-                <a href="action/logout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"><i class="fa-solid fa-right-from-bracket"></i> Clear Session</a>
+                <a href="action/logout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10"><i class="fa-solid fa-right-from-bracket"></i> Clear Session</a>
             </div>
         </aside>
 
         <!-- MAIN CONTAINER -->
         <main class="flex-1 p-6 md:p-8 overflow-y-auto max-h-screen">
             
-            <!-- Toast Notification Box -->
-            <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 bg-gray-900 border border-emerald-500/30 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 pointer-events-none">
-                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-                <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i> <span id="toast-text" class="text-sm font-semibold tracking-wide"></span>
+            <!-- Toast Box -->
+            <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 bg-gray-900 border border-emerald-500/30 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i> <span id="toast-text" class="text-sm font-semibold"></span>
             </div>
 
             <!-- DASHBOARD TAB -->
-            <div id="tab-dashboard" class="tab-content hidden space-y-8 animate-fadeIn">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-custom-main">Main Command Dashboard</h1>
-                        <p class="text-sm text-custom-muted">Live operational analytical monitoring dashboard.</p>
-                    </div>
-                    <!-- Quick Stats Badges Layer -->
-                    <div class="flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/10">
-                            <i class="fa-solid fa-trophy text-[10px]"></i> High-Value Target Rules Engaged
-                        </span>
-                    </div>
+            <div id="tab-dashboard" class="tab-content hidden space-y-8">
+                <div>
+                    <h1 class="text-2xl font-bold text-custom-main">Main Command Dashboard</h1>
+                    <p class="text-sm text-custom-muted">Live operational analytical monitoring ecosystem.</p>
                 </div>
                 
-                <!-- Expanded Metrics Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><i class="fa-solid fa-bolt text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Leads</p><h3 id="stat-leads" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-indigo-500/10 text-indigo-600 rounded-xl"><i class="fa-solid fa-bolt text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Leads</p><h3 id="stat-leads" class="text-xl font-extrabold text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl"><i class="fa-solid fa-wallet text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Clients</p><h3 id="stat-customers" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl"><i class="fa-solid fa-wallet text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Clients</p><h3 id="stat-customers" class="text-xl font-extrabold text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl"><i class="fa-solid fa-circle-check text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Tasks</p><h3 id="stat-tasks" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-blue-500/10 text-blue-600 rounded-xl"><i class="fa-solid fa-chart-line text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Pipeline</p><h3 id="stat-pipeline-value" class="text-xl font-extrabold text-custom-main">₹0</h3></div>
                     </div>
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl"><i class="fa-solid fa-chart-line text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Pipeline</p><h3 id="stat-pipeline-value" class="text-xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-purple-500/10 text-purple-600 rounded-xl"><i class="fa-solid fa-calculator text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Avg Deal</p><h3 id="stat-avg-deal" class="text-xl font-extrabold text-custom-main">₹0</h3></div>
                     </div>
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl"><i class="fa-solid fa-calculator text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Avg Deal</p><h3 id="stat-avg-deal" class="text-xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl"><i class="fa-solid fa-paper-plane text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Queued</p><h3 id="stat-queued-messages" class="text-xl font-extrabold text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
-                        <div class="p-2.5 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-xl"><i class="fa-solid fa-paper-plane text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Queued</p><h3 id="stat-queued-messages" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
-                    </div>
-                    <!-- ADVANCED NEW METRIC 1: TOTAL REVENUE POOL -->
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3 bg-gradient-to-br from-emerald-500/5 to-transparent">
-                        <div class="p-2.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl"><i class="fa-solid fa-gavel text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Revenue</p><h3 id="stat-revenue-pool" class="text-xl font-extrabold mt-0.5 text-emerald-500">₹0</h3></div>
-                    </div>
-                    <!-- ADVANCED NEW METRIC 2: HIGH VALUE ACQUISITIONS -->
-                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3 bg-gradient-to-br from-indigo-500/5 to-transparent">
-                        <div class="p-2.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl"><i class="fa-solid fa-gem text-lg"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">VIP Deals</p><h3 id="stat-high-value" class="text-xl font-extrabold mt-0.5 text-indigo-500">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl border flex items-center gap-3">
+                        <div class="p-2.5 bg-emerald-500/20 text-emerald-600 rounded-xl"><i class="fa-solid fa-gavel text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase text-custom-muted">Revenue</p><h3 id="stat-revenue-pool" class="text-xl font-extrabold text-emerald-500">₹0</h3></div>
                     </div>
                 </div>
 
-                <!-- Charts & Activity Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 panel-card p-6 rounded-2xl shadow-sm border flex flex-col justify-between">
-                        <h3 class="font-bold text-base mb-4 flex items-center gap-2 text-custom-main"><i class="fa-solid fa-chart-simple text-indigo-600"></i> Pipeline Status Analysis</h3>
+                    <div class="lg:col-span-2 panel-card p-6 rounded-2xl border flex flex-col justify-between">
+                        <h3 class="font-bold text-base mb-4 text-custom-main"><i class="fa-solid fa-chart-simple text-indigo-600"></i> Pipeline Status Analysis</h3>
                         <div class="w-full h-72 relative"><canvas id="dashboardPipelineChart"></canvas></div>
                     </div>
-                    <div class="panel-card p-6 rounded-2xl shadow-sm border flex flex-col">
-                        <h3 class="font-bold text-base mb-4 flex items-center gap-2 text-custom-main"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Recent Activities</h3>
-                        <div id="recent-activity-list" class="space-y-3 overflow-y-auto max-h-[288px] flex-1 pr-1"></div>
+                    <div class="panel-card p-6 rounded-2xl border flex flex-col">
+                        <h3 class="font-bold text-base mb-4 text-custom-main"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Recent Activities</h3>
+                        <div id="recent-activity-list" class="space-y-3 overflow-y-auto max-h-[288px] flex-1"></div>
                     </div>
                 </div>
             </div>
@@ -459,36 +464,33 @@ HTML_LAYOUT = """
             <!-- LEADS TAB -->
             <div id="tab-leads" class="tab-content hidden space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Sales Funnel Pipeline</h1><p class="text-sm text-custom-muted">Track and optimize incoming inquiries.</p></div>
+                    <div><h1 class="text-2xl font-bold text-custom-main">Sales Funnel Pipeline</h1><p class="text-sm text-custom-muted">Track and optimize incoming inquiries.</p></div>
                     <div class="flex gap-2.5">
-                        <button onclick="exportLeadsToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/10 text-xs tracking-wide flex items-center gap-2 cursor-pointer transition"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
-                        <button onclick="openLeadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/10 text-xs tracking-wide flex items-center gap-2 cursor-pointer transition"><i class="fa-solid fa-plus"></i> New Lead</button>
+                        <button onclick="exportLeadsToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition shadow-md"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                        <button onclick="openLeadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition shadow-md"><i class="fa-solid fa-plus"></i> New Lead</button>
                     </div>
                 </div>
-                <!-- ENHANCED ARCHITECTURE FILTER BAR -->
+                
                 <div class="panel-card p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                     <div class="relative w-full">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
-                        <input type="text" id="leadSearch" onkeyup="renderLeadsTable()" placeholder="Search client name or brand..." class="w-full input-custom border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-indigo-500">
+                        <input type="text" id="leadSearch" onkeyup="renderLeadsTable()" placeholder="Search client name..." class="w-full input-custom border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none">
                     </div>
                     <div>
                         <select id="leadFilterStatus" onchange="renderLeadsTable()" class="w-full input-custom border rounded-xl px-3 py-2 text-xs focus:outline-none">
                             <option value="All">All Statuses</option><option value="New">New</option><option value="Contacted">Contacted</option><option value="Proposal">Proposal</option><option value="Lost">Lost</option>
                         </select>
                     </div>
-                    <!-- BRAND NEW MULTI-LAYER FILTER (VALUE RANKING CATEGORIZATION ENGINE) -->
                     <div>
                         <select id="leadFilterValueTier" onchange="renderLeadsTable()" class="w-full input-custom border rounded-xl px-3 py-2 text-xs focus:outline-none">
-                            <option value="All">All Deal Sizes</option>
-                            <option value="High">VIP Deals (≥ ₹1,00,000)</option>
-                            <option value="Mid">Standard Deals (< ₹1,00,000)</option>
+                            <option value="All">All Deal Sizes</option><option value="High">VIP Deals (≥ ₹1,00,000)</option><option value="Mid">Standard Deals (< ₹1,00,000)</option>
                         </select>
                     </div>
                 </div>
                 <div class="panel-card rounded-xl border overflow-x-auto shadow-sm">
                     <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
-                            <tr class="border-b border-custom text-custom-muted text-[11px] font-bold uppercase tracking-widest bg-gray-500/5">
+                            <tr class="border-b border-custom text-custom-muted text-[11px] font-bold uppercase bg-gray-500/5">
                                 <th class="p-4">Client / Company</th><th class="p-4">Est Value</th><th class="p-4">Dynamic Tier</th><th class="p-4">Funnel Position</th><th class="p-4">Date Added</th><th class="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -499,18 +501,12 @@ HTML_LAYOUT = """
 
             <!-- CUSTOMERS TAB -->
             <div id="tab-customers" class="tab-content hidden space-y-6">
-                <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Active Accounts Database</h1><p class="text-sm text-custom-muted">Clients converted from pipeline into official revenue generators.</p></div>
-                <div class="panel-card p-4 rounded-xl border flex gap-3 items-center">
-                    <div class="relative w-full sm:w-72">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
-                        <input type="text" id="customerSearch" onkeyup="renderCustomersTable()" placeholder="Search active accounts..." class="w-full input-custom border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                    </div>
-                </div>
+                <div><h1 class="text-2xl font-bold text-custom-main">Active Accounts Database</h1><p class="text-sm text-custom-muted">Converted official revenue generators.</p></div>
                 <div class="panel-card rounded-xl border overflow-x-auto shadow-sm">
                     <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
-                            <tr class="border-b border-custom text-custom-muted text-[11px] font-bold uppercase tracking-widest bg-gray-500/5">
-                                <th class="p-4">Customer Entity</th><th class="p-4">Corporate Brand</th><th class="p-4">Contact Logic</th><th class="p-4">Total Revenue Generated</th><th class="p-4">Acquisition Date</th>
+                            <tr class="border-b border-custom text-custom-muted text-[11px] font-bold uppercase bg-gray-500/5">
+                                <th class="p-4">Customer Entity</th><th class="p-4">Corporate Brand</th><th class="p-4">Contact Logic</th><th class="p-4">Revenue Generated</th><th class="p-4">Acquisition Date</th>
                             </tr>
                         </thead>
                         <tbody id="customers-table-body" class="divide-y divide-custom text-xs text-custom-main"></tbody>
@@ -522,42 +518,59 @@ HTML_LAYOUT = """
             <div id="tab-automation" class="tab-content hidden space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-custom-main">Bulk Marketing & Message Automation</h1>
-                        <p class="text-sm text-custom-muted">Upload CSV spreadsheets to dispatch automated triggers.</p>
+                        <h1 class="text-2xl font-bold text-custom-main">Bulk Marketing & Message Automation</h1>
+                        <p class="text-sm text-custom-muted">Select live CRM leads or ingest spreadsheets to dispatch workflows.</p>
                     </div>
-                    <button onclick="clearAutomationLogs()" class="bg-rose-600/10 text-rose-500 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-2">
+                    <button onclick="clearAutomationLogs()" class="bg-rose-600/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-2">
                         <i class="fa-solid fa-trash-can"></i> Clear Broadcast Records
                     </button>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="panel-card p-6 rounded-2xl border h-fit space-y-4 shadow-sm">
-                        <h3 class="font-bold text-base text-indigo-500 flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> Ingest Customer Sheet</h3>
-                        <p class="text-xs text-custom-muted leading-relaxed">
-                            Upload a <strong>CSV file</strong> structured exactly into the following schema grid:<br>
-                            <span class="block mt-1.5 font-mono text-indigo-500 bg-indigo-500/5 p-2 rounded-lg border border-indigo-500/10">Col A: Phone | Col B: Name | Col C: Email | Col D: Message</span>
-                        </p>
-                        <form id="automation-upload-form" onsubmit="handleSheetUpload(event)" class="space-y-4">
-                            <div class="border-2 border-dashed border-custom rounded-xl p-6 text-center hover:border-indigo-500 transition relative bg-gray-500/5 cursor-pointer">
-                                <input type="file" id="automation_file" name="automation_file" accept=".csv" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2 block"></i>
-                                <p class="text-xs font-semibold text-custom-main">Click or Drag CSV Document</p>
+                    <!-- CONTROLS & LEAD INJECTION BOX -->
+                    <div class="panel-card p-6 rounded-2xl border h-fit space-y-5 shadow-sm">
+                        <div>
+                            <h3 class="font-bold text-base text-indigo-500 mb-2"><i class="fa-solid fa-gears"></i> Engine Composer</h3>
+                            <p class="text-xs text-custom-muted">Compose your text template below. Use token <span class="font-mono text-indigo-500 font-bold">[Name]</span> for dynamic lead customization.</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-custom-muted mb-1.5">Message Template</label>
+                            <textarea id="auto_msg_template" rows="4" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500 resize-none" placeholder="Namaste [Name], check out our new automation update!"></textarea>
+                        </div>
+
+                        <div class="border-t border-custom pt-4">
+                            <h4 class="text-xs font-bold text-custom-main mb-3 flex items-center gap-1.5"><i class="fa-solid fa-users text-indigo-500"></i> Option A: Inject Live Funnel Leads</h4>
+                            <div id="automation-leads-injector-list" class="space-y-2 max-h-40 overflow-y-auto border border-custom p-2.5 rounded-xl bg-gray-500/5">
+                                <!-- Populated dynamically from JavaScript -->
                             </div>
-                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-indigo-600/10">
-                                <i class="fa-solid fa-gears"></i> Deploy Sheet Records
+                            <button onclick="deployLiveLeadsToAutomation()" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs cursor-pointer transition shadow-sm">
+                                🚀 Process Selected Leads
                             </button>
-                        </form>
+                        </div>
+
+                        <div class="border-t border-custom pt-4">
+                            <h4 class="text-xs font-bold text-custom-main mb-2"><i class="fa-solid fa-file-excel text-emerald-500"></i> Option B: External CSV Ingest</h4>
+                            <form id="automation-upload-form" onsubmit="handleSheetUpload(event)" class="space-y-3">
+                                <div class="border border-dashed border-custom rounded-xl p-4 text-center relative bg-gray-500/5 cursor-pointer">
+                                    <input type="file" id="automation_file" name="automation_file" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <p class="text-[11px] text-custom-muted">Click to browse sheet document (.csv)</p>
+                                </div>
+                                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs cursor-pointer transition shadow-sm">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload & Process Sheet
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
+                    <!-- BROADCAST REALTIME DISPLAY LOG ENGINE -->
                     <div class="lg:col-span-2 panel-card p-6 rounded-2xl border flex flex-col shadow-sm">
-                        <h3 class="font-bold text-base mb-4 flex items-center gap-2 text-custom-main"><i class="fa-solid fa-satellite-dish text-indigo-600"></i> Dispatched Broadcast Operational Grid</h3>
-                        <div class="overflow-x-auto flex-1 max-h-[400px]">
+                        <h3 class="font-bold text-base mb-4 text-custom-main"><i class="fa-solid fa-satellite-dish text-indigo-600"></i> Dispatched Broadcast Operational Grid</h3>
+                        <div class="overflow-x-auto flex-1 max-h-[520px]">
                             <table class="w-full text-left border-collapse text-xs min-w-[500px]">
                                 <thead>
-                                    <tr class="border-b border-custom text-custom-muted font-bold uppercase tracking-wider bg-gray-500/5">
-                                        <th class="p-3">Client Target</th>
-                                        <th class="p-3">Automated Message Body</th>
-                                        <th class="p-3 text-right">Dispatch Channels</th>
+                                    <tr class="border-b border-custom text-custom-muted font-bold uppercase bg-gray-500/5">
+                                        <th class="p-3">Client Target</th><th class="p-3">Automated Message Body</th><th class="p-3 text-right">Dispatch Channels</th>
                                     </tr>
                                 </thead>
                                 <tbody id="automation-queue-body" class="divide-y divide-custom text-custom-main"></tbody>
@@ -569,58 +582,46 @@ HTML_LAYOUT = """
 
             <!-- TASKS TAB -->
             <div id="tab-tasks" class="tab-content hidden space-y-6">
-                <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Workflow Task Matrix</h1><p class="text-sm text-custom-muted">Internal activities and client engagement logs.</p></div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="panel-card p-6 rounded-2xl border h-fit shadow-sm">
                         <h3 class="font-bold text-base mb-4 text-indigo-500">Register New Objective</h3>
                         <form id="task-form" onsubmit="handleTaskSubmit(event)" class="space-y-4">
                             <div>
-                                <label class="block text-xs font-bold text-custom-muted mb-1.5">Objective Task Title</label>
-                                <input type="text" id="task_title" required placeholder="E.g., Design Review Blueprint" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                                <label class="block text-xs font-bold text-custom-muted mb-1.5">Objective Title</label>
+                                <input type="text" id="task_title" required placeholder="E.g., Review Dashboard System" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-custom-muted mb-1.5">Due Deadline</label>
-                                    <input type="date" id="task_due" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                                    <input type="date" id="task_due" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-custom-muted mb-1.5">Priority Weight</label>
-                                    <select id="task_priority" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                                    <select id="task_priority" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                                         <option value="High">High</option><option value="Medium" selected>Medium</option><option value="Low">Low</option>
                                     </select>
                                 </div>
                             </div>
-                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition cursor-pointer shadow-md shadow-indigo-600/10">Inject Task Engine</button>
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer transition">Inject Task Engine</button>
                         </form>
                     </div>
                     <div class="lg:col-span-2 panel-card p-6 rounded-2xl border flex flex-col shadow-sm">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
-                            <h3 class="font-bold text-base flex items-center gap-2 text-custom-main">Active Strategic Roadmap</h3>
-                            <div class="flex gap-2 w-full sm:w-auto">
-                                <select id="taskFilterPriority" onchange="renderTasksList()" class="input-custom border rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
-                                    <option value="All">All Priorities</option><option value="High">High Only</option><option value="Medium">Medium Only</option><option value="Low">Low Only</option>
-                                </select>
-                                <select id="taskFilterStatus" onchange="renderTasksList()" class="input-custom border rounded-xl px-2.5 py-1.5 text-xs focus:outline-none">
-                                    <option value="All">All Statuses</option><option value="Pending">Pending</option><option value="Completed">Completed</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div id="tasks-list" class="space-y-3 flex-1 overflow-y-auto max-h-[450px] pr-1"></div>
+                        <h3 class="font-bold text-base mb-4 text-custom-main">Active Strategic Roadmap</h3>
+                        <div id="tasks-list" class="space-y-3 flex-1 overflow-y-auto max-h-[450px]"></div>
                     </div>
                 </div>
             </div>
 
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden space-y-8">
-                <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Advanced Analytical Business Reports</h1><p class="text-sm text-custom-muted">Visual intelligence telemetry summaries.</p></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="panel-card p-6 rounded-2xl border shadow-sm">
-                        <h3 class="font-bold text-base mb-6 text-center text-custom-main">Funnels Pipeline Component Breakdown</h3>
-                        <div class="w-full max-w-[280px] mx-auto relative"><canvas id="reportPieChart"></canvas></div>
+                        <h3 class="font-bold text-base mb-6 text-center text-custom-main">Funnels Pipeline Breakdown</h3>
+                        <div class="w-full max-w-[260px] mx-auto relative"><canvas id="reportPieChart"></canvas></div>
                     </div>
                     <div class="panel-card p-6 rounded-2xl border shadow-sm">
-                        <h3 class="font-bold text-base mb-6 text-center text-custom-main">Gross Business Conversion Velocity</h3>
-                        <div class="w-full max-w-[280px] mx-auto relative"><canvas id="reportDoughnutChart"></canvas></div>
+                        <h3 class="font-bold text-base mb-6 text-center text-custom-main">Gross Conversion Velocity</h3>
+                        <div class="w-full max-w-[260px] mx-auto relative"><canvas id="reportDoughnutChart"></canvas></div>
                     </div>
                 </div>
             </div>
@@ -639,45 +640,45 @@ HTML_LAYOUT = """
                 <input type="hidden" id="lead_date">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Lead Client Name</label>
-                        <input type="text" id="lead_name" required placeholder="Shivam Singh" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Lead Name</label>
+                        <input type="text" id="lead_name" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Corporate Brand Name</label>
-                        <input type="text" id="lead_company" placeholder="OrbitEdge Media" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Email Coordinates</label>
-                        <input type="email" id="lead_email" required placeholder="shivam@example.com" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Telephony Gateway (Phone)</label>
-                        <input type="text" id="lead_phone" required placeholder="+91 9876543210" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Corporate Brand</label>
+                        <input type="text" id="lead_company" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Pipeline State Status</label>
-                        <select id="lead_status" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Email ID</label>
+                        <input type="email" id="lead_email" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Phone Number</label>
+                        <input type="text" id="lead_phone" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Funnel Status</label>
+                        <select id="lead_status" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                             <option value="New">New</option><option value="Contacted">Contacted</option><option value="Proposal">Proposal</option><option value="Lost">Lost</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Estimated Capital Matrix</label>
-                        <input type="number" step="0.01" min="0" id="lead_value" required placeholder="50000" class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-bold text-custom-muted mb-1.5">Estimated Capital</label>
+                        <input type="number" step="0.01" min="0" id="lead_value" required class="w-full input-custom border rounded-xl p-2.5 text-xs focus:outline-none">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2.5 pt-3 border-t border-custom mt-5">
-                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2 border border-custom text-xs font-bold rounded-xl hover:bg-gray-500/10 cursor-pointer text-custom-main transition">Terminate Process</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl cursor-pointer transition shadow-md shadow-indigo-600/10">Commit Database Entry</button>
+                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2 border border-custom text-xs font-bold rounded-xl cursor-pointer text-custom-main transition">Terminate</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl cursor-pointer transition">Commit Database Entry</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- JAVASCRIPT APP ARCHITECTURE -->
+    <!-- JAVASCRIPT APPLICATION LOGIC ENGINE -->
     <script>
         let activeTab = 'dashboard';
         let rawLeads = [];
@@ -700,7 +701,7 @@ HTML_LAYOUT = """
                 let response = await fetch(`${getBlueprintPrefix()}api/${endpoint}`, options);
                 return await response.json();
             } catch (err) {
-                console.error("AJAX Telemetry stream broke down:", err);
+                console.error("AJAX Telemetry system broken down:", err);
             }
         }
 
@@ -712,9 +713,7 @@ HTML_LAYOUT = """
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('theme') === 'dark') {
-                toggleDarkMode(true);
-            }
+            if (localStorage.getItem('theme') === 'dark') toggleDarkMode(true);
             switchTab('dashboard');
         });
 
@@ -722,22 +721,16 @@ HTML_LAYOUT = """
             const body = document.body;
             const icon = document.getElementById('theme-icon');
             if (body.classList.contains('light-mode') || forceDark) {
-                body.classList.remove('light-mode');
-                body.classList.add('dark-mode');
-                body.style.setProperty('--bg-main', '#030712');
-                body.style.setProperty('--bg-panel', '#111827');
-                body.style.setProperty('--text-main', '#f9fafb');
-                body.style.setProperty('--border-color', '#1f2937');
+                body.classList.remove('light-mode'); body.classList.add('dark-mode');
+                body.style.setProperty('--bg-main', '#030712'); body.style.setProperty('--bg-panel', '#111827');
+                body.style.setProperty('--text-main', '#f9fafb'); body.style.setProperty('--border-color', '#1f2937');
                 body.style.setProperty('--text-muted', '#9ca3af');
                 icon.className = "fa-solid fa-sun text-amber-400";
                 localStorage.setItem('theme', 'dark');
             } else {
-                body.classList.remove('dark-mode');
-                body.classList.add('light-mode');
-                body.style.setProperty('--bg-main', '#f3f4f6');
-                body.style.setProperty('--bg-panel', '#ffffff');
-                body.style.setProperty('--text-main', '#111827');
-                body.style.setProperty('--border-color', '#e5e7eb');
+                body.classList.remove('dark-mode'); body.classList.add('light-mode');
+                body.style.setProperty('--bg-main', '#f3f4f6'); body.style.setProperty('--bg-panel', '#ffffff');
+                body.style.setProperty('--text-main', '#111827'); body.style.setProperty('--border-color', '#e5e7eb');
                 body.style.setProperty('--text-muted', '#6b7280');
                 icon.className = "fa-solid fa-moon";
                 localStorage.setItem('theme', 'light');
@@ -767,27 +760,21 @@ HTML_LAYOUT = """
             document.getElementById('stat-leads').innerText = stats.total_leads;
             document.getElementById('stat-customers').innerText = stats.total_customers;
             document.getElementById('stat-tasks').innerText = stats.pending_tasks;
-            document.getElementById('stat-queued-messages').innerText = stats.total_queued_messages ?? 0;
+            document.getElementById('stat-queued-messages').innerText = stats.total_queued_messages;
             document.getElementById('stat-pipeline-value').innerText = '₹' + parseFloat(stats.total_pipeline_value).toLocaleString('en-IN');
             document.getElementById('stat-avg-deal').innerText = '₹' + parseFloat(stats.average_deal_size).toLocaleString('en-IN', {maximumFractionDigits: 0});
-            
-            // Populating Advanced Metrics Realtime UI Engine Components
             document.getElementById('stat-revenue-pool').innerText = '₹' + parseFloat(stats.total_revenue_pool).toLocaleString('en-IN', {maximumFractionDigits: 0});
-            document.getElementById('stat-high-value').innerText = stats.high_value_leads;
-
+            
             let actList = document.getElementById('recent-activity-list');
             actList.innerHTML = '';
             if(stats.recent_activity.length === 0) {
-                actList.innerHTML = `<p class="text-xs text-gray-500 text-center py-6">No recent activity found.</p>`;
+                actList.innerHTML = `<p class="text-xs text-gray-500 text-center py-6">No recent logs.</p>`;
             } else {
                 stats.recent_activity.forEach(act => {
                     actList.innerHTML += `
                     <div class="flex items-center justify-between p-3 bg-gray-500/5 rounded-xl border border-custom">
-                        <div>
-                            <p class="text-xs font-bold text-custom-main">${act.name}</p>
-                            <span class="text-[10px] text-custom-muted">${act.company || 'Individual Account'}</span>
-                        </div>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">${act.status}</span>
+                        <div><p class="text-xs font-bold text-custom-main">${act.name}</p><span class="text-[10px] text-custom-muted">${act.company || 'Individual'}</span></div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500">${act.status}</span>
                     </div>`;
                 });
             }
@@ -797,16 +784,13 @@ HTML_LAYOUT = """
         function renderPipelineGraph(counts) {
             let ctx = document.getElementById('dashboardPipelineChart').getContext('2d');
             if (pipelineChartInstance) pipelineChartInstance.destroy();
-            
             let isDark = document.body.classList.contains('dark-mode');
-            let textColor = isDark ? '#9ca3af' : '#6b7280';
-
+            
             pipelineChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: Object.keys(counts),
                     datasets: [{
-                        label: 'Total Value Metric',
                         data: Object.values(counts),
                         backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f43f5e'],
                         borderRadius: 6
@@ -817,8 +801,8 @@ HTML_LAYOUT = """
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { ticks: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } }, grid: { display: false } },
-                        y: { ticks: { color: textColor, precision: 0, font: { family: 'Plus Jakarta Sans', size: 11 } }, grid: { color: isDark ? '#1f2937' : '#e5e7eb' } }
+                        x: { ticks: { color: isDark ? '#9ca3af' : '#6b7280', font: { family: 'Plus Jakarta Sans', size: 11 } }, grid: { display: false } },
+                        y: { ticks: { color: isDark ? '#9ca3af' : '#6b7280', precision: 0 }, grid: { color: isDark ? '#1f2937' : '#e5e7eb' } }
                     }
                 }
             });
@@ -837,72 +821,40 @@ HTML_LAYOUT = """
             tbody.innerHTML = '';
 
             let targetList = rawLeads.filter(l => {
-                let matchesQuery = l.name.toLowerCase().includes(query) || l.company.toLowerCase().includes(query);
-                let matchesFilter = filter === 'All' || l.status === filter;
-                
-                // Realtime Automated Categorization Logic Matcher
-                let matchesValueTier = true;
-                if(valueTierFilter === 'High') {
-                    matchesValueTier = floatVal = parseFloat(l.value) >= 100000;
-                } else if(valueTierFilter === 'Mid') {
-                    matchesValueTier = floatVal = parseFloat(l.value) < 100000;
-                }
-                
-                return matchesQuery && matchesFilter && matchesValueTier;
+                let mq = l.name.toLowerCase().includes(query) || l.company.toLowerCase().includes(query);
+                let mf = filter === 'All' || l.status === filter;
+                let mv = true;
+                if(valueTierFilter === 'High') mv = parseFloat(l.value) >= 100000;
+                if(valueTierFilter === 'Mid') mv = parseFloat(l.value) < 100000;
+                return mq && mf && mv;
             });
 
             if(targetList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-medium">No matching leads.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-medium">No records found.</td></tr>`;
                 return;
             }
 
             targetList.forEach(l => {
-                // Calculate Dynamic Layout Badge Metrics Inline
-                let badgeClass = parseFloat(l.value) >= 100000 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold' : 'bg-gray-500/10 text-custom-muted border border-custom';
-                let tierText = parseFloat(l.value) >= 100000 ? '<i class="fa-solid fa-gem mr-1 text-[10px]"></i> VIP Account' : 'Standard';
-
+                let isVip = parseFloat(l.value) >= 100000;
                 tbody.innerHTML += `
                 <tr class="hover:bg-gray-500/5 transition">
-                    <td class="p-4 font-semibold text-custom-main">
-                        <div class="text-xs font-bold">${l.name}</div><div class="text-[11px] text-custom-muted font-normal mt-0.5">${l.email} | ${l.phone}</div>
-                    </td>
-                    <td class="p-4 font-bold text-indigo-500 dark:text-indigo-400">₹${parseFloat(l.value).toLocaleString('en-IN')}</td>
-                    <td class="p-4"><span class="text-[10px] px-2 py-0.5 rounded-lg ${badgeClass}">${tierText}</span></td>
-                    <td class="p-4"><span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">${l.status}</span></td>
+                    <td class="p-4 font-semibold text-custom-main"><div class="text-xs font-bold">${l.name}</div><div class="text-[11px] text-custom-muted mt-0.5">${l.email} | ${l.phone}</div></td>
+                    <td class="p-4 font-bold text-indigo-500">₹${parseFloat(l.value).toLocaleString('en-IN')}</td>
+                    <td class="p-4"><span class="text-[10px] px-2 py-0.5 rounded-lg ${isVip?'bg-amber-500/10 text-amber-500':'bg-gray-500/10 text-custom-muted'}">${isVip?'💎 VIP':'Standard'}</span></td>
+                    <td class="p-4"><span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-600">${l.status}</span></td>
                     <td class="p-4 text-[11px] text-custom-muted">${l.date}</td>
                     <td class="p-4 text-right space-x-1 whitespace-nowrap">
-                        <button onclick="convertLead(${l.id})" class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-1 rounded-lg transition cursor-pointer"><i class="fa-solid fa-crown"></i> Convert</button>
-                        <button onclick='editLeadModal(${JSON.stringify(l)})' class="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded-lg transition cursor-pointer"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteLead(${l.id})" class="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-lg transition cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="convertLead(${l.id})" class="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-1 rounded-lg cursor-pointer">Convert</button>
+                        <button onclick='editLeadModal(${JSON.stringify(l)})' class="text-[10px] text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded-lg cursor-pointer"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteLead(${l.id})" class="text-[10px] text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-lg cursor-pointer"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
             });
         }
 
-        function exportLeadsToCSV() {
-            if (rawLeads.length === 0) {
-                alert("No lead entries found to export!");
-                return;
-            }
-            let csvContent = "data:text/csv;charset=utf-8,ID,Name,Company,Email,Phone,Status,Value,Date\\n";
-            rawLeads.forEach(l => {
-                let row = `${l.id},"${l.name}","${l.company}",${l.email},${l.phone},${l.status},${l.value},${l.date}`;
-                csvContent += row + "\\n";
-            });
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "OrbitEdge_Leads_Report.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            popToast("CSV Export completed successfully!");
-        }
-
         function openLeadModal() {
             document.getElementById('lead-form').reset();
             document.getElementById('lead_id').value = '';
-            document.getElementById('modalTitle').innerText = "Initialize Core Funnel Record";
             let m = document.getElementById('leadModal');
             m.classList.remove('opacity-0', 'pointer-events-none');
             m.firstElementChild.classList.remove('scale-95');
@@ -916,7 +868,6 @@ HTML_LAYOUT = """
 
         function editLeadModal(lead) {
             openLeadModal();
-            document.getElementById('modalTitle').innerText = "Modify Funnel Specifications";
             document.getElementById('lead_id').value = lead.id;
             document.getElementById('lead_name').value = lead.name;
             document.getElementById('lead_company').value = lead.company;
@@ -940,161 +891,133 @@ HTML_LAYOUT = """
             fd.append('date', document.getElementById('lead_date').value);
 
             let res = await fetchAPI('save_lead', fd);
-            if(res.success) {
-                closeLeadModal();
-                popToast("Database Registry Updated!");
-                loadLeadsEngine();
-            }
+            if(res.success) { closeLeadModal(); popToast("Database Registry Updated!"); loadLeadsEngine(); }
         }
 
         async function deleteLead(id) {
-            if(!confirm("Are you sure you want to delete this record?")) return;
+            if(!confirm("Are you sure?")) return;
             let fd = new FormData(); fd.append('id', id);
             await fetchAPI('delete_lead', fd);
-            popToast("Entry wiped from core storage.");
+            popToast("Entry wiped out.");
             loadLeadsEngine();
         }
 
         async function convertLead(id) {
             let fd = new FormData(); fd.append('id', id);
             let res = await fetchAPI('convert_to_customer', fd);
-            if(res.success) {
-                popToast("Lead successfully converted to Active Customer!");
-                loadLeadsEngine();
-            }
+            if(res.success) { popToast("Converted to Customer!"); loadLeadsEngine(); }
         }
 
         async function loadCustomersEngine() {
             rawCustomers = await fetchAPI('get_customers');
-            renderCustomersTable();
-        }
-
-        function renderCustomersTable() {
-            let query = document.getElementById('customerSearch').value.toLowerCase();
             let tbody = document.getElementById('customers-table-body');
             tbody.innerHTML = '';
-
-            let filtered = rawCustomers.filter(c => c.name.toLowerCase().includes(query) || c.company.toLowerCase().includes(query));
-
-            if(filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No active accounts.</td></tr>`;
+            if(rawCustomers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No converted clients.</td></tr>`;
                 return;
             }
-
-            filtered.forEach(c => {
+            rawCustomers.forEach(c => {
                 tbody.innerHTML += `
                 <tr class="hover:bg-gray-500/5 transition">
-                    <td class="p-4 font-bold text-custom-main">${c.name}</td>
-                    <td class="p-4 text-custom-muted font-medium">${c.company || 'N/A'}</td>
-                    <td class="p-4 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">${c.email} <br> ${c.phone}</td>
+                    <td class="p-4 font-bold text-custom-main">${c.name}</td><td class="p-4 text-custom-muted">${c.company || 'N/A'}</td>
+                    <td class="p-4 text-[11px] text-indigo-600">${c.email} <br> ${c.phone}</td>
                     <td class="p-4 font-extrabold text-emerald-500">₹${parseFloat(c.revenue).toLocaleString('en-IN')}</td>
                     <td class="p-4 text-[11px] text-custom-muted">${c.joined_date}</td>
                 </tr>`;
             });
         }
 
+        // AUTOMATION LAYER INTEGRATION
         async function loadAutomationEngine() {
             rawAutomation = await fetchAPI('get_automation_queue');
+            rawLeads = await fetchAPI('get_leads'); // Fetch current leads to render dynamic selector checkbox block
+            
+            // Render Live CRM selection inside Automation Controls
+            let injectorList = document.getElementById('automation-leads-injector-list');
+            injectorList.innerHTML = '';
+            if(rawLeads.length === 0) {
+                injectorList.innerHTML = `<p class="text-[10px] text-gray-500 text-center py-2">No active leads found.</p>`;
+            } else {
+                rawLeads.forEach(l => {
+                    injectorList.innerHTML += `
+                    <label class="flex items-center gap-2 text-[11px] font-medium p-1 hover:bg-gray-500/10 rounded cursor-pointer text-custom-main">
+                        <input type="checkbox" name="automation_leads_checked" value="${l.id}" class="rounded text-indigo-600 focus:ring-0">
+                        <span>${l.name} (${l.phone})</span>
+                    </label>`;
+                });
+            }
             renderAutomationTable();
         }
 
         function renderAutomationTable() {
             let tbody = document.getElementById('automation-queue-body');
             tbody.innerHTML = '';
-
             if (rawAutomation.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 font-medium">No records found. Upload a CSV file to begin.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 font-medium">No records inside the queue dashboard grid.</td></tr>`;
                 return;
             }
-
             rawAutomation.forEach(item => {
-                let encodedText = encodeURIComponent(`Hello ${item.name},\\n\\n${item.message}`);
+                let encodedText = encodeURIComponent(item.message);
                 let waLink = `https://api.whatsapp.com/send?phone=${item.phone}&text=${encodedText}`;
-                let mailLink = `mailto:${item.email}?subject=Updates&body=${encodeURIComponent(item.message)}`;
+                let mailLink = `mailto:${item.email}?subject=Broadcast&body=${encodedText}`;
 
                 tbody.innerHTML += `
-                <tr class="hover:bg-gray-500/5 transition border-b border-custom">
-                    <td class="p-3 font-semibold text-custom-main">
-                        <div class="font-bold">${item.name}</div>
-                        <div class="text-[10px] text-custom-muted font-mono mt-0.5">${item.phone || 'No Phone'} | ${item.email || 'No Email'}</div>
-                    </td>
+                <tr class="hover:bg-gray-500/5 transition border-b border-custom text-xs">
+                    <td class="p-3 font-semibold text-custom-main"><div class="font-bold">${item.name}</div><div class="text-[10px] text-custom-muted mt-0.5">${item.phone}</div></td>
                     <td class="p-3 text-custom-muted max-w-[220px] truncate" title="${item.message}">${item.message}</td>
-                    <td class="p-3 text-right space-x-1.5 whitespace-nowrap">
-                        <a href="${waLink}" target="_blank" class="inline-flex items-center gap-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg text-[10px] font-bold transition">
-                            <i class="fa-brands fa-whatsapp"></i> Chat
-                        </a>
-                        <a href="${mailLink}" class="inline-flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-[10px] font-bold transition">
-                            <i class="fa-solid fa-envelope"></i> Email
-                        </a>
+                    <td class="p-3 text-right space-x-1 whitespace-nowrap">
+                        <a href="${waLink}" target="_blank" class="inline-flex items-center gap-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded text-[10px] font-bold transition"><i class="fa-brands fa-whatsapp"></i> Chat</a>
+                        <a href="${mailLink}" class="inline-flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold transition"><i class="fa-solid fa-envelope"></i> Email</a>
                     </td>
                 </tr>`;
             });
+        }
+
+        async function deployLiveLeadsToAutomation() {
+            let checkedBoxes = document.querySelectorAll('input[name="automation_leads_checked"]:checked');
+            let template = document.getElementById('auto_msg_template').value;
+            
+            if(checkedBoxes.length === 0) return alert("Please select at least one live funnel lead!");
+            if(!template) return alert("Please compose your marketing message blueprint!");
+            
+            let fd = new FormData();
+            checkedBoxes.forEach(cb => fd.append('lead_ids[]', cb.value));
+            fd.append('message', template);
+            
+            let res = await fetchAPI('process_lead_automation', fd);
+            if(res.success) { popToast(res.message); loadAutomationEngine(); }
         }
 
         async function handleSheetUpload(e) {
             e.preventDefault();
             let fileInput = document.getElementById('automation_file');
             if (fileInput.files.length === 0) return;
-
-            let fd = new FormData();
-            fd.append('automation_file', fileInput.files[0]);
-
+            let fd = new FormData(); fd.append('automation_file', fileInput.files[0]);
             let res = await fetchAPI('upload_automation_sheet', fd);
-            if (res.success) {
-                popToast(res.message);
-                document.getElementById('automation-upload-form').reset();
-                loadAutomationEngine();
-            } else {
-                alert(res.message);
-            }
+            if (res.success) { popToast(res.message); document.getElementById('automation-upload-form').reset(); loadAutomationEngine(); }
         }
 
         async function clearAutomationLogs() {
-            if(!confirm("Are you sure you want to flush all automation records?")) return;
+            if(!confirm("Flush records?")) return;
             let res = await fetchAPI('clear_automation_queue');
-            if (res.success) {
-                popToast("Automation log tables reset.");
-                loadAutomationEngine();
-            }
+            if (res.success) { popToast("Queue reset."); loadAutomationEngine(); }
         }
 
         async function loadTasksEngine() {
             rawTasks = await fetchAPI('get_tasks');
-            renderTasksList();
-        }
-
-        function renderTasksList() {
-            let priorityFilter = document.getElementById('taskFilterPriority').value;
-            let statusFilter = document.getElementById('taskFilterStatus').value;
-            let container = document.getElementById('tasks-list');
-            container.innerHTML = '';
-
-            let filteredTasks = rawTasks.filter(t => {
-                let matchesPriority = (priorityFilter === 'All' || t.priority === priorityFilter);
-                let matchesStatus = (statusFilter === 'All' || t.status === statusFilter);
-                return matchesPriority && matchesStatus;
-            });
-
-            if(filteredTasks.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-8 font-medium">No matching objectives found.</p>`;
-                return;
+            let container = document.getElementById('tasks-list'); container.innerHTML = '';
+            if(rawTasks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">No pending objectives.</p>`; return;
             }
-
-            filteredTasks.forEach(t => {
+            rawTasks.forEach(t => {
                 let isComp = t.status === 'Completed';
                 container.innerHTML += `
-                <div class="flex items-center justify-between p-4 bg-gray-500/5 border border-custom rounded-xl transition ${isComp ? 'opacity-40 line-through':''}">
+                <div class="flex items-center justify-between p-3 bg-gray-500/5 border border-custom rounded-xl ${isComp?'opacity-40 line-through':''}">
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" ${isComp ? 'checked':''} onclick="toggleTask(${t.id})" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-custom bg-transparent cursor-pointer">
-                        <div>
-                            <p class="text-xs font-bold text-custom-main">${t.title}</p>
-                            <span class="text-[10px] text-custom-muted"><i class="fa-solid fa-calendar text-[9px] mr-1"></i>Deadline: ${t.due_date}</span>
-                        </div>
+                        <input type="checkbox" ${isComp?'checked':''} onclick="toggleTask(${t.id})" class="w-4 h-4 text-indigo-600 rounded focus:ring-0">
+                        <div><p class="text-xs font-bold text-custom-main">${t.title}</p><span class="text-[10px] text-custom-muted">Due: ${t.due_date}</span></div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${t.priority==='High'?'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20':'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'}">${t.priority}</span>
-                        <button onclick="deleteTask(${t.id})" class="text-gray-400 hover:text-rose-500 text-xs transition p-1 cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
+                    <button onclick="deleteTask(${t.id})" class="text-gray-400 hover:text-rose-500 text-xs transition p-1"><i class="fa-solid fa-trash-can"></i></button>
                 </div>`;
             });
         }
@@ -1105,25 +1028,11 @@ HTML_LAYOUT = """
             fd.append('title', document.getElementById('task_title').value);
             fd.append('due_date', document.getElementById('task_due').value);
             fd.append('priority', document.getElementById('task_priority').value);
-            
-            await fetchAPI('save_task', fd);
-            document.getElementById('task-form').reset();
-            popToast("Task objective deployed successfully.");
-            loadTasksEngine();
+            await fetchAPI('save_task', fd); document.getElementById('task-form').reset(); loadTasksEngine();
         }
 
-        async function toggleTask(id) {
-            let fd = new FormData(); fd.append('id', id);
-            await fetchAPI('toggle_task', fd);
-            loadTasksEngine();
-        }
-
-        async function deleteTask(id) {
-            let fd = new FormData(); fd.append('id', id);
-            await fetchAPI('delete_task', fd);
-            popToast("Task record eliminated.");
-            loadTasksEngine();
-        }
+        async function toggleTask(id) { let fd = new FormData(); fd.append('id', id); await fetchAPI('toggle_task', fd); loadTasksEngine(); }
+        async function deleteTask(id) { let fd = new FormData(); fd.append('id', id); await fetchAPI('delete_task', fd); loadTasksEngine(); }
 
         async function loadReportsEngine() {
             let stats = await fetchAPI('get_dashboard_stats');
@@ -1132,55 +1041,41 @@ HTML_LAYOUT = """
 
             if (reportPieChartInstance) reportPieChartInstance.destroy();
             if (reportDoughnutChartInstance) reportDoughnutChartInstance.destroy();
-
             let isDark = document.body.classList.contains('dark-mode');
-            let legendColor = isDark ? '#9ca3af' : '#6b7280';
 
-            let chartOptions = {
-                responsive: true,
-                plugins: { 
-                    legend: { 
-                        position: 'bottom', 
-                        labels: { 
-                            boxWidth: 10, 
-                            color: legendColor,
-                            font: { size: 10, family: 'Plus Jakarta Sans', weight: 500 } 
-                        } 
-                    } 
-                }
-            };
+            let chartOptions = { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#9ca3af' : '#6b7280', font: { size: 10 } } } } };
 
             reportPieChartInstance = new Chart(ctxPie, {
                 type: 'pie',
-                data: {
-                    labels: Object.keys(stats.lead_status_counts),
-                    datasets: [{
-                        data: Object.values(stats.lead_status_counts),
-                        backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f43f5e'],
-                        borderWidth: isDark ? 2 : 1,
-                        borderColor: isDark ? '#111827' : '#ffffff'
-                    }]
-                },
+                data: { labels: Object.keys(stats.lead_status_counts), datasets: [{ data: Object.values(stats.lead_status_counts), backgroundColor: ['#6366f1', '#3b82f6', '#10b981', '#f43f5e'] }] },
                 options: chartOptions
             });
 
             reportDoughnutChartInstance = new Chart(ctxDoughnut, {
                 type: 'doughnut',
-                data: {
-                    labels: ['Pipeline Inbounds', 'Converted Global Accounts'],
-                    datasets: [{
-                        data: [stats.total_leads, stats.total_customers],
-                        backgroundColor: ['#6366f1', '#10b981'],
-                        borderWidth: isDark ? 2 : 1,
-                        borderColor: isDark ? '#111827' : '#ffffff'
-                    }]
-                },
+                data: { labels: ['Leads', 'Clients'], datasets: [{ data: [stats.total_leads, stats.total_customers], backgroundColor: ['#6366f1', '#10b981'] }] },
                 options: chartOptions
             });
+        }
+        
+        function exportLeadsToCSV() {
+            if (rawLeads.length === 0) return alert("No entries found!");
+            let csv = "ID,Name,Company,Email,Phone,Status,Value\\n";
+            rawLeads.forEach(l => { csv += `${l.id},"${l.name}","${l.company}",${l.email},${l.phone},${l.status},${l.value}\\n`; });
+            let link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv));
+            link.setAttribute("download", "CRM_Leads.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
     </script>
 {% endif %}
 </body>
 </html>
 """
+
+# =========================================================================
+# APPLICATION GATEWAY INITIALIZATION RUNNER
+# =========================================================================
+if __name__ == '__main__':
+    # Initialize core datastore files upon engine launching sequence
+    init_db()
+    app.run(debug=True, port=5000)
 
