@@ -13,7 +13,7 @@ script34_bp = Blueprint('script34', __name__)
 
 DATA_FILE = 'crm_data.json'
 AUTH_USER = 'admin'
-AUTH_PASS = 'admin123' 
+AUTH_PASS = '@#5hsuusu78@#/@&hsb' 
 
 # =========================================================================
 # DATABASE CORE (NO-SQL JSON SCHEMATICS ENGINE)
