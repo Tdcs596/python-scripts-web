@@ -4,15 +4,16 @@ import time
 import random
 import csv
 from io import StringIO
-from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
-from werkzeug.utils import secure_filename
+from flask import Blueprint, render_template_string, request, jsonify, session, redirect, url_for
 
-app = Flask(__name__)
-app.secret_key = 'super_secret_orbit_edge_media_key_prod_v4' # Production key
+# =========================================================================
+# FACTORY CORE: EXPORT BLUEPRINT FOR APP.PY INTERNAL IMPORT
+# =========================================================================
+script34_bp = Blueprint('script34', __name__)
 
 DATA_FILE = 'crm_data.json'
 AUTH_USER = 'admin'
-AUTH_PASS = '@#fsh@#admin123' # Production fallback authentication credential
+AUTH_PASS = '@#fsh@#admin123' 
 
 # =========================================================================
 # DATABASE CORE (NO-SQL JSON SCHEMATICS ENGINE)
@@ -46,32 +47,31 @@ def is_authenticated():
 # =========================================================================
 # FLASK ROUTING GATEWAYS
 # =========================================================================
-@app.route('/', methods=['GET'])
+@script34_bp.route('/', methods=['GET'])
 def index():
     if not is_authenticated():
-        # Clean Login Template Interface injection
         return render_template_string(HTML_LAYOUT, is_authenticated=False, login_error=None)
     return render_template_string(HTML_LAYOUT, is_authenticated=True, login_error=None)
 
-@app.route('/action/login', methods=['POST'])
+@script34_bp.route('/action/login', methods=['POST'])
 def action_login():
     username = request.form.get('username', '')
     password = request.form.get('password', '')
     if username == AUTH_USER and password == AUTH_PASS:
         session['crm_logged_in'] = True
-        return redirect(url_for('index'))
+        return redirect(url_for('script34.index'))
     else:
         return render_template_string(HTML_LAYOUT, is_authenticated=False, login_error="Invalid credentials! Please try again.")
 
-@app.route('/action/logout', methods=['GET'])
+@script34_bp.route('/action/logout', methods=['GET'])
 def action_logout():
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('script34.index'))
 
 # =========================================================================
 # FLASK RESTFUL ASYNC API HOOKS (CRITICAL BUSINESS COMPUTATIONS LOGIC)
 # =========================================================================
-@app.route('/api/get_dashboard_stats', methods=['GET'])
+@script34_bp.route('/api/get_dashboard_stats', methods=['GET'])
 def get_dashboard_stats():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -98,7 +98,7 @@ def get_dashboard_stats():
             
     return jsonify(stats)
 
-@app.route('/api/save_lead', methods=['POST'])
+@script34_bp.route('/api/save_lead', methods=['POST'])
 def save_lead():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -126,7 +126,7 @@ def save_lead():
     db_write(db)
     return jsonify({'success': True, 'message': 'Lead saved successfully!'})
 
-@app.route('/api/delete_lead', methods=['POST'])
+@script34_bp.route('/api/delete_lead', methods=['POST'])
 def delete_lead():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -135,7 +135,7 @@ def delete_lead():
     db_write(db)
     return jsonify({'success': True})
 
-@app.route('/api/convert_to_customer', methods=['POST'])
+@script34_bp.route('/api/convert_to_customer', methods=['POST'])
 def convert_to_customer():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -162,17 +162,17 @@ def convert_to_customer():
         return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Lead not found'})
 
-@app.route('/api/get_leads', methods=['GET'])
+@script34_bp.route('/api/get_leads', methods=['GET'])
 def get_leads():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(db_read().get('leads', []))
 
-@app.route('/api/get_customers', methods=['GET'])
+@script34_bp.route('/api/get_customers', methods=['GET'])
 def get_customers():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(db_read().get('customers', []))
 
-@app.route('/api/save_task', methods=['POST'])
+@script34_bp.route('/api/save_task', methods=['POST'])
 def save_task():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -186,12 +186,12 @@ def save_task():
     db_write(db)
     return jsonify({'success': True})
 
-@app.route('/api/get_tasks', methods=['GET'])
+@script34_bp.route('/api/get_tasks', methods=['GET'])
 def get_tasks():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(db_read().get('tasks', []))
 
-@app.route('/api/toggle_task', methods=['POST'])
+@script34_bp.route('/api/toggle_task', methods=['POST'])
 def toggle_task():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -203,7 +203,7 @@ def toggle_task():
     db_write(db)
     return jsonify({'success': True})
 
-@app.route('/api/delete_task', methods=['POST'])
+@script34_bp.route('/api/delete_task', methods=['POST'])
 def delete_task():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -212,12 +212,12 @@ def delete_task():
     db_write(db)
     return jsonify({'success': True})
 
-@app.route('/api/get_automation_queue', methods=['GET'])
+@script34_bp.route('/api/get_automation_queue', methods=['GET'])
 def get_automation_queue():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(db_read().get('automation_queue', []))
 
-@app.route('/api/clear_automation_queue', methods=['GET', 'POST'])
+@script34_bp.route('/api/clear_automation_queue', methods=['GET', 'POST'])
 def clear_automation_queue():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
@@ -225,7 +225,7 @@ def clear_automation_queue():
     db_write(db)
     return jsonify({'success': True})
 
-@app.route('/api/upload_automation_sheet', methods=['POST'])
+@script34_bp.route('/api/upload_automation_sheet', methods=['POST'])
 def upload_automation_sheet():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     if 'automation_file' not in request.files:
@@ -260,7 +260,7 @@ def upload_automation_sheet():
             imported_count += 1
             
         db_write(db)
-        return jsonify({'success': True, 'message': f'Successfully processed {imported_count} workflow contacts into broadcast engine.'})
+        return jsonify({'success': True, 'message': f'Successfully processed {imported_count} workflow contacts.'})
         
     return jsonify({'success': False, 'message': 'Invalid file layout format.'})
 
@@ -433,7 +433,7 @@ HTML_LAYOUT = """
             <!-- LEADS TAB -->
             <div id="tab-leads" class="tab-content hidden space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Sales Funnel Pipeline</h1><p class="text-sm text-custom-muted">Track and optimize incoming OrbitEdge inquiries.</p></div>
+                    <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Sales Funnel Pipeline</h1><p class="text-sm text-custom-muted">Track and optimize incoming inquiries.</p></div>
                     <div class="flex gap-2.5">
                         <button onclick="exportLeadsToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/10 text-xs tracking-wide flex items-center gap-2 cursor-pointer transition"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
                         <button onclick="openLeadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/10 text-xs tracking-wide flex items-center gap-2 cursor-pointer transition"><i class="fa-solid fa-plus"></i> New Lead</button>
@@ -486,7 +486,7 @@ HTML_LAYOUT = """
                 <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <div>
                         <h1 class="text-2xl font-bold tracking-tight text-custom-main">Bulk Marketing & Message Automation</h1>
-                        <p class="text-sm text-custom-muted">Upload CSV spreadsheets to dispatch automated WhatsApp alerts and Email triggers.</p>
+                        <p class="text-sm text-custom-muted">Upload CSV spreadsheets to dispatch automated triggers.</p>
                     </div>
                     <button onclick="clearAutomationLogs()" class="bg-rose-600/10 text-rose-500 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition flex items-center gap-2">
                         <i class="fa-solid fa-trash-can"></i> Clear Broadcast Records
@@ -575,7 +575,7 @@ HTML_LAYOUT = """
 
             <!-- REPORTS TAB -->
             <div id="tab-reports" class="tab-content hidden space-y-8">
-                <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Advanced Analytical Business Reports</h1><p class="text-sm text-custom-muted">Visual corporate intelligence telemetry summaries.</p></div>
+                <div><h1 class="text-2xl font-bold tracking-tight text-custom-main">Advanced Analytical Business Reports</h1><p class="text-sm text-custom-muted">Visual intelligence telemetry summaries.</p></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="panel-card p-6 rounded-2xl border shadow-sm">
                         <h3 class="font-bold text-base mb-6 text-center text-custom-main">Funnels Pipeline Component Breakdown</h3>
@@ -758,7 +758,6 @@ HTML_LAYOUT = """
                 type: 'bar',
                 data: {
                     labels: Object.keys(counts),
-                    labels: Object.keys(counts),
                     datasets: [{
                         label: 'Total Value Metric',
                         data: Object.values(counts),
@@ -796,7 +795,7 @@ HTML_LAYOUT = """
             });
 
             if(targetList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No matching leads inside pipeline grid.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No matching leads.</td></tr>`;
                 return;
             }
 
@@ -887,7 +886,7 @@ HTML_LAYOUT = """
         }
 
         async function deleteLead(id) {
-            if(!confirm("Are you sure you want to permanently delete this record from pipeline?")) return;
+            if(!confirm("Are you sure you want to delete this record?")) return;
             let fd = new FormData(); fd.append('id', id);
             await fetchAPI('delete_lead', fd);
             popToast("Entry wiped from core storage.");
@@ -898,7 +897,7 @@ HTML_LAYOUT = """
             let fd = new FormData(); fd.append('id', id);
             let res = await fetchAPI('convert_to_customer', fd);
             if(res.success) {
-                popToast("Lead successfully converted to Active Customer Account!");
+                popToast("Lead successfully converted to Active Customer!");
                 loadLeadsEngine();
             }
         }
@@ -916,7 +915,7 @@ HTML_LAYOUT = """
             let filtered = rawCustomers.filter(c => c.name.toLowerCase().includes(query) || c.company.toLowerCase().includes(query));
 
             if(filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No active accounts inside ledger.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No active accounts.</td></tr>`;
                 return;
             }
 
@@ -942,14 +941,14 @@ HTML_LAYOUT = """
             tbody.innerHTML = '';
 
             if (rawAutomation.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 font-medium">No automation logs uploaded yet. Try uploading a CSV dataset file.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 font-medium">No records found. Upload a CSV file to begin.</td></tr>`;
                 return;
             }
 
             rawAutomation.forEach(item => {
                 let encodedText = encodeURIComponent(`Hello ${item.name},\\n\\n${item.message}`);
                 let waLink = `https://api.whatsapp.com/send?phone=${item.phone}&text=${encodedText}`;
-                let mailLink = `mailto:${item.email}?subject=OrbitEdge%20Media%20Updates&body=${encodeURIComponent(item.message)}`;
+                let mailLink = `mailto:${item.email}?subject=Updates&body=${encodeURIComponent(item.message)}`;
 
                 tbody.innerHTML += `
                 <tr class="hover:bg-gray-500/5 transition border-b border-custom">
@@ -989,10 +988,10 @@ HTML_LAYOUT = """
         }
 
         async function clearAutomationLogs() {
-            if(!confirm("Are you sure you want to flush all automation records from your dashboard view?")) return;
+            if(!confirm("Are you sure you want to flush all automation records?")) return;
             let res = await fetchAPI('clear_automation_queue');
             if (res.success) {
-                popToast("Automation log tables reset to empty state.");
+                popToast("Automation log tables reset.");
                 loadAutomationEngine();
             }
         }
@@ -1015,7 +1014,7 @@ HTML_LAYOUT = """
             });
 
             if(filteredTasks.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-8 font-medium">No matching operational objectives found.</p>`;
+                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-8 font-medium">No matching objectives found.</p>`;
                 return;
             }
 
@@ -1060,7 +1059,7 @@ HTML_LAYOUT = """
         async function deleteTask(id) {
             let fd = new FormData(); fd.append('id', id);
             await fetchAPI('delete_task', fd);
-            popToast("Task matrix record eliminated.");
+            popToast("Task record eliminated.");
             loadTasksEngine();
         }
 
@@ -1123,7 +1122,3 @@ HTML_LAYOUT = """
 </html>
 """
 
-if __name__ == '__main__':
-    # Initialize DB architecture and run standalone local runtime engine
-    init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
