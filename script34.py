@@ -49,7 +49,6 @@ def is_authenticated():
 # =========================================================================
 @script34_bp.route('/', methods=['GET', 'POST'])
 def index():
-    # POST login requests handle karne ke liye context loop
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
@@ -76,22 +75,31 @@ def get_dashboard_stats():
     if not is_authenticated(): return jsonify({'error': 'Unauthorized'}), 401
     db = db_read()
     
-    total_value = sum(float(l.get('value', 0)) for l in db.get('leads', []))
-    leads_count = len(db.get('leads', []))
+    leads = db.get('leads', [])
+    customers = db.get('customers', [])
+    
+    total_value = sum(float(l.get('value', 0)) for l in leads)
+    leads_count = len(leads)
     avg_value = total_value / leads_count if leads_count > 0 else 0
 
+    # Advanced Dynamic Telemetry Engine Calculators
+    total_revenue = sum(float(c.get('revenue', 0)) for c in customers)
+    high_value_leads_count = len([l for l in leads if float(l.get('value', 0)) >= 100000])
+    
     stats = {
         'total_leads': leads_count,
-        'total_customers': len(db.get('customers', [])),
+        'total_customers': len(customers),
         'pending_tasks': len([t for t in db.get('tasks', []) if t.get('status') != 'Completed']),
         'total_pipeline_value': total_value,
         'average_deal_size': avg_value,
         'total_queued_messages': len(db.get('automation_queue', [])),
+        'total_revenue_pool': total_revenue,
+        'high_value_leads': high_value_leads_count,
         'lead_status_counts': {'New': 0, 'Contacted': 0, 'Proposal': 0, 'Lost': 0},
-        'recent_activity': list(reversed(db.get('leads', [])))[:5]
+        'recent_activity': list(reversed(leads))[:6]
     }
     
-    for l in db.get('leads', []):
+    for l in leads:
         status = l.get('status', 'New')
         if status in stats['lead_status_counts']:
             stats['lead_status_counts'][status] += 1
@@ -278,9 +286,9 @@ HTML_LAYOUT = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.3s, color 0.3s; }
-        .sidebar-link.active { background-color: #4f46e5; color: white; }
+        .sidebar-link.active { background-color: #4f46e5; color: white; font-weight: 600; }
         .dark-mode { 
             --bg-panel: #111827; 
             --bg-main: #030712; 
@@ -325,7 +333,6 @@ HTML_LAYOUT = """
                 </div>
             {% endif %}
 
-            <!-- FIXED ACTION ROUTE BACK TO SELF -->
             <form action="" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Username</label>
@@ -374,7 +381,7 @@ HTML_LAYOUT = """
             </div>
         </aside>
 
-        <!-- MAIN MAIN CONTAINER -->
+        <!-- MAIN CONTAINER -->
         <main class="flex-1 p-6 md:p-8 overflow-y-auto max-h-screen">
             
             <!-- Toast Notification Box -->
@@ -385,36 +392,54 @@ HTML_LAYOUT = """
 
             <!-- DASHBOARD TAB -->
             <div id="tab-dashboard" class="tab-content hidden space-y-8 animate-fadeIn">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-custom-main">Main Command Dashboard</h1>
-                    <p class="text-sm text-custom-muted">Live operational analytical monitoring dashboard.</p>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-custom-main">Main Command Dashboard</h1>
+                        <p class="text-sm text-custom-muted">Live operational analytical monitoring dashboard.</p>
+                    </div>
+                    <!-- Quick Stats Badges Layer -->
+                    <div class="flex flex-wrap gap-2">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-500/10 text-indigo-500 border border-indigo-500/10">
+                            <i class="fa-solid fa-trophy text-[10px]"></i> High-Value Target Rules Engaged
+                        </span>
+                    </div>
                 </div>
                 
-                <!-- Stat Cards -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><i class="fa-solid fa-bolt text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Leads</p><h3 id="stat-leads" class="text-2xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                <!-- Expanded Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><i class="fa-solid fa-bolt text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Leads</p><h3 id="stat-leads" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl"><i class="fa-solid fa-wallet text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Clients</p><h3 id="stat-customers" class="text-2xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl"><i class="fa-solid fa-wallet text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Clients</p><h3 id="stat-customers" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl"><i class="fa-solid fa-circle-check text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Tasks</p><h3 id="stat-tasks" class="text-2xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Tasks</p><h3 id="stat-tasks" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
                     </div>
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl"><i class="fa-solid fa-chart-line text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Pipeline</p><h3 id="stat-pipeline-value" class="text-2xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl"><i class="fa-solid fa-chart-line text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Pipeline</p><h3 id="stat-pipeline-value" class="text-xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
                     </div>
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl"><i class="fa-solid fa-calculator text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Avg Deal</p><h3 id="stat-avg-deal" class="text-2xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl"><i class="fa-solid fa-calculator text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Avg Deal</p><h3 id="stat-avg-deal" class="text-xl font-extrabold mt-0.5 text-custom-main">₹0</h3></div>
                     </div>
-                    <div class="panel-card p-5 rounded-2xl shadow-sm border flex items-center gap-4">
-                        <div class="p-3 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-xl"><i class="fa-solid fa-paper-plane text-xl"></i></div>
-                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Queued Msg</p><h3 id="stat-queued-messages" class="text-2xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3">
+                        <div class="p-2.5 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-xl"><i class="fa-solid fa-paper-plane text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Queued</p><h3 id="stat-queued-messages" class="text-xl font-extrabold mt-0.5 text-custom-main">0</h3></div>
+                    </div>
+                    <!-- ADVANCED NEW METRIC 1: TOTAL REVENUE POOL -->
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3 bg-gradient-to-br from-emerald-500/5 to-transparent">
+                        <div class="p-2.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl"><i class="fa-solid fa-gavel text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">Revenue</p><h3 id="stat-revenue-pool" class="text-xl font-extrabold mt-0.5 text-emerald-500">₹0</h3></div>
+                    </div>
+                    <!-- ADVANCED NEW METRIC 2: HIGH VALUE ACQUISITIONS -->
+                    <div class="panel-card p-4 rounded-2xl shadow-sm border flex items-center gap-3 bg-gradient-to-br from-indigo-500/5 to-transparent">
+                        <div class="p-2.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl"><i class="fa-solid fa-gem text-lg"></i></div>
+                        <div><p class="text-[10px] font-bold uppercase tracking-widest text-custom-muted">VIP Deals</p><h3 id="stat-high-value" class="text-xl font-extrabold mt-0.5 text-indigo-500">0</h3></div>
                     </div>
                 </div>
 
@@ -440,20 +465,31 @@ HTML_LAYOUT = """
                         <button onclick="openLeadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/10 text-xs tracking-wide flex items-center gap-2 cursor-pointer transition"><i class="fa-solid fa-plus"></i> New Lead</button>
                     </div>
                 </div>
-                <div class="panel-card p-4 rounded-xl border flex flex-col sm:flex-row gap-3 justify-between items-center">
-                    <div class="relative w-full sm:w-72">
+                <!-- ENHANCED ARCHITECTURE FILTER BAR -->
+                <div class="panel-card p-4 rounded-xl border grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div class="relative w-full">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
                         <input type="text" id="leadSearch" onkeyup="renderLeadsTable()" placeholder="Search client name or brand..." class="w-full input-custom border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-indigo-500">
                     </div>
-                    <select id="leadFilterStatus" onchange="renderLeadsTable()" class="w-full sm:w-44 input-custom border rounded-xl px-3 py-2 text-xs focus:outline-none">
-                        <option value="All">All Statuses</option><option value="New">New</option><option value="Contacted">Contacted</option><option value="Proposal">Proposal</option><option value="Lost">Lost</option>
-                    </select>
+                    <div>
+                        <select id="leadFilterStatus" onchange="renderLeadsTable()" class="w-full input-custom border rounded-xl px-3 py-2 text-xs focus:outline-none">
+                            <option value="All">All Statuses</option><option value="New">New</option><option value="Contacted">Contacted</option><option value="Proposal">Proposal</option><option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                    <!-- BRAND NEW MULTI-LAYER FILTER (VALUE RANKING CATEGORIZATION ENGINE) -->
+                    <div>
+                        <select id="leadFilterValueTier" onchange="renderLeadsTable()" class="w-full input-custom border rounded-xl px-3 py-2 text-xs focus:outline-none">
+                            <option value="All">All Deal Sizes</option>
+                            <option value="High">VIP Deals (≥ ₹1,00,000)</option>
+                            <option value="Mid">Standard Deals (< ₹1,00,000)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="panel-card rounded-xl border overflow-x-auto shadow-sm">
                     <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
                             <tr class="border-b border-custom text-custom-muted text-[11px] font-bold uppercase tracking-widest bg-gray-500/5">
-                                <th class="p-4">Client / Company</th><th class="p-4">Est Value</th><th class="p-4">Funnel Position</th><th class="p-4">Date Added</th><th class="p-4 text-right">Actions</th>
+                                <th class="p-4">Client / Company</th><th class="p-4">Est Value</th><th class="p-4">Dynamic Tier</th><th class="p-4">Funnel Position</th><th class="p-4">Date Added</th><th class="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="leads-table-body" class="divide-y divide-custom text-xs text-custom-main"></tbody>
@@ -652,7 +688,6 @@ HTML_LAYOUT = """
         let reportPieChartInstance = null;
         let reportDoughnutChartInstance = null;
 
-        // LOCAL DYNAMIC PATH RESOLVER TO KEEP ROUTING INSIDE BLUEPRINT BOUNDS
         function getBlueprintPrefix() {
             let path = window.location.pathname;
             if(path.endsWith('/')) return path;
@@ -735,6 +770,10 @@ HTML_LAYOUT = """
             document.getElementById('stat-queued-messages').innerText = stats.total_queued_messages ?? 0;
             document.getElementById('stat-pipeline-value').innerText = '₹' + parseFloat(stats.total_pipeline_value).toLocaleString('en-IN');
             document.getElementById('stat-avg-deal').innerText = '₹' + parseFloat(stats.average_deal_size).toLocaleString('en-IN', {maximumFractionDigits: 0});
+            
+            // Populating Advanced Metrics Realtime UI Engine Components
+            document.getElementById('stat-revenue-pool').innerText = '₹' + parseFloat(stats.total_revenue_pool).toLocaleString('en-IN', {maximumFractionDigits: 0});
+            document.getElementById('stat-high-value').innerText = stats.high_value_leads;
 
             let actList = document.getElementById('recent-activity-list');
             actList.innerHTML = '';
@@ -793,27 +832,42 @@ HTML_LAYOUT = """
         function renderLeadsTable() {
             let query = document.getElementById('leadSearch').value.toLowerCase();
             let filter = document.getElementById('leadFilterStatus').value;
+            let valueTierFilter = document.getElementById('leadFilterValueTier').value;
             let tbody = document.getElementById('leads-table-body');
             tbody.innerHTML = '';
 
             let targetList = rawLeads.filter(l => {
                 let matchesQuery = l.name.toLowerCase().includes(query) || l.company.toLowerCase().includes(query);
                 let matchesFilter = filter === 'All' || l.status === filter;
-                return matchesQuery && matchesFilter;
+                
+                // Realtime Automated Categorization Logic Matcher
+                let matchesValueTier = true;
+                if(valueTierFilter === 'High') {
+                    matchesValueTier = floatVal = parseFloat(l.value) >= 100000;
+                } else if(valueTierFilter === 'Mid') {
+                    matchesValueTier = floatVal = parseFloat(l.value) < 100000;
+                }
+                
+                return matchesQuery && matchesFilter && matchesValueTier;
             });
 
             if(targetList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No matching leads.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 font-medium">No matching leads.</td></tr>`;
                 return;
             }
 
             targetList.forEach(l => {
+                // Calculate Dynamic Layout Badge Metrics Inline
+                let badgeClass = parseFloat(l.value) >= 100000 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold' : 'bg-gray-500/10 text-custom-muted border border-custom';
+                let tierText = parseFloat(l.value) >= 100000 ? '<i class="fa-solid fa-gem mr-1 text-[10px]"></i> VIP Account' : 'Standard';
+
                 tbody.innerHTML += `
                 <tr class="hover:bg-gray-500/5 transition">
                     <td class="p-4 font-semibold text-custom-main">
                         <div class="text-xs font-bold">${l.name}</div><div class="text-[11px] text-custom-muted font-normal mt-0.5">${l.email} | ${l.phone}</div>
                     </td>
                     <td class="p-4 font-bold text-indigo-500 dark:text-indigo-400">₹${parseFloat(l.value).toLocaleString('en-IN')}</td>
+                    <td class="p-4"><span class="text-[10px] px-2 py-0.5 rounded-lg ${badgeClass}">${tierText}</span></td>
                     <td class="p-4"><span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">${l.status}</span></td>
                     <td class="p-4 text-[11px] text-custom-muted">${l.date}</td>
                     <td class="p-4 text-right space-x-1 whitespace-nowrap">
@@ -1129,3 +1183,4 @@ HTML_LAYOUT = """
 </body>
 </html>
 """
+
