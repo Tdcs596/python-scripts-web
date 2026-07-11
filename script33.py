@@ -176,6 +176,7 @@ ULTIMATE_AUDIT_UI_V7 = r"""
 
     <div class="studio-layout">
         
+        <!-- Left Summary Matrix -->
         <div class="panel">
             <div class="panel-header">🎯 Live Multi-Vector Signal Matrix</div>
             <div class="table-container">
@@ -193,6 +194,7 @@ ULTIMATE_AUDIT_UI_V7 = r"""
             </div>
         </div>
 
+        <!-- Right Terminal View Blocks -->
         <div class="panel">
             <div class="tabs-header">
                 <button class="tab-btn active" id="tab_report" onclick="switchTab('report')">📝 Technical & Explanatory Logs</button>
@@ -327,7 +329,7 @@ def run_live_audit():
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         
-        # --- 1. RESOURCE HARVESTING & INITIAL LATENCIES ---
+        # --- 1. HARVESTING RESOURCE ---
         start_time = time.time()
         req_html = urllib.request.Request(clean_base_url, headers=headers)
         
@@ -362,7 +364,7 @@ def run_live_audit():
             
         page_load_speed = f"{round(total_duration, 2)}s{speed_status}"
 
-        # Analytics Mappings
+        # Analytics Triggers
         has_gsc = bool(re.search(r'google-site-verification|google\d+[a-zA-Z0-9\-_]+\.html|sc-domain:|googletagmanager\.com.*?id=GTM-[A-Z0-9]+', html_content, re.IGNORECASE))
         has_ga = bool(re.search(r'gtag\(|google-analytics\.com|googletagmanager\.com/gtag/js|_gaq\.push', html_content, re.IGNORECASE))
         has_gtm = bool(re.search(r'googletagmanager\.com/gtm\.js|gtm\.start', html_content, re.IGNORECASE))
@@ -386,7 +388,7 @@ def run_live_audit():
             except Exception: pass
         else: performance_score -= 5
 
-        # SEO Mapping Indicators
+        # Local & International SEO Verification Elements
         has_hreflang = bool(re.search(r'rel=["\']alternate["\']\s+hreflang=', html_content, re.IGNORECASE))
         has_lang_attr = bool(re.search(r'<html\s+[^>]*?lang=', html_content, re.IGNORECASE))
         intl_seo = has_hreflang or has_lang_attr
@@ -395,13 +397,13 @@ def run_live_audit():
         has_contact_footprint = bool(re.search(r'tel:|phone|\+\d{1,4}\s?\d{10}', html_content, re.IGNORECASE))
         local_seo = has_local_schema or has_contact_footprint
 
-        # Maps Verification Flags
+        # Local Maps & GMB Setup Rules
         has_gmb = bool(re.search(r'google\.com/maps/place|business\.google\.com|g\.page|maps\.google\.com.*?cid=\d+', html_content, re.IGNORECASE)) or has_local_schema
         if not has_gmb: performance_score -= 5
         has_my_maps = bool(re.search(r'google\.com/maps/d/embed|google\.com/maps/d/viewer', html_content, re.IGNORECASE))
         if not has_my_maps: performance_score -= 5
 
-        # Backlinks Calculation Mapping
+        # Backlinks Metrics mapping
         found_ext_links = re.findall(r'href=["\'](https?://([^\s<>"\']+?))["\']', html_content, re.IGNORECASE)
         external_domains = []
         for l, d in found_ext_links:
@@ -437,7 +439,7 @@ def run_live_audit():
         social_count = len(detected_socials)
         social_platforms = ", ".join(detected_socials) if detected_socials else "None Linked"
 
-        # Citation Frameworks Mapping
+        # Citation Frameworks
         directory_patterns = {
             "Yelp": r'yelp\.com/biz/[A-Za-z0-9\._\-]+', "YellowPages": r'yellowpages\.com/[A-Za-z0-9\._\-]+',
             "TripAdvisor": r'tripadvisor\.com/[A-Za-z0-9\._\-]+', "Foursquare": r'foursquare\.com/[A-Za-z0-9\._\-]+',
@@ -454,20 +456,20 @@ def run_live_audit():
                 directory_report_logs.append(f"  ⚠️ Mapped Footprint Absent: {dir_name} directory endpoint missing backlink")
         directory_count = len(detected_directories)
 
-        # UX/UI Engine Assets Checking
+        # UX/UI App Features
         has_manifest = bool(re.search(r'rel=["\']manifest["\']\s+href=', html_content, re.IGNORECASE)) or "manifest.json" in html_content
         mobile_friendly = bool(re.search(r'<meta\s+[^>]*?name=["\']viewport["\'][^>]*?content=["\'][^>]*?width=device-width', html_content, re.IGNORECASE))
         responsive = bool(re.search(r'@media\s*\(', html_content, re.IGNORECASE)) or mobile_friendly
         if not has_manifest: performance_score -= 3
         if not mobile_friendly: performance_score -= 5
 
-        # Integrity Validation Filters
+        # Security Layers Checks
         has_mixed_content = is_https and (("src=\"http://" in html_content) or ("href=\"http://" in html_content))
         malware_detected = bool(re.search(r'eval\(gzinflate\(base64_decode|unescape\([\'"]%75%31[\'"]\)', html_content, re.IGNORECASE))
         if not is_https: performance_score -= 10
         if malware_detected: performance_score -= 20
 
-        # --- 2. RE-ENGINEERED COMPETITOR AUDIT ENGINE (FIXED LOOP SCOPING) ---
+        # Competitor Intelligence Processing Layer
         meta_keywords_match = re.search(r'<meta\s+name=["\']keywords["\']\s+content=["\'](.*?)["\']', html_content, re.IGNORECASE)
         extracted_raw_tags = []
         if meta_keywords_match:
@@ -517,9 +519,34 @@ def run_live_audit():
         xml_count = len(xml_files_discovered)
         sitemap_terminal_log = "\n".join([f"  📊 Mapped XML Node [{i+1}]: {link}" for i, link in enumerate(xml_files_discovered)]) if xml_files_discovered else "  [No external XML index pointers listed]"
 
+        # --- 2. INTELLIGENT SEO CONCLUSION & SUGGESTIONS LOGIC Engine ---
+        strategic_suggestions = []
+        conclusion_summary = f"Audit evaluation completed for domain {parsed_domain}. "
+        
+        if performance_score >= 80:
+            conclusion_summary += "The overall baseline digital health is optimal, but structural conversion micro-gaps still limit complete visibility."
+        else:
+            conclusion_summary += "Critical visibility architectural vulnerabilities detected. The domain faces serious leaks in visibility pipelines."
+
+        if not has_ga or not has_gsc:
+            strategic_suggestions.append("👉 ACTION 1: Connect production standard scripts for Google Analytics 4 (GA4) and verify Google Search Console property layer to prevent complete data blindspots.")
+        if not is_https:
+            strategic_suggestions.append("👉 ACTION 2: Immediately force server-wide 301 rules redirecting HTTP assets to HTTPS. Chrome and Google Core algorithms actively throttle non-encrypted domains.")
+        if not mobile_friendly:
+            strategic_suggestions.append("👉 ACTION 3: Add responsive scaling parameters inside the head node (`meta name='viewport' content='width=device-width'`) to address heavy rendering penalties.")
+        if not has_gmb or not has_my_maps:
+            strategic_suggestions.append("👉 ACTION 4: Inject dynamic high-value Local Map embeds (Google My Maps) and structure local JSON-LD graphs to hijack localized geo-fenced commercial queries.")
+        if backlinks_count < 30:
+            strategic_suggestions.append("👉 ACTION 5: Execute aggressive link asset building pipelines. Link structure is shallow; target high domain authority context nodes to amplify PageRank scores.")
+        if comp_strategy == "CONSERVATIVE FOOTPRINT":
+            strategic_suggestions.append("👉 ACTION 6: Switch internal link architecture to scale a content ecosystem framework. Deploy explicit hubs targeting high intent semantic long-tail keywords.")
+            
+        if not strategic_suggestions:
+            strategic_suggestions.append("✨ System Status Optimal: Maintain continuous dynamic structural indexing tracking rules and keep content fresh.")
+
         if performance_score < 20: performance_score = 20
 
-        # --- SECTIONAL MASTER REPORT DATA LOGS ---
+        # --- SECTIONAL MASTER REPORT LOGS ---
         technical_report = f"""======================================================================
 🛰️ SYSTEM REPORT VECTOR ENGINE (COMPREHENSIVE SEGMENTATION ARCHITECTURE)
 ======================================================================
@@ -575,6 +602,14 @@ def run_live_audit():
   • .Identified Production Content Strategy Footprint:
     [STRATEGY ENGINE TYPE]: {comp_strategy} -> Focuses tracking structures based on internal distribution anchors.
 
+[SECTION G: EXECUTIVE AUDIT CONCLUSION & STRATEGIC SEO SUGGESTIONS]
+----------------------------------------------------------------------
+  • 📋 SCAN SUMMARY CONCLUSION:
+    {conclusion_summary}
+    
+  • 🛠️ CORE RECOMMENDATIONS TO ENHANCE ORGANIC SEO VISIBILITY:
+{"\n".join(strategic_suggestions)}
+
 ======================================================================"""
 
         # --- VALUE DRIVEN CONVERSION PITCH MAKER ---
@@ -619,7 +654,7 @@ def run_live_audit():
     <div style="margin-top: 15px; font-size: 11px; color: var(--text-gray); line-height: 1.5;">
         <span style="color: #10b981; font-weight: bold;">■ Optimization Present</span> | <span style="color: #ef4444; font-weight: bold;">■ System Deficits / Core Holes</span>
         <br><br>
-        <span style="color: #f3f4f6;">Performance Matrix Breakdown calculation incorporates Sections A-F including Core Analytics, Mobile Responsiveness, Advanced Encryption parameters, Local Omnipresence Maps Maps setups, and Competitor Defense Positioning rules.</span>
+        <span style="color: #f3f4f6;">Performance Matrix Breakdown calculation incorporates Sections A-G including Core Analytics, Mobile Responsiveness, Advanced Encryption parameters, Local Omnipresence Maps setups, Competitor Defense, and Strategic Action Suggestions.</span>
     </div>
 </div>
 ======================================================================"""
@@ -645,4 +680,3 @@ def run_live_audit():
             "status": "error",
             "message": f"Connection pipeline timeout while processing verification constraints loop. Details: {str(e)}"
         })
-
