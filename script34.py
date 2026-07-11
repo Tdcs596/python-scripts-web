@@ -7,13 +7,13 @@ from io import StringIO
 from flask import Blueprint, render_template_string, request, jsonify, session, redirect, url_for
 
 # =========================================================================
-# FACTORY CORE: EXPORT BLUEPRINT FOR APP.PY INTERNAL IMPORT
+# FACTORY CORE: EXPORT BLUEPRINT FOR MAIN DASHBOARD WRAPPER
 # =========================================================================
 script34_bp = Blueprint('script34', __name__)
 
 DATA_FILE = 'crm_data.json'
 AUTH_USER = 'admin'
-AUTH_PASS = '@#fsh@#admin123' 
+AUTH_PASS = 'admin123' 
 
 # =========================================================================
 # DATABASE CORE (NO-SQL JSON SCHEMATICS ENGINE)
@@ -45,31 +45,31 @@ def is_authenticated():
     return session.get('crm_logged_in') is True
 
 # =========================================================================
-# FLASK ROUTING GATEWAYS
+# FLASK ROUTING GATEWAYS (FIXED REDIRECT ROUTING)
 # =========================================================================
-@script34_bp.route('/', methods=['GET'])
+@script34_bp.route('/', methods=['GET', 'POST'])
 def index():
+    # POST login requests handle karne ke liye context loop
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        if username == AUTH_USER and password == AUTH_PASS:
+            session['crm_logged_in'] = True
+            return render_template_string(HTML_LAYOUT, is_authenticated=True, login_error=None)
+        else:
+            return render_template_string(HTML_LAYOUT, is_authenticated=False, login_error="Invalid credentials! Please try again.")
+
     if not is_authenticated():
         return render_template_string(HTML_LAYOUT, is_authenticated=False, login_error=None)
     return render_template_string(HTML_LAYOUT, is_authenticated=True, login_error=None)
 
-@script34_bp.route('/action/login', methods=['POST'])
-def action_login():
-    username = request.form.get('username', '')
-    password = request.form.get('password', '')
-    if username == AUTH_USER and password == AUTH_PASS:
-        session['crm_logged_in'] = True
-        return redirect(url_for('script34.index'))
-    else:
-        return render_template_string(HTML_LAYOUT, is_authenticated=False, login_error="Invalid credentials! Please try again.")
-
 @script34_bp.route('/action/logout', methods=['GET'])
 def action_logout():
-    session.clear()
+    session.pop('crm_logged_in', None)
     return redirect(url_for('script34.index'))
 
 # =========================================================================
-# FLASK RESTFUL ASYNC API HOOKS (CRITICAL BUSINESS COMPUTATIONS LOGIC)
+# FLASK RESTFUL ASYNC API HOOKS
 # =========================================================================
 @script34_bp.route('/api/get_dashboard_stats', methods=['GET'])
 def get_dashboard_stats():
@@ -265,7 +265,7 @@ def upload_automation_sheet():
     return jsonify({'success': False, 'message': 'Invalid file layout format.'})
 
 # =========================================================================
-# FULL INTERFACE SPECIFICATION TEMPLATE LAYOUT (NO-TOUCH DESIGN ENGINE)
+# FULL INTERFACE SPECIFICATION TEMPLATE LAYOUT (RELATIVE ROUTING FIXED)
 # =========================================================================
 HTML_LAYOUT = """
 <!DOCTYPE html>
@@ -325,7 +325,8 @@ HTML_LAYOUT = """
                 </div>
             {% endif %}
 
-            <form action="/action/login" method="POST" class="space-y-4">
+            <!-- FIXED ACTION ROUTE BACK TO SELF -->
+            <form action="" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Username</label>
                     <div class="relative">
@@ -369,7 +370,7 @@ HTML_LAYOUT = """
                 <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-900 text-xs font-semibold cursor-pointer text-gray-300 hover:text-white hover:bg-gray-850 transition">
                     <span>Appearance Mode</span><i id="theme-icon" class="fa-solid fa-moon"></i>
                 </button>
-                <a href="/action/logout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"><i class="fa-solid fa-right-from-bracket"></i> Clear Session</a>
+                <a href="action/logout" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"><i class="fa-solid fa-right-from-bracket"></i> Clear Session</a>
             </div>
         </aside>
 
@@ -651,10 +652,17 @@ HTML_LAYOUT = """
         let reportPieChartInstance = null;
         let reportDoughnutChartInstance = null;
 
+        // LOCAL DYNAMIC PATH RESOLVER TO KEEP ROUTING INSIDE BLUEPRINT BOUNDS
+        function getBlueprintPrefix() {
+            let path = window.location.pathname;
+            if(path.endsWith('/')) return path;
+            return path + '/';
+        }
+
         async function fetchAPI(endpoint, postData = null) {
             try {
                 let options = postData ? { method: 'POST', body: postData } : { method: 'GET' };
-                let response = await fetch(`/api/${endpoint}`, options);
+                let response = await fetch(`${getBlueprintPrefix()}api/${endpoint}`, options);
                 return await response.json();
             } catch (err) {
                 console.error("AJAX Telemetry stream broke down:", err);
@@ -1121,4 +1129,3 @@ HTML_LAYOUT = """
 </body>
 </html>
 """
-
