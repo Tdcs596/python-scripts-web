@@ -34,6 +34,8 @@ from script31 import script31_bp
 from script32 import script32_bp
 from script33 import script33_bp
 from script34 import script34_bp
+from script38 import script38_bp
+
 
 
 app = Flask(__name__)
@@ -145,6 +147,7 @@ def home():
             <a href="/script32/" class="btn"> WhatsApp</a>
             <a href="/script33/" class="btn"> Seo Audit</a>
             <a href="/script34/" class="btn"> CRM </a>
+            <a href="/script38/" class="btn"> Fund Analyzer </a>
             
         </div>
     </body>
@@ -184,6 +187,7 @@ app.register_blueprint(script31_bp, url_prefix='/script31')
 app.register_blueprint(script32_bp, url_prefix='/script32')
 app.register_blueprint(script33_bp, url_prefix='/script33')
 app.register_blueprint(script34_bp, url_prefix='/script34')
+app.register_blueprint(script38_bp, url_prefix='/script38')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
