@@ -57,7 +57,7 @@ class FundamentalAnalysisEngine:
         gross_margin = (info.get('grossMargins') or 0.0) * 100
         operating_margin = (info.get('operatingMargins') or 0.0) * 100
         net_margin = (info.get('profitMargins') or 0.0) * 100
-         dividend_yield = (info.get('dividendYield') or 0.0) * 100
+        dividend_yield = (info.get('dividendYield') or 0.0) * 100
 
         ratios = {
             "P/E Ratio": {"val": round(pe_ratio, 2), "desc": "Price to Earnings: Valuation against income benchmarks.", "health": "Good" if 0 < pe_ratio < 25 else "Overvalued"},
@@ -168,7 +168,7 @@ HTML_LAYOUT = """
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
         body { 
             font-family: 'Space Grotesk', sans-serif; 
-            transition: background-color 0.3s elements, color 0.3s ease;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
     </style>
 </head>
@@ -350,4 +350,3 @@ HTML_LAYOUT = """
 </body>
 </html>
 """
-
